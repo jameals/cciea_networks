@@ -1,0 +1,275 @@
+---
+title: "Identify Metiers, Infomap"
+author: "E. Fuller, M. Fisher"
+date: "Written Jan. 26, 2019. Last Run `r Sys.Date()`"
+output:
+  html_document:
+    df_print: paged
+    toc: yes
+    toc_depth: '3'
+  pdf_document:
+    highlight: haddock
+    number_sections: yes
+    toc: yes
+    toc_depth: '3'
+geometry: margin=1in
+subtitle: Preparation for network analysis in Fisher et al.
+fontsize: 11pt
+---
+
+# Description
+
+Using the metiers identified in script 1, assign metiers to the remaining fish ticket data based on the k-nearest neighbor (KNN) algorithm. KNN identifies the "nearest neighbors" of a given fish ticket based on Hellinger dissimilarities. 
+
+Before running this script, you should have used `test_kvals_knn.Rmd` to identify the best `k` value for this port group. The default k value is 1, due to testing with port groups CCA and MNA. 
+
+<br>
+```{r "setup", include=FALSE}
+if(!require("here")) {install.packages("here")}
+library(here)
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = here::here())
+
+## start time for full script
+script_start_time <- Sys.time()
+```
+<br>
+
+This script requires the following packages. 
+```{r packages, message=FALSE, warning=FALSE}
+if(!require("tidyverse")) {install.packages("tidyverse")}
+if(!require("vegan")) {install.packages("vegan")}
+if(!require("purrr")) {install.packages("purrr")}
+if(!require("parallelDist")) {install.packages("parallelDist")}
+if(!require("ggplot2")) {install.packages("ggplot2")}
+if(!require("grid")) {install.packages("grid")}
+if(!require("gridExtra")) {install.packages("gridExtra")}
+```
+<br>
+
+And calls the following functions:
+```{r}
+source('R/knn_matrix.R')
+source('R/knn_assign.R')
+```
+<br>
+
+# User Inputs 
+
+Select your directories.
+```{r get_dir}
+## input directory containing fish ticket data without assigned metiers
+indir_tix <- 'data/input'
+
+## input directory containing fish tickets from reference years, with infomap-assigned metiers
+indir_ref <- 'data/intermediate_metiers/reference'
+
+## output directory
+outdir <- 'data/intermediate_metiers'
+
+## final output directory for tickets without missing metiers
+outdir_final <- 'data/input/metiers'
+```
+<br>
+
+Set the value of `k` for the k-nearest neighbor function. This tells the function the number of 'nearest neighbors' to look at for assigning metier membership. You should have explored various values of `k` to find the one that is most appropriate for your data.
+```{r}
+k <- 1
+```
+<br>
+
+Filter the new fish tickets without metiers for commercial tickets?
+```{r}
+filter_type = TRUE
+```
+<br>
+
+The script will loop over each of the ports and crab years in these vectors.
+```{r}
+myports <- c("CCA","ERA","BGA","BDA","SFA","MNA","MRA")
+years <- c(2008,2009,2012,2013,2014,2015,2016,2017)
+```
+<br>
+
+The default settings will write out a different file for each port group and year; you can also write a combined output file with the landings + metiers from all port groups in a given crab year.
+```{r}
+combined_output <- TRUE
+```
+<br>
+
+Set these objects according to your user inputs from Script 1
+```{r}
+## trip comparisons for metier identification based on revenue or lbs
+metric <- "revenue"
+
+## which year(s) of fish ticket data were used to identify metiers with infomap?
+ref_years <- c(2010,2011)
+```
+<br>
+
+
+# 1: Metier Assignment
+
+By port group.
+
+## 1.1. Prep for writing files
+
+List of output data frames with all port groups in a year, to write combined output file.
+```{r}
+if(combined_output){
+  outlist <- vector("list", length(years))
+  names(outlist) <- years
+}
+```
+<br>
+
+This short function will write out the fish tickets from the reference years in the same format as the rest of the years of fish tickets post-metier assignment, for future use.
+```{r}
+rewrite_ref <- function(ref_data, crab_years, port, mydir){
+  for(y in crab_years){
+    tmptix <- filter(metiers,crab_year==y)
+    write.csv(tmptix, here::here(mydir, paste0( "FishTix_",port,"_crab", y, "_metiers.csv")), row.names=FALSE)
+  }
+}
+```
+<br>
+
+## 1.2 KNN
+
+Loop over ports and crab years to assign metiers using the k-nearest neighbor algorithm.
+```{r knn}
+for(myport in myports){
+  
+  # READ IN TRAINING DATA
+  metiers <- read.csv(here::here(indir_ref, paste0("FishTix_", metric, "_", paste0(ref_years,collapse="_"), "_", myport, "_metiers.csv")))
+  head(metiers)
+  # write out as individual crab years for future use
+  rewrite_ref(ref_data=metiers, crab_years = ref_years, port = myport, mydir=outdir_final)
+  
+  # ORGANIZE TRAINING DATA
+  ## Split data into a data frame with ticket information, and a data frame with a key to metiers
+  traindat <- dplyr::select(metiers, -metier.num, -metier)
+  metier_key <- metiers %>%
+    dplyr::select(trip_id, metier.num, metier) %>%
+    distinct()
+  met_names_key <- metier_key %>%
+    dplyr::select(metier.num, metier) %>%
+    distinct()
+  head(traindat); head(metier_key)
+  ## Make sure there are no duplicates in the key *(sum should equal 0)*
+  count_trips <- metier_key %>%
+    group_by(trip_id) %>%
+    summarise( n_trips = n())
+  if(sum(count_trips$n_trips > 1) > 1){
+    stop("there are duplicates in your metier key!")
+  } else{message("there are no duplicates in your metier key.")}
+  
+  # ASSIGN METIERS
+  for(y in years){
+    # read in test data without metiers
+    tickets <- read.csv(here::here(indir_tix, paste0("fish_tickets_crab", y, "_processed_for_networks.csv")))
+    
+    # filters for port group of interest / commercial tickets
+    if(filter_type){
+    tickets_filtered <- tickets %>%
+      filter(pcgroup == myport) %>%
+      filter(removal_type == "COMMERCIAL (NON-EFP)" | removal_type == "COMMERCIAL(DIRECT SALES)")
+    } else{
+      tickets_filtered <- tickets %>%
+        filter(pcgroup == myport)
+    }
+    
+    # start a list of trips that have been 
+    trips_assigned <- c()
+    
+    # get a list of the gear groups
+    gear_list <- unique(tickets_filtered$grgroup)
+    
+    # prep a data frame to hold metier info
+    test_metiers <- data.frame(trip_id = as.character(),
+                               metier.num = as.numeric())
+    
+    # for each gear type...
+    for(g in gear_list){
+      cat("processing gear group ", as.character(g), ". \n")
+      ## get a list of trips NOT already assigned a metier, and within given gear group
+      tmp_trips <- tickets_filtered %>%
+        filter(!(trip_id %in% trips_assigned)) %>%
+        filter(grgroup == g) %>%
+        dplyr::select(trip_id) %>%
+        distinct()
+      if(length(tmp_trips$trip_id) > 0){
+        ## get all of the fish tickets associated with those trips
+        tmp_tix <- left_join(tmp_trips, tickets_filtered, by="trip_id")
+        ## run knn
+        tmp_test_metiers <- knn_assign_metiers(train = traindat, key = metier_key, test = tmp_tix, k = k, adjust.revenue = TRUE, print.plot=TRUE)
+        
+        ## append new assignments to data frame
+        test_metiers <- rbind(test_metiers, tmp_test_metiers)
+        ## save the trip ids of the trips assigned metiers
+        trips_assigned <- c(trips_assigned, tmp_trips$trip_id)
+        
+        ## remove objects
+        rm(tmp_trips)
+        rm(tmp_tix)
+        rm(tmp_test_metiers)
+      } else{
+        cat("all trips from gear group ", g, " already classified. moving to next gear group.")
+      }
+    }
+    
+    #join metier IDs to fish tickets
+    test_metiers$trip_id <- as.character(test_metiers$trip_id); tickets_filtered$trip_id <- as.character(tickets_filtered$trip_id)
+    tickets_w_metiers <- left_join(tickets_filtered, test_metiers, by="trip_id")
+    
+    #join metier names to fish tickets
+    tickets_w_metiers$metier.num <- as.character(tickets_w_metiers$metier.num)
+    met_names_key$metier.num <- as.character(met_names_key$metier.num)
+    tickets_w_metiers <- left_join(tickets_w_metiers, met_names_key, by="metier.num")
+    colnames(tickets_w_metiers)[dim(tickets_w_metiers)[2]] <- "metier.name"
+    missing_metiers <- sum(is.na(tickets_w_metiers$metier.num))
+    
+    # write out
+    cat("writing out file for year", y, ". ", missing_metiers, " tickets (", missing_metiers/dim(tickets_filtered)[1]*100, "%) missing metier assignment. \n")
+    write.csv(tickets_w_metiers, here::here(outdir, paste0( "FishTix_",myport,"_crab", y, "_metiers_k", k, ".csv")), row.names=FALSE)
+    
+    # add to combined output data frame
+    if(combined_output){
+      if(myport == myports[1]){
+        outlist[[which(names(outlist)==y)]] <- tickets_w_metiers
+      } else{ #this could be rewritten using purrr
+        tmpdf_fromList <- outlist[[which(names(outlist) == y)]]
+        tmpdf_fromList <- rbind(tmpdf_fromList, tickets_w_metiers)
+        outlist[[which(names(outlist)==y)]] <- tickets_w_metiers
+      }
+    } #end if(combined_output)
+    
+    # remove test metiers
+    rm(tickets_w_metiers, test_metiers, tmpdf_fromList)
+    
+  } #end for(y in years)
+  
+} #end for(port in myports)
+```
+<br>
+
+# 2. Write Combined Output
+
+```{r write_all}
+if(combined_output){
+  for(y in years){
+    tmpdf_fromList <- outlist[[which(names(outlist) == y)]]
+    write.csv(tmpdf_fromList, here::here(outdir, paste0("FishTix_crab", y, "_metiers_k", k, ".csv")), row.names=FALSE)
+  }
+}
+```
+<br>
+
+---
+
+Script Runtime:
+```{r echo=FALSE}
+Sys.time()-script_start_time
+```
+
+

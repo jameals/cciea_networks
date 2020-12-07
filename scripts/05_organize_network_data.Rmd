@@ -1,0 +1,144 @@
+---
+title: "Organize Network Data"
+author: "E. Fuller, M. Fisher"
+date: "Written Feb. 4, 2019. Last Run `r Sys.Date()`"
+output:
+  html_document:
+    df_print: paged
+    toc: yes
+    toc_depth: '3'
+  pdf_document:
+    highlight: haddock
+    number_sections: yes
+    toc: yes
+    toc_depth: '3'
+geometry: margin=1in
+subtitle: Preparation for network analysis in Fisher et al.
+fontsize: 11pt
+---
+
+
+# Description
+
+Metier identification and assignment is conducted by port group due to computational restrictions. This script will recombine fish tickets across port groups for each crab year. It will also produce a text file for each port group listing all metier IDs and names (species / gear group abbreviations) found in the fish tickets. 
+
+After running this script, you can manually name each metier as you wish to see it represented in network graphs in the text file.
+
+<br>
+```{r "setup", include=FALSE}
+if(!require("here")) {install.packages("here")}
+library(here)
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = here::here())
+
+## start time for full script
+script_start_time <- Sys.time()
+```
+<br>
+
+This script requires the following packages. 
+```{r packages, message=FALSE, warning=FALSE}
+if(!require("tidyverse")) {install.packages("tidyverse")}
+```
+<br>
+
+# User Inputs 
+
+Select your directories. If following the default directory structure, `indir` and `outdir` will be the same.
+```{r get_dir}
+## input directory containing fish tickets fully assigned metiers (output from script 04)
+indir <- 'data/input/metiers'
+
+## output directory for recombined tickets
+outdir <- 'data/input/metiers'
+```
+<br>
+
+Identify the crab years and port groups covered by your landings data.
+```{r}
+# years <- seq(2008,2017)
+# myports <- c("CCA","ERA","BGA","BDA","SFA","MNA","MRA")
+years <- c(2010,2011,2016,2017)
+myports <- c("CCA")
+```
+<br>
+
+Set these objects according to your user inputs from Scripts 1 and 3
+```{r}
+## the value of `k` for the k-nearest neighbor function
+k <- 1
+
+## the reference years first run through infomap
+ref_years <- c(2010,2011)
+```
+<br>
+
+
+# 1: Combine Data
+
+Save all of the individual fish ticket files as a single data frame.
+```{r}
+for(p in myports){
+  for(y in years){
+    if(y %in% ref_years){
+      tmptix <- read.csv(here::here(indir, paste0("FishTix_",p,"_crab",y,"_metiers.csv")))
+    } else{
+      tmptix <- read.csv(here::here(indir, paste0("FishTix_",p,"_crab",y,"_metiers_k",k,"_recoded.csv")))
+    }
+    if(exists('all_data')){
+      all_data <- rbind(all_data,tmptix)
+    } else{
+      all_data <- tmptix
+    } # end if(exists)
+  } #end for(y)
+} #end for(p)
+```
+<br>
+
+
+# 2: Write out data
+
+## 2.1. Fish tickets
+
+Keep in mind that metier IDs / names have not been changed, so there will be duplicates between port groups.
+```{r}
+for(y in years){
+  yearly_tix <- filter(all_data, crab_year==y)
+  if(y %in% ref_years){
+    write.csv(yearly_tix, here::here(outdir, paste0('FishTix_crab', y, '_metiers.csv')),row.names=FALSE)
+  } else{
+      write.csv(yearly_tix, here::here(outdir, paste0('FishTix_crab', y, '_metiers_k1_recoded.csv')),row.names=FALSE)
+    }
+  message("crab year ",y, " contains landings data for port groups: ", paste0(unique(yearly_tix$pcgroup), collapse=", "), ".\n")
+}
+```
+<br>
+
+## 2.2. Metier keys
+
+For each port group, get a data frame with all unique metier IDs / names. Then write to file.
+
+*When splitting the metier name (abbreviation) into species and gear group, mixed-species metiers may generate a warning message about 'additional pieces'. Use this to identify metiers which may require customized `metier.spid` column entries or names.*
+
+```{r}
+for(i in seq(1,length(myports))){
+  pcgroup_metiers <- filter(all_data,pcgroup==myports[i]) %>%
+    dplyr::select(metier.num,metier.name) %>%
+    distinct() %>%
+    separate(col=metier.name, into=c('metier.spid','metier.gear'), sep='_', remove=FALSE) %>%
+    rename(metier.abbrev=metier.name) %>%
+    mutate(metier.name=NA)
+  write_delim(pcgroup_metiers, here::here(outdir,paste0(myports[i], '_metier_names.txt')), delim='\t')
+}
+```
+
+For the remaining scripts that generate and plot `igraph` network objects, make sure that you have manually replaced 'NAs' in the `metier.name` column with a customized name for each metier. The text files should include the following columns: 
+
+| metier.num | metier.abbrev |	metier.spid |	metier.gear |	metier.name |
+| :--------: | :-----------: | :----------: | :---------: | :---------- |
+|     1      |    DCRB_POT   |     DCRB     |    POT      |   D. crab   |
+|     2      |    BLCK_HKL   |     BLCK     |    HKL      |  RockLing   |
+
+
+
+
