@@ -1,0 +1,384 @@
+---
+title: "Identify Metiers P. 2, Infomap"
+author: "E. Fuller, M. Fisher"
+date: "Written Jan. 30, 2019. Last Run `r Sys.Date()`"
+output:
+  html_document:
+    df_print: paged
+    toc: yes
+    toc_depth: '3'
+  pdf_document:
+    highlight: haddock
+    number_sections: yes
+    toc: yes
+    toc_depth: '3'
+geometry: margin=1in
+subtitle: Preparation for network analysis in Fisher et al.
+fontsize: 11pt
+---
+
+# Description
+
+Fish tickets which were not assigned a metier through k-nearest neighbor analysis will be combined across years, within each port group, and run through infomap to identify metiers that may not have been present in the original reference years.
+
+It is important to run this script with as many years of data as possible, to help infomap identify unique metiers without oversplitting the data. Best practice is to wait until all years of interest have been processed with script 03 before running this script.
+<br>
+
+<br>
+```{r "setup", include=FALSE}
+if(!require("here")) {install.packages("here")}
+library(here)
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = here::here())
+
+## start time for full script
+script_start_time <- Sys.time()
+```
+<br>
+
+This script requires the following packages. 
+```{r packages, message=FALSE, warning=FALSE}
+if(!require("tidyverse")) {install.packages("tidyverse")}
+if(!require("parallelDist")) {install.packages("parallelDist")}
+if(!require("ggplot2")) {install.packages("ggplot2")}
+if(!require("labdsv")) {install.packages("labdsv")}
+if(!require("igraph")) {install.packages("igraph")}
+```
+<br>
+
+And calls the following functions:
+```{r}
+source("R/generate_catch_matrix_reruns.R")
+source("R/filter_matrix.R")
+source("R/split_matrix.R")
+source("R/convert_distance_matrix.R")
+source("R/distance_to_similarity.R")
+source("R/merge_data.R")
+source("R/average_similarities.R")
+source("R/network_edges.R")
+source("R/identify_metiers.R")
+source("R/metier_key_reruns.R")
+```
+<br>
+
+# User Inputs 
+
+Select your directories.
+```{r get_dir}
+## input directory containing fish ticket data with KNN-assigned metiers
+indir_tix <- 'data/intermediate_metiers'
+
+## input directory containing fish tickets from reference years, with infomap-assigned metiers
+indir_ref <- 'data/intermediate_metiers/reference'
+
+## output directory for tickets fully assigned metiers
+outdir <- 'data/input/metiers'
+```
+<br>
+
+Identify the crab years and port groups with landings data that need to be checked for fish tickets that were not assigned metiers using the KNN algorithm.
+```{r}
+years <- c(2008,2009,2012,2013,2014,2015,2016,2017)
+myports <- c("CCA","ERA","BGA","BDA","SFA","MNA","MRA")
+```
+<br>
+
+Set these objects according to your user inputs from Scripts 1 and 3
+```{r}
+## trip comparisons for metier identification based on revenue or lbs
+metric <- "revenue"
+
+## filter to include only commercial tickets?
+filter_type = TRUE
+
+## the value of `k` for the k-nearest neighbor function
+k <- 1
+
+## the reference years first run through infomap
+ref_years <- c(2010,2011)
+```
+<br>
+
+Do you want to filter the fish tickets to remove catch from rare species? 
+```{r}
+filter_rare <- 2
+```
+<br>
+
+# 1: Prepare Data
+
+Read in fish tickets from non-reference years, with KNN-assigned metiers.
+```{r rawdata}
+for(y in years){
+  for(port in myports){
+    if(port == myports[1] & y == min(years)){
+      rawdat <- read.csv(here::here(indir_tix, paste0("FishTix_",port,"_crab", y, "_metiers_k", k, ".csv")))
+    } else{
+      tmp_rawdat <- read.csv(here::here(indir_tix, paste0("FishTix_",port,"_crab", y, "_metiers_k", k, ".csv")))
+      rawdat <- rbind(rawdat,tmp_rawdat)
+    }
+  }
+}
+
+colnames(rawdat)
+```
+
+
+## 1.1. Select unassigned tickets 
+
+Filter for trip IDs from fish tickets that do not have an assigned metier, but do have non-zero revenue. 
+```{r NAtrips}
+tripsNA <- rawdat %>%
+  dplyr::select(trip_id, crab_year, metier.num) %>%
+  filter(is.na(metier.num)) %>%
+  distinct()
+cat("Total trips in data: ", length(unique(rawdat$trip_id)), "\nTrips missing metier assignments: ", dim(tripsNA)[1])
+```
+<br>
+
+Grab fish tickets associated with the trip IDs
+```{r NAtrips_data}
+mydat <- filter(rawdat, trip_id %in% tripsNA$trip_id)
+```
+<br>
+
+## 1.2. Filter for nonzero revenue
+
+```{r filter_rev}
+# get total revenue for each trip
+rev_bytrip <- mydat %>%
+  group_by(trip_id) %>%
+  summarise(total_rev = sum(revenue))
+# filter for trips with revenue > 0
+trips_w_revenue <- filter(rev_bytrip, total_rev > 0)
+# select 'mydat' tickets with revenue > 0
+mydat <- filter(mydat, trip_id %in% trips_w_revenue$trip_id)
+cat("Out of ", length(rev_bytrip$trip_id), " trips, ", length(trips_w_revenue$trip_id), " have nonzero revenue.\n")
+```
+<br>
+
+
+# 2: Run Infomap
+
+The following code loops over the list of port groups, and for each: 
+
+1. Process raw fish tickets into a matrix format, with each row a trip and each column a gear-catch combination
+
+2. Creates the Hellinger distance matrix
+
+3. Converts the distance matrix to a similarity (adjacency) matrix
+
+4. Uses `infomap` to identify metiers in R
+
+5. Names metiers. This can be done manually, or just by taking the highest grossing species / gear combination.
+
+6. Adds metiers to processed fish tickets
+
+```{r infomap}
+for(p in unique(mydat$pcgroup)){
+  cat("working on port group: ", p, ".\n")
+  portdat <- filter(mydat, pcgroup == p)
+  cat(length(unique(portdat$trip_id)), " trips at this port.\n")
+  
+  ##### 1. CREATE CATCH MATRIX #####
+  revmat <- gen_catch_matrix_rerun(mydata = portdat, multigear=TRUE, NAto0 = TRUE)
+  # Optional filtering
+  final.revmat <- filter_matrix(mydata = revmat, commercial = FALSE, rare = filter_rare, type= "number", ids = c("drvid_year", "crab_year", "trip_id"))
+  
+  
+  inmat <- final.revmat
+  # Separate IDs from Data
+  inmat_ids <- inmat %>%
+    dplyr::select(drvid_year, crab_year, trip_id) %>%
+    mutate(index = row.names(inmat))
+  inmat_ids$index <- as.numeric(inmat_ids$index)
+  inmat <- as.matrix(dplyr::select(inmat, -drvid_year, -crab_year, -trip_id))
+  
+  if(dim(inmat)[2] == 1){
+    # there is only one species; create community key for that species
+    trip_community_key <- final.revmat[,c("trip_id", "drvid_year", "crab_year")]
+    trip_community_key <- trip_community_key %>%
+      mutate(comm_num = 1,
+             comm_id = colnames(inmat))
+    # plot
+    myplot <- ggplot(data=melt(final.revmat, id.vars = c("drvid_year", "crab_year", "trip_id")), aes(x=name, y=value, fill=name)) +
+      geom_col() +
+      ggtitle(paste0(p, " - 1")) +
+      guides(fill=FALSE) +
+      theme(axis.text.x = element_text(angle=90, hjust=1))
+    print(myplot)
+    png(here::here('data/intermediate_metiers/plots/', paste0(p, "_rerun_community_1.png")))
+    print(myplot)
+    dev.off()
+    rm(final.revmat, revmat) #clean up
+  } else{
+    rm(final.revmat, revmat) #clean up
+    
+    
+    ##### 2. HELLINGER DISTANCE #####
+    hell.dist <- parDist(inmat, method="hellinger", diag=FALSE, upper=FALSE)
+    hell.df <- convertDist(hell.dist)
+    rm(hell.dist)
+    
+    
+    ##### 3. SIMILARITY #####
+    hell.sim.df <- dist2sim(x=hell.df,col=3, max.type = "individual")
+    rm(hell.df)
+    similarities <- left_join(hell.sim.df, dplyr::select(inmat_ids, trip_id, index), by=c("row" = "index"))
+    colnames(similarities) <- c(colnames(hell.sim.df), "trip1") #rename
+    similarities <- left_join(similarities, dplyr::select(inmat_ids, trip_id, index), by=c("col" = "index"))
+    colnames(similarities)[6] <- "trip2" #rename
+    similarities <- similarities[,c("trip1", "trip2", "value.sim")]
+    
+    
+    ##### 4. CREATING IGRAPH OBJECT; RUN INFOMAP ALGORITHM #####
+    # Save unique trip names; associated drvid_year
+    all_trips <- c(similarities$trip1, similarities$trip2)
+    all_trips <- unique(all_trips)
+    trip_info <- dplyr::select(inmat_ids, trip_id, drvid_year, crab_year)
+    cat("There are ", length(all_trips), " trips in similarities data set.")
+    # Create vertices data frame
+    vertices_df <- data.frame(rownum = seq(1, length(all_trips)),
+                              node = as.character(all_trips))
+    vertices_df$node <- as.character(vertices_df$node); trip_info$trip_id <- as.character(trip_info$trip_id)
+    vertices_ext <- left_join(vertices_df, trip_info, by=c("node" = "trip_id"))
+    # Create edges data frame
+    edges_df <- generate_network_edges(similarities = similarities, vertices = vertices_ext)
+    cat("There are ", dim(edges_df)[1], " edges.")
+    
+    # igraph & infomap
+    mycommunities <- identify_metiers(vertices=vertices_ext, edges = edges_df, trials = 100)
+    
+    
+    
+   ##### 5. ASSIGN COMMUNITIES BACK TO TRIPS #####
+    # match community designations with trip ids
+    vertices_membership <- membership(mycommunities)
+    vertices_ext[,"community"] <- NA
+    for(i in seq(1,length(vertices_ext$node))){
+      vertices_ext[i,"community"] <- vertices_membership[[i]]
+    }
+    # put info back into revenue matrix
+    inmat <- cbind(trip_info, inmat)
+    inmat_comm <- left_join(inmat, vertices_ext, by=c("trip_id" = "node", "drvid_year"="drvid_year", "crab_year" = "crab_year"))
+    inmat_comm <- dplyr::select(inmat_comm, -rownum)
+    inmat_comm.melt <- pivot_longer(inmat_comm, cols = colnames(inmat_comm)[which(!(colnames(inmat_comm) %in% c("drvid_year", "crab_year", "trip_id", "community")))])
+    
+    
+    ##### 6. NAME COMMUNITIES #####
+    # summarise the revenue from each species in the community
+    rev_by_community <- inmat_comm.melt %>%
+      group_by(community, name) %>%
+      summarise(total_rev = sum(value))
+    cat("There are ", length(unique(rev_by_community$community)), " new communities.\n")
+    # plot
+    for(i in unique(rev_by_community$community)){
+      tmp_dat <- rev_by_community %>%
+        filter(community == i) %>%
+        filter(total_rev > 0)
+      myplot <- ggplot(tmp_dat, aes(x=name, y=total_rev, fill=name)) +
+        geom_col() +
+        ggtitle(paste0(p, "-", i)) +
+        guides(fill=FALSE) + theme_bw() +
+        theme(axis.text.x = element_text(angle=90, hjust=1))
+      print(myplot)
+      png(here::here('data/intermediate_metiers/plots/', p, paste0( "rerun_metier_",i,".png")))
+      print(myplot)
+      dev.off()
+    }
+    # create trip-community key, with named communities
+    trip_community_key <- metier_key_rerun(revenue = rev_by_community, vertices = vertices_ext, name=TRUE)
+  } #end if more than one species in final revenue matrix
+  # Write out key
+  write.csv(trip_community_key, here::here(indir_ref, paste0("FishTix_",metric,"_", years[1],"_",tail(years, n=1),"_",p, "_InfoMap_Metier_Key_ReRun.csv")), row.names=FALSE)
+  
+  cat("\n\n---\n")
+}
+```
+<br>
+
+```{r include=FALSE}
+## Clean up environment ##
+rm(edges_df, vertices_df, vertices_ext, hell.sim.df, inmat, inmat_comm, inmat_comm.melt, inmat_ids, 
+   mycommunities, mydat, rawdat, myplot, portdat, rev_by_community, rev_bytrip,
+   similarities, tmp_dat, tmp_rawdat, trip_community_key, trip_info, trips_w_revenue, tripsNA, p)
+```
+<br>
+
+# 3: Add Metiers to Fish Tickets
+
+Use trip-community key from Section 2 to replace "NA" metiers in fish ticket data
+```{r add_metiers}
+for(p in myports){
+  cat("Port Group ", p, "\n")
+  rerun_key <- read.csv(here::here(indir_ref,paste0("FishTix_",metric,"_", years[1],"_",tail(years, n=1),"_",p, "_InfoMap_Metier_Key_ReRun.csv")))
+  years <- sort(unique(rerun_key$crab_year))
+  
+  # read in fish tickets
+  for(y in years){
+    if(y == min(years)){
+      fishtix <- read.csv(here::here(indir_tix,paste0("FishTix_", p, "_crab", y, "_metiers_k", k, ".csv")))
+      fishtix$metier.name <- as.character(fishtix$metier.name)
+      fishtix$metier.num <- as.character(fishtix$metier.num)
+      cat("read in fish tickets from crab year ", y, "\n")
+    } else{
+      tmp_tix <- read.csv(here::here(indir_tix, paste0("FishTix_", p, "_crab", y, "_metiers_k", k, ".csv")))
+      tmp_tix$metier.name <- as.character(tmp_tix$metier.name)
+      tmp_tix$metier.num <- as.character(tmp_tix$metier.num)
+      fishtix <- rbind(fishtix, tmp_tix)
+      cat("appended fish tickets from crab year ", y, "\n")
+    }
+  }
+  
+  # read in original metiers
+  orig_key <- read.csv(here::here(indir_ref, paste0("FishTix_", metric, "_", paste0(ref_years,collapse="_"), "_", p, "_metiers.csv"))) %>%
+    dplyr::select(metier.num, metier) %>%
+    distinct()
+  
+  # get last metier number and all metier names of existing fish tickets
+  met_exist <- as.character(unique(orig_key$metier))
+  max_num <- max(orig_key$metier.num, na.rm=TRUE)
+  
+  # add column to key that re-numbers new metiers, and that adds an "r" if the metier name already exists
+  rerun_key$comm_id <- as.character(rerun_key$comm_id)
+  rerun_key <- rerun_key %>%
+    mutate(comm_num_edit = comm_num + max_num) %>%
+    mutate(comm_id_edit = ifelse(comm_id %in% met_exist, paste0(comm_id, "r"), comm_id))
+  cat("replicated metier names: ", length(which("r" %in% rerun_key$comm_id_edit)), "\n\n")
+  
+  # for each trip in the key
+  for(trip in rerun_key$trip_id){
+    ## save the original metier
+    old_met <- unique(fishtix$metier.num[which(fishtix$trip_id == trip)])
+    ## if the original metier is NA (it should be!)
+    if(is.na(old_met)){
+      ### save the new metier info from the key for that trip
+      tmp_key <- filter(rerun_key, trip_id == trip)
+      ### replace the metier num and name with the new metier info
+      fishtix$metier.num[which(fishtix$trip_id == trip)] <- tmp_key$comm_num_edit
+      fishtix$metier.name[which(fishtix$trip_id == trip)] <- tmp_key$comm_id_edit
+    }
+    ## if the original metier is not NA, there was a mistake!
+    else{
+      message("ERROR: Trying to replace an existing metier for trip ", trip)
+    }
+  }
+  
+  # write out new fish tickets
+  for(y in years){
+    tmp_fishtix <- filter(fishtix, crab_year == y)
+    write.csv(tmp_fishtix, here::here(outdir, paste0("FishTix_", p, "_crab", y, "_metiers_k", k, "_recoded.csv")), row.names=FALSE)
+  }
+}
+```
+*Note - sometimes R doesn't like reading in the "NAs" from .csv file, so will return the warning "invalid factor level, NA generated." Just ignore - I checked to make sure that all NAs in R were NAs in the original .csv*
+
+
+
+
+---
+
+Script runtime:
+```{r echo=FALSE}
+Sys.time()-script_start_time
+```

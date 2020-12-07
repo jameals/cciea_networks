@@ -1,0 +1,409 @@
+---
+title: "Generalized Linear Models"
+author: "M. Fisher"
+date: "Written Mar. 8, 2019. Last Run `r Sys.Date()`"
+output:
+  html_document:
+    df_print: paged
+    toc: yes
+    toc_depth: '3'
+  pdf_document:
+    highlight: haddock
+    number_sections: yes
+    toc: yes
+    toc_depth: '3'
+geometry: margin=1in
+subtitle: Preparation for network analysis in Fisher et al.
+fontsize: 11pt
+---
+
+# Description
+
+Run nested generalized linear models (GLMs) for each network statistic. Code and GLM structure based on modeling conducted by Dr. Sunny Jardine for Jardine et al. (2020) doi: [10.1016/j.ecolecon.2020.106691](https://doi.org/10.1016/j.ecolecon.2020.106691).
+
+We use robust standard errors to address the assumption of homoskedasticity of errors (implemented by `coeftest`). Although we do not think that the error terms are independent draws, clustering can underestimate the standard errors, so clustering is not used in this version of model testing.
+
+
+Explanatory variables include:
+
+1. Y: year (2007-2016)
+
+2. R: region (North - Crescent City, Eureka, Fort Bragg, Bodega Bay; Central - San Francisco, Monterey, Morro Bay)
+
+3. P: port group
+
+4. D: closure duration (none 0 days, low =< 14 days, medium =< 50 days, high)
+
+5. N: number of nodes (network size; see script 07)
+
+Every GLM will include an interaction between the region and the closure duration; this decision was made after visually evaluating the network graphs.
+
+This script has hard-coded the network metrics for GLMs; if you want to use any metrics not included in Fisher et al., you will need to manually edit the following code, and decide which link functions to use for each set of GLMs.
+
+
+<br>
+```{r "setup", include=FALSE}
+if(!require("here")) {install.packages("here")}
+library(here)
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = here::here())
+
+## start time for full script
+script_start_time <- Sys.time()
+```
+<br>
+
+This script requires the following packages. 
+```{r packages, message=FALSE, warning=FALSE}
+if(!require("tidyverse")) {install.packages("tidyverse")}
+if(!require("foreign")) {install.packages("foreign")}
+if(!require("sandwich")) {install.packages("sandwich")}
+if(!require("lmtest")) {install.packages("lmtest")}
+if(!require("lme4")) {install.packages("lme4")}
+if(!require("bbmle")) {install.packages("bbmle")}
+if(!require("arm")) {install.packages("arm")}
+```
+<br>
+
+# User Inputs
+
+Identify the directory with the network statistics .csv file.
+```{r}
+indir <- 'results/statistics'
+```
+<br>
+
+What is the name of the `.csv` file with the network statistics from script 06?
+```{r}
+filename <- "2008_2017_CA_ParticipationNetworkMetrics.csv"
+```
+<br>
+
+
+# 1. Data
+
+Read in the network statistics. Select the metrics used in Fisher et al., and assign regions for each port group.
+```{r}
+stats <- read.csv(here::here(indir, filename)) %>%
+  dplyr::select(y, ed, m_weighted, nc_weighted, N, period, pcgroup) %>%
+  mutate(R = ifelse(pcgroup %in% c("CCA", "ERA", "BGA", "BDA"), "north", "central"))
+colnames(stats)
+```
+<br>
+
+Check out the distributions of the network metrics
+```{r echo=FALSE, fig_height=2.5}
+plotdat <- pivot_longer(stats,cols=c('ed','m_weighted','nc_weighted'))
+ggplot(plotdat,aes(x=value)) + 
+  geom_histogram(alpha=0.8) +
+  facet_wrap(~name) + 
+  theme_bw()
+```
+<br>
+
+
+Duration of Dungeness crab fishery closures, in days. Fishery closure duration is classified as "none", "medium", "high."  
+```{r include=FALSE}
+closures <- read.csv(here::here('data/input','DCRB_Historic_Closures_CA_updated.csv')) %>%
+  mutate(D = ifelse(days.closed == 0, "none", ifelse(days.closed <= 21, "low",
+                                                            ifelse(days.closed < 50, "medium", "high"))))
+```
+<br>
+
+Add the closure length information to the network stats data frame. 
+```{r}
+stats <- left_join(stats, closures, by=c("y", "pcgroup"))
+stats$D <- as.factor(stats$D)
+```
+<br>
+
+We conducted the GLMs for the early and the late season separately. Split the data accordingly. Then order the closure durations as a factor, so that 'none' is the base level in the GLMs.
+```{r}
+edata <- filter(stats, period == "early")
+ldata <- filter(stats, period == "late")
+
+edata$D <- factor(edata$D, levels=c("none", "low", "medium", "high"))
+ldata$D <- factor(ldata$D, levels=c("none", "low", "medium", "high"))
+```
+<br>
+
+# 2. GLMs
+
+## 2.1. Edge Density
+
+Edge density ranges from 0 to 1, and is the proportion of realized edges in a network. Use the quasibinomial logit link function.
+<br>
+
+**Run 1:** `E~D*R+N`
+```{r include=FALSE}
+him1e <- glm(ed ~ D*R+N, data = edata, family = quasibinomial('logit'))
+robust.se.him1e <- sqrt(diag(vcovHC(him1e , type="HC0")))
+coeftest(him1e, vcovHC(him1e , type="HC0"))
+
+him1l <- glm(ed ~ D*R+N, data = ldata, family = quasibinomial('logit'))
+robust.se.him1l <- sqrt(diag(vcovHC(him1l , type="HC0")))
+coeftest(him1l, vcovHC(him1l , type="HC0"))
+```
+<br>
+
+**Run 2.1:** `E~D*R+N + Y`
+```{r include=FALSE}
+him201e <- glm(ed ~ D*R+N + y, data = edata, family = quasibinomial('logit'))
+robust.se.him201e <- sqrt(diag(vcovHC(him201e , type="HC0")))
+coeftest(him201e, vcovHC(him201e , type="HC0"))
+
+him201l <- glm(ed ~ D*R+N + y, data = ldata, family = quasibinomial('logit'))
+robust.se.him201l <- sqrt(diag(vcovHC(him201l , type="HC0")))
+coeftest(him201l, vcovHC(him201l , type="HC0"))
+```
+<br>
+
+**Run 2.2:** `E~D*R+N + P`
+```{r}
+him202e <- glm(ed ~ D*R+N + pcgroup, data = edata, family = quasibinomial('logit'))
+robust.se.him202e <- sqrt(diag(vcovHC(him202e , type="HC0")))
+coeftest(him202e, vcovHC(him202e , type="HC0"))
+
+him202l <- glm(ed ~ D*R+N + pcgroup, data = ldata, family = quasibinomial('logit'))
+robust.se.him202l <- sqrt(diag(vcovHC(him202l , type="HC0")))
+coeftest(him202l, vcovHC(him202l , type="HC0"))
+```
+
+
+**Run 2.3:** `E~D*R+N + Y + P`
+```{r include=FALSE}
+him203e <- glm(ed ~ D*R+N + y + pcgroup, data = edata, family = quasibinomial('logit'))
+robust.se.him203e <- sqrt(diag(vcovHC(him203e , type="HC0")))
+coeftest(him203e, vcovHC(him203e , type="HC0"))
+
+him203l <- glm(ed ~ D*R+N + y + pcgroup, data = ldata, family = quasibinomial('logit'))
+robust.se.him203l <- sqrt(diag(vcovHC(him203l , type="HC0")))
+coeftest(him203l, vcovHC(him203l , type="HC0"))
+```
+<br>
+
+**Run 3:** `E~D*R+N + Y*R + P`
+```{r include=FALSE}
+him3e <- glm(ed ~ D*R+N + y*R + pcgroup, data = edata, family = quasibinomial('logit'))
+robust.se.him3e <- sqrt(diag(vcovHC(him3e , type="HC0")))
+coeftest(him3e, vcovHC(him3e , type="HC0"))
+
+him3l <- glm(ed ~ D*R+N + y*R + pcgroup, data = ldata, family = quasibinomial('logit'))
+robust.se.him3l <- sqrt(diag(vcovHC(him3l , type="HC0")))
+coeftest(him3l, vcovHC(him3l , type="HC0"))
+```
+<br>
+
+**Run 4:** `E~D*R+N + Y*P`
+```{r include=FALSE}
+him4e <- glm(ed ~ D*R+N + y*pcgroup, data = edata, family = quasibinomial('logit'))
+robust.se.him4e <- sqrt(diag(vcovHC(him4e , type="HC0")))
+coeftest(him4e, vcovHC(him4e , type="HC0"))
+
+him4l <- glm(ed ~ D*R+N + y*pcgroup, data = ldata, family = quasibinomial('logit'))
+robust.se.him4l <- sqrt(diag(vcovHC(him4l , type="HC0")))
+coeftest(him4l, vcovHC(him4l , type="HC0"))
+```
+<br>
+
+### F-tests
+
+Early Season
+```{r}
+anova(him1e,him201e,him202e,him203e,him3e,him4e, test="F") # can also check with LRT
+```
+<br>
+
+Late Season
+```{r}
+anova(him1l,him201l,him202l,him203l,him3l,him4l,test="F") # can also check with LRT
+```
+<br>
+
+
+## 2.2. Centralization
+
+Network centralization ranges from 0 - 1, and is the proportion of all possible edges that are actually present in a network. I use the quasibinomial logit link function.
+<br>
+
+**Run 1 (him):** `NC~D*R+N`
+```{r}
+him1e <- glm(nc_weighted ~D*R+N, data = edata, family = quasibinomial('logit'))
+robust.se.him1e <- sqrt(diag(vcovHC(him1e , type="HC0")))
+coeftest(him1e, vcovHC(him1e , type="HC0"))
+```
+```{r include=FALSE}
+him1l <- glm(nc_weighted ~D*R+N, data = ldata, family = quasibinomial('logit'))
+robust.se.him1l <- sqrt(diag(vcovHC(him1l , type="HC0")))
+coeftest(him1l, vcovHC(him1l , type="HC0"))
+```
+<br>
+
+**Run 2.1:** `NC~D*R+N + Y`
+```{r include=FALSE}
+him201e <- glm(nc_weighted ~D*R+N + y, data = edata, family = quasibinomial('logit'))
+robust.se.him201e <- sqrt(diag(vcovHC(him201e , type="HC0")))
+coeftest(him201e, vcovHC(him201e , type="HC0"))
+
+him201l <- glm(nc_weighted ~D*R+N + y, data = ldata, family = quasibinomial('logit'))
+robust.se.him201l <- sqrt(diag(vcovHC(him201l , type="HC0")))
+coeftest(him201l, vcovHC(him201l , type="HC0"))
+```
+<br>
+
+**Run 2.2:** `NC~D*R+N + P`
+```{r include=FALSE}
+him202e <- glm(nc_weighted ~D*R+N + pcgroup, data = edata, family = quasibinomial('logit'))
+robust.se.him202e <- sqrt(diag(vcovHC(him202e , type="HC0")))
+coeftest(him202e, vcovHC(him202e , type="HC0"))
+```
+```{r}
+him202l <- glm(nc_weighted ~D*R+N + pcgroup, data = ldata, family = quasibinomial('logit'))
+robust.se.him202l <- sqrt(diag(vcovHC(him202l , type="HC0")))
+coeftest(him202l, vcovHC(him202l , type="HC0"))
+```
+
+
+**Run 2.3:** `NC~D*R+N + Y + P`
+```{r include=FALSE}
+him203e <- glm(nc_weighted ~D*R+N + y + pcgroup, data = edata, family = quasibinomial('logit'))
+robust.se.him203e <- sqrt(diag(vcovHC(him203e , type="HC0")))
+coeftest(him203e, vcovHC(him203e , type="HC0"))
+
+him203l <- glm(nc_weighted ~D*R+N + y + pcgroup, data = ldata, family = quasibinomial('logit'))
+robust.se.him203l <- sqrt(diag(vcovHC(him203l , type="HC0")))
+coeftest(him203l, vcovHC(him203l , type="HC0"))
+```
+<br>
+
+**Run 3:** `NC~D*R+N + Y*R + P`
+```{r include=FALSE}
+him3e <- glm(nc_weighted ~D*R+N + y*R + pcgroup, data = edata, family = quasibinomial('logit'))
+robust.se.him3e <- sqrt(diag(vcovHC(him3e , type="HC0")))
+coeftest(him3e, vcovHC(him3e , type="HC0"))
+
+him3l <- glm(nc_weighted ~D*R+N + y*R + pcgroup, data = ldata, family = quasibinomial('logit'))
+robust.se.him3l <- sqrt(diag(vcovHC(him3l , type="HC0")))
+coeftest(him3l, vcovHC(him3l , type="HC0"))
+```
+<br>
+
+**Run 4:** `NC~D*R+N + Y*P`
+```{r include=FALSE}
+him4e <- glm(nc_weighted ~D*R+N + y*pcgroup, data = edata, family = quasibinomial('logit'))
+robust.se.him4e <- sqrt(diag(vcovHC(him4e , type="HC0")))
+coeftest(him4e, vcovHC(him4e , type="HC0"))
+
+him4l <- glm(nc_weighted ~D*R+N + y*pcgroup, data = ldata, family = quasibinomial('logit'))
+robust.se.him4l <- sqrt(diag(vcovHC(him4l , type="HC0")))
+coeftest(him4l, vcovHC(him4l , type="HC0"))
+```
+<br>
+
+### F-test
+
+Early Season
+```{r}
+anova(him1e,him201e,him202e,him203e,him3e,him4e, test="F") #also checked with LRT
+```
+<br>
+
+Late Season
+```{r}
+anova(him1l,him201l,him202l,him203l,him3l,him4l,test="F") #also checked with LRT
+```
+<br>
+
+## 2.3. Modularity
+
+Modularity ranges: from -1 to 1, but in our data set ranges from -0.5 to 0.5. I use the gaussian link function.
+<br>
+
+**Run 1 (him):** `M~D*R+N`
+```{r}
+him1e <- glm(m_weighted ~D*R+N, data = edata, family = gaussian(link='identity'))
+robust.se.him1e <- sqrt(diag(vcovHC(him1e , type="HC0")))
+coeftest(him1e, vcovHC(him1e , type="HC0"))
+```
+```{r include=FALSE}
+him1l <- glm(m_weighted ~D*R+N, data = ldata, family = gaussian(link='identity'))
+robust.se.him1l <- sqrt(diag(vcovHC(him1l , type="HC0")))
+coeftest(him1l, vcovHC(him1l , type="HC0"))
+```
+<br>
+
+**Run 2.1:** `M~D*R+N + Y`
+```{r include=FALSE}
+him201e <- glm(m_weighted ~D*R+N + y, data = edata, family = gaussian(link='identity'))
+robust.se.him201e <- sqrt(diag(vcovHC(him201e , type="HC0")))
+coeftest(him201e, vcovHC(him201e , type="HC0"))
+
+him201l <- glm(m_weighted ~D*R+N + y, data = ldata, family = gaussian(link='identity'))
+robust.se.him201l <- sqrt(diag(vcovHC(him201l , type="HC0")))
+coeftest(him201l, vcovHC(him201l , type="HC0"))
+```
+<br>
+
+**Run 2.2:** `M~D*R+N + P`
+```{r include=FALSE}
+him202e <- glm(m_weighted ~D*R+N + pcgroup, data = edata, family = gaussian(link='identity'))
+robust.se.him202e <- sqrt(diag(vcovHC(him202e , type="HC0")))
+coeftest(him202e, vcovHC(him202e , type="HC0"))
+```
+```{r}
+him202l <- glm(m_weighted ~D*R+N + pcgroup, data = ldata, family = gaussian(link='identity'))
+robust.se.him202l <- sqrt(diag(vcovHC(him202l , type="HC0")))
+coeftest(him202l, vcovHC(him202l , type="HC0"))
+```
+
+
+**Run 2.3:** `M~D*R+N + Y + P`
+```{r include=FALSE}
+him203e <- glm(m_weighted ~D*R+N + y + pcgroup, data = edata, family = gaussian(link='identity'))
+robust.se.him203e <- sqrt(diag(vcovHC(him203e , type="HC0")))
+coeftest(him203e, vcovHC(him203e , type="HC0"))
+
+him203l <- glm(m_weighted ~D*R+N + y + pcgroup, data = ldata, family = gaussian(link='identity'))
+robust.se.him203l <- sqrt(diag(vcovHC(him203l , type="HC0")))
+coeftest(him203l, vcovHC(him203l , type="HC0"))
+```
+<br>
+
+**Run 3:** `M~D*R+N + Y*R + P`
+```{r include=FALSE}
+him3e <- glm(m_weighted ~D*R+N + y*R + pcgroup, data = edata, family = gaussian(link='identity'))
+robust.se.him3e <- sqrt(diag(vcovHC(him3e , type="HC0")))
+coeftest(him3e, vcovHC(him3e , type="HC0"))
+
+him3l <- glm(m_weighted ~D*R+N + y*R + pcgroup, data = ldata, family = gaussian(link='identity'))
+robust.se.him3l <- sqrt(diag(vcovHC(him3l , type="HC0")))
+coeftest(him3l, vcovHC(him3l , type="HC0"))
+```
+<br>
+
+**Run 4:** `M~D*R+N + Y*P`
+```{r include=FALSE}
+him4e <- glm(m_weighted ~D*R+N + y*pcgroup, data = edata, family = gaussian(link='identity'))
+robust.se.him4e <- sqrt(diag(vcovHC(him4e , type="HC0")))
+coeftest(him4e, vcovHC(him4e , type="HC0"))
+
+him4l <- glm(m_weighted ~D*R+N + y*pcgroup, data = ldata, family = gaussian(link='identity'))
+robust.se.him4l <- sqrt(diag(vcovHC(him4l , type="HC0")))
+coeftest(him4l, vcovHC(him4l , type="HC0"))
+```
+<br>
+
+
+### F-test
+
+Early Season
+```{r}
+anova(him1e,him201e,him202e,him203e,him3e,him4e, test="F")
+```
+<br>
+
+Late Season
+```{r}
+anova(him1l,him201l,him202l,him203l,him3l,him4l,test="F")
+```
+<br>

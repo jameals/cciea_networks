@@ -1,0 +1,92 @@
+---
+title: "Test KNN Parameters"
+author: "M. Fisher"
+date: "Written Jan. 26, 2019. Last Run `r Sys.Date()`"
+output:
+  html_document:
+    df_print: paged
+    toc: yes
+    toc_depth: '3'
+  pdf_document:
+    highlight: haddock
+    number_sections: yes
+    toc: yes
+    toc_depth: '3'
+geometry: margin=1in
+subtitle: Preparation for network analysis in Fisher et al.
+fontsize: 11pt
+---
+
+# Description
+
+KNN identifies the "nearest neighbors" of a given fish ticket based on the Hellinger distance. Different values of `k`, and the use of a maximum acceptable distance value, should be explored before using the KNN to assign metiers, 
+
+<br>
+```{r "setup", include=FALSE}
+if(!require("here")) {install.packages("here")}
+library(here)
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = here::here())
+
+## start time for full script
+script_start_time <- Sys.time()
+```
+<br>
+
+This script requires the following packages. 
+```{r packages, message=FALSE, warning=FALSE}
+if(!require("tidyverse")) {install.packages("tidyverse")}
+if(!require("vegan")) {install.packages("vegan")}
+if(!require("purrr")) {install.packages("purrr")}
+if(!require("parallelDist")) {install.packages("parallelDist")}
+if(!require("ggplot2")) {install.packages("ggplot2")}
+if(!require("grid")) {install.packages("grid")}
+if(!require("gridExtra")) {install.packages("gridExtra")}
+```
+<br>
+
+And calls the following functions:
+```{r}
+```
+<br>
+
+# User Inputs 
+
+Select your directories.
+```{r get_dir}
+## input directory containing fish ticket data without assigned metiers
+indir_tix <- 'data/input'
+
+## input directory containing fish tickets from reference years, with infomap-assigned metiers
+indir_met <- 'data/intermediate_metiers/reference'
+```
+<br>
+
+Set the range of values of `k` for the k-nearest neighbor function.
+```{r}
+kvals <- seq(from=1,to=5,by=1)
+```
+<br>
+
+Filter the new fish tickets without metiers for commercial tickets?
+```{r}
+filter_type = TRUE
+```
+<br>
+
+The script will loop over each of the ports and crab years in these vectors.
+```{r}
+myports <- c("CCA","ERA","BGA","BDA","SFA","MNA","MRA")
+years <- c(2016,2017)
+```
+<br>
+
+Set these objects according to your user inputs from Script 1
+```{r}
+## trip comparisons for metier identification based on revenue or lbs
+metric <- "revenue"
+
+## which year(s) of fish ticket data were used to identify metiers with infomap?
+infomap_years <- c(2010,2011)
+```
+<br>

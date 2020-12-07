@@ -1,0 +1,589 @@
+---
+title: "Identify Metiers, Infomap"
+author: "E. Fuller, M. Fisher"
+date: "Written Jan. 26, 2019. Last Run `r Sys.Date()`"
+output:
+  html_document:
+    df_print: paged
+    toc: yes
+    toc_depth: '3'
+  pdf_document:
+    highlight: haddock
+    number_sections: yes
+    toc: yes
+    toc_depth: '3'
+geometry: margin=1in
+subtitle: Preparation for network analysis in Fisher et al.
+fontsize: 11pt
+---
+
+# Description
+
+This is the first step to generate distinct fisheries from the reference year(s) data, based on metier analysis. For Fisher et al., the reference years were 2010 and 2011.
+<br>
+```{r "setup", include=FALSE}
+if(!require("here")) {install.packages("here")}
+library(here)
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = here::here())
+
+## start time for full script
+script_start_time <- Sys.time()
+```
+<br>
+
+This script requires the following packages. 
+```{r packages, message=FALSE, warning=FALSE}
+if(!require("tidyverse")) {install.packages("tidyverse")}
+if(!require("foreign")) {install.packages("foreign")}
+if(!require("lubridate")) {install.packages("lubridate")}
+if(!require("qdapTools")) {install.packages("qdapTools")}
+if(!require("labdsv")) {install.packages("labdsv")}
+if(!require("parallelDist")) {install.packages("parallelDist")}
+if(!require("igraph")) {install.packages("igraph")}
+```
+<br>
+
+And calls the following functions:
+```{r}
+source("R/generate_catch_matrix.R")
+source("R/filter_matrix.R")
+source("R/split_matrix.R")
+source("R/convert_distance_matrix.R")
+source("R/distance_to_similarity.R")
+source("R/merge_data.R")
+source("R/average_similarities.R")
+source("R/network_edges.R")
+source("R/identify_metiers.R")
+source("R/metier_key.R")
+```
+<br>
+
+# User Inputs 
+
+Select your directories.
+```{r get_dir}
+## input directory containing processed fish ticket data
+indir <- "data/input"
+
+## output directory
+outdir <- "data/intermediate_metiers/reference"
+```
+<br>
+
+Do you want to filter the fish tickets to remove catch from rare species? Suggested cutoff is 0.001 (0.1%) for one reference year, 0.0005 (0.05%) for two reference years.
+
+Generally, the following cut-off values will reduce the species/gear combos by:
+
+| Cutoff | % Combos Remaining |
+| :--- | :---: |
+| 5% | 89 |
+| 1% | 74 |
+| 0.5% | 63 |
+| 0.1% | 44 |
+
+```{r inputs2}
+filter_rare <- 0.0005
+```
+<br>
+
+Set a few more objects that will be used in the script or as function arguments.
+```{r}
+## which (Crab) years of fish tickets are you interested in? [numeric vector]
+years <- c(2010,2011)
+
+## which port group are you interested in? [port group code]
+my.port <- "CCA"
+
+## option to generate landed lbs matrix instead of revenue [revenue / lbs]
+metric = "revenue"
+
+## if metric == revenue, use adjusted revenue? [true/false]
+adjusted = TRUE  
+
+## filter to include only commercial tickets? [true/false]
+filter_type = TRUE
+
+## automatically name the metiers? [true/false]
+auto_name = TRUE
+```
+<br>
+
+This automatically sets the prefix for the output files, using the inputs above
+```{r get_filenames}
+outfile <- paste0("FishTix_",metric,"_",paste0(years,collapse="_"),"_",my.port)
+```
+<br>
+
+
+# Prepare for InfoMap
+
+## 1: Generate catch matrix
+
+### 1.1. Read in Data
+
+This should be a .csv file containing raw PacFIN data.
+```{r rawdata}
+for(y in years){
+  if(y == min(years)){
+    rawdat <- read.csv(here::here(indir, paste0("fish_tickets_crab", y, "_processed_for_networks.csv")))
+  } else{
+    tmp_rawdat <- read.csv(here::here(indir, paste0("fish_tickets_crab", y, "_processed_for_networks.csv")))
+    rawdat <- rbind(rawdat,tmp_rawdat)
+  }
+}
+
+colnames(rawdat)
+```
+
+
+### 1.2. Edit existing columns, Filtering
+
+Remove the columns where the vessel identifier (drvid) is either "UNKNOWN" or blank ("") -- this was done when processing fish tickets, but just in case...
+Change class of objects in columns for later calculations
+```{r}
+rawdat <- rawdat %>%
+  filter(drvid != "UNKNOWN") %>%
+  filter(drvid != "") %>%
+  filter(drvid != "MISSING") %>%
+  mutate(drvid = as.character(drvid),
+         pounds = as.numeric(pounds),
+         revenue = as.numeric(revenue))
+```
+<br>
+
+
+Filter for port group
+```{r}
+rawdat.sub <- filter(rawdat, pcgroup == my.port)
+dim(rawdat.sub)
+length(unique(rawdat.sub$trip_id))
+```
+<br>
+
+
+### 1.3. Calculate per-trip revenue or pounds landed
+
+Get the unique gear types listed in the raw data
+```{r}
+gear_list <- unique(rawdat.sub$grgroup)
+gear_list
+```
+<br>
+
+Run the function. Leave the `gear` argument as default TRUE.
+```{r revenue_matrix}
+mydat <- generate_catch_matrix(mydata = rawdat.sub, metric = metric, adjust.revenue = adjusted)
+output <- mydat[[2]]
+output.melted <- mydat[[1]]
+```
+<br>
+
+Write out the resulting matrix as an intermediate file, for QC if needed.
+```{r}
+write.csv(output,here::here(outdir,paste0('TixMatrix_',my.port,"_",metric,"_",paste0(years,collapse="_"),"_bySpeciesGear.csv")), row.names=FALSE)
+```
+<br>
+
+### 1.4. Optional: filtering before Hellinger distance calculations
+
+Optional filtering includes:
+
+1. Removal of non-commercial fish tickets.
+
+2. Removal of species or species/gear combos that make below a certain value of revenue. completely individually for each port group.
+```{r filter_matrix}
+final.output <- filter_matrix(mydata = output, commercial = filter_type, rare = filter_rare)
+```
+<br>
+
+
+### 1.5. Write out the filtered data.
+```{r write_revmat}
+if(filter_type == TRUE){
+  if(!is.na(filter_rare)){
+    write.csv(x=final.output, here::here(outdir, paste0('TixMatrix_',my.port,"_",metric,"_",paste0(years,collapse="_"),"_bySpeciesGear_filterCommRare.csv")),row.names=FALSE)
+  } else{
+    write.csv(x=final.output, here::here(outdir, paste0('TixMatrix_',my.port,"_",metric,"_",paste0(years,collapse="_"),"_bySpeciesGear_filterComm.csv")),row.names=FALSE)
+  }
+} else{
+  if(!is.na(filter_rare)){
+    write.csv(x=final.output, here::here(outdir, paste0('TixMatrix_',my.port,"_",metric,"_",paste0(years,collapse="_"),"_bySpeciesGear_filterRare.csv")),row.names=FALSE)
+  }
+}
+```
+<br>
+
+
+
+## 2: Hellinger Matrix
+```{r include = FALSE}
+section.start <- Sys.time()
+```
+
+Rename the data frame from part I. 
+```{r}
+inmat <- final.output
+rm(final.output)
+dim(inmat)
+```
+<br>
+
+### 2.1. Split the catch matrix into separate matrices for each gear group
+
+Run the function to split up the catch matrix by gear type, and save the output of the function: (1) catch (revenue / lbs) data frame, (2) associated trip and vessel ids, (3) vector of gear types that are present in the data. This will also clean up the vector of gear groups if any gear groups were removed in previous filtering.
+```{r}
+catchmats_bygear <- split_matrix(gear.list = gear_list, catch_matrix = inmat)
+catch_bygear_list <- catchmats_bygear[[1]]
+ids_bygear_list <- catchmats_bygear[[2]]
+gear_list_filtered <- catchmats_bygear[[3]]
+```
+<br>
+
+### 2.2. Calculate Hellinger distance
+
+Using `purr`, calculate the hellinger distance for each matrix in the list
+```{r hellinger_dist}
+hellinger_dist_list <- catch_bygear_list %>%
+  map(~ parDist(.x, method="hellinger", diag=FALSE, upper=FALSE))
+```
+<br>
+
+### 2.3. Convert distance object to data frame, remove NaNs
+
+Convert distance object to a data frame of vertices + edge weight (as distance metric)
+```{r}
+hellinger_df_list <- hellinger_dist_list %>%
+  map(~convertDist(.x))
+
+# Check for NAs 
+df_nas <- hellinger_df_list %>%
+  map(~sum(is.na(.)))
+df_nas
+```
+<br>
+
+Time to complete:
+```{r echo=FALSE}
+Sys.time() - section.start
+```
+<br>
+```{r include=FALSE}
+# clean up
+rm(df_nas, catch_bygear_list, catchmats_bygear, hellinger_dist_list)
+```
+
+
+
+
+## 3: Convert Distance to Similarity
+```{r include = FALSE}
+section.start <- Sys.time()
+```
+
+Find the maximum distance value across all data frames.
+```{r}
+dist_max <- 0
+for(i in seq(1,length(hellinger_df_list))){
+  tmp_df <- hellinger_df_list[[i]]
+  tmp_max <- max(tmp_df[,3], na.rm=TRUE)
+  if(tmp_max > dist_max){
+    dist_max <- tmp_max
+  }
+}
+cat("Maximum Hellinger distance is: ", dist_max)
+```
+
+Convert distance values to similarities by subtracting the maximum distance value.
+```{r hellinger_sim}
+similarities_df_list <- hellinger_df_list %>%
+  map(~dist2sim(.x,3, max.type = "manual", total.max = dist_max))
+str(similarities_df_list)
+```
+<br>
+Time to complete:
+```{r echo=FALSE}
+Sys.time() - section.start
+```
+```{r include=FALSE}
+#clean up
+rm(hellinger_df_list, output, output.melted, rawdat, tmp_rawdat)
+```
+
+
+## 4: Create Single Data Frame 
+
+With multiple gear groups
+```{r include = FALSE}
+section.start <- Sys.time()
+gc()
+```
+<br>
+
+### 4.1. Combine trip IDs and similarities. 
+
+To do this, I'll extract each list element (in order) from both the similarities and the ids data frames, then match the row numbers in the similarities and the IDs data frames. Then I can append the output to a single large data frame
+```{r merge_df}
+similarities <- merge_df(gear.list = gear_list_filtered, sim.list = similarities_df_list, ids.list = ids_bygear_list)
+head(similarities)
+```
+<br>
+
+```{r include=FALSE}
+#clean up
+rm(ids_bygear_list,similarities_df_list)
+```
+<br>
+
+### 4.2. Average repeated trip comparisons
+
+Search for paired trips that had similarities calculated for more than one gear type. This code will find exact duplicates, and reciprocal duplicates (trip1-trip2 and trip2-trip1). 
+```{r id_duplicates}
+detect_duplicates <- similarities %>%
+  dplyr::select(trip1,trip2) %>%
+ group_by(grp = paste(exec(pmax,!!!.), exec(pmin,!!!.), sep = "_")) %>%
+  summarise(duplicates=n()-1) %>%
+  filter(duplicates > 0) %>%
+  dplyr::select(-duplicates) %>%
+  separate(col=grp,into=c("trip1","trip2"), sep="_",remove=FALSE)
+detect_duplicates <- mutate(detect_duplicates,trip1=as.integer(trip1),trip2=as.integer(trip2))
+
+duplicate_rows <- rbind(inner_join(detect_duplicates,similarities, by=c("trip1","trip2")),
+                        inner_join(detect_duplicates,similarities, by=c("trip1"="trip2","trip2"="trip1")))
+
+dim(duplicate_rows)[1]
+```
+
+
+<br>
+For duplicates, average the Hellinger similarity value across gear groups. Replace the duplicated data with this value. 
+```{r avg_duplicates}
+if(dim(duplicate_rows)[1] > 0){
+  similarities <- average_similarities(duplicates_df=duplicate_rows, similarities = similarities, plot=TRUE)
+} else{
+  message("No duplicated trip comparisons")}
+```
+<br>
+
+### 4.3. Write out data
+```{r}
+write.csv(x=similarities, here::here(outdir, paste0("TixMatrix_", my.port, "_", metric, "_bySpeciesGear_", paste0(years, collapse="_"), "_HellingerSim.csv")), row.names=FALSE)
+```
+<br>
+
+Time to complete:
+```{r echo=FALSE}
+Sys.time() - section.start
+```
+<br>
+```{r include=FALSE}
+# clean up
+rm(duplicate_rows,detect_duplicates)
+```
+<br>
+
+# Run InfoMap
+
+## 5: INFOMAP Input
+```{r include = FALSE}
+section.start <- Sys.time()
+```
+
+### 5.1. Generate `.net` file format
+
+Vertices
+```{r vertices}
+all_trips <- c(unique(similarities$trip1), unique(similarities$trip2))
+all_trips <- unique(all_trips)
+cat("There are ", length(all_trips), " trips in similarities data set.")
+
+# Add weights
+weights <- rep(1, times=length(all_trips))
+vertices_df <- data.frame(rownum = seq(1, length(all_trips)),
+                          node = as.character(all_trips),
+                          weight = as.numeric(weights))
+```
+<br>
+
+Edges
+```{r edges}
+edges_df <- generate_network_edges(similarities = similarities, vertices = vertices_df)
+cat("There are ", dim(edges_df)[1], " edges.")
+```
+<br>
+
+### 5.2. Write out preliminary `infomap` input files
+```{r}
+write.csv(edges_df, here::here(outdir, paste0(outfile, "_SpeciesGear_edges.csv")), row.names=FALSE, quote = FALSE)
+write.csv(vertices_df, here::here(outdir, paste0(outfile, "SpeciesGear_vertices.csv")), row.names=FALSE, quote = TRUE)
+```
+<br>
+
+Time to complete:
+```{r echo=FALSE}
+Sys.time() - section.start
+```
+<br>
+```{r include=FALSE}
+# clean up
+rm(similarities, all_trips)
+```
+
+
+
+## 6: INFOMAP R Implementation 
+```{r include = FALSE}
+section.start <- Sys.time()
+```
+
+### 6.1. iGraph's cluster_infoMap function: identify communities with the map equation
+Function will create igraph object and run cluster_infomap
+```{r id_metiers}
+trip_info <- dplyr::select(inmat, c(trip_id, drvid_year))
+# Edit the vertices data frame to include vessel
+vertices_df$node <- as.character(vertices_df$node)
+trip_info$trip_id <- as.character(trip_info$trip_id)
+vertices_ext <- left_join(vertices_df, trip_info, by=c("node" = "trip_id"))
+
+# igraph / infomap
+mycommunities <- identify_metiers(edges = edges_df, vertices = vertices_ext)
+```
+<br>
+
+### 6.2. Link communities to trips
+Assign communities back to list of tripsmemor
+```{r}
+vertices_membership <- membership(mycommunities)
+vertices_ext[,"community"] <- NA
+for(i in seq(1,length(vertices_ext$node))){
+  vertices_ext[i,"community"] <- vertices_membership[[i]]
+}
+```
+<br>
+
+Add community designation to original catch matrix
+```{r}
+inmat$trip_id <- as.character(inmat$trip_id)
+inmat_comm <- left_join(inmat, vertices_ext, by=c("trip_id" = "node", "drvid_year"="drvid_year"))
+inmat_comm <- dplyr::select(inmat_comm, -weight, -rownum,-removal_type, -pcgroup)
+```
+<br>
+
+Time to complete:
+```{r echo=FALSE}
+Sys.time() - section.start
+```
+<br>
+```{r include=FALSE}
+# clean up
+rm(inmat, vertices_membership, mycommunities)
+```
+<br>
+
+# Add Metiers to Fish Tickets
+
+The composition of each metier identified with InfoMap will be plotted in the `plot_communities` code chunk; these plots can be later used to gut-check metier composition. Plots will be saved in the following folder, named automatically here and hard-coded into the script.
+```{r}
+dir.create(paste0('data/intermediate_metiers/plots/',my.port)) #do not change
+```
+<br>
+
+## 7: Name Metiers (Communities)
+```{r include = FALSE}
+section.start <- Sys.time()
+```
+
+### 7.1. Melt catch matrix and plot by metier
+```{r plot_communities}
+inmat_comm.melt <- pivot_longer(inmat_comm, -c("drvid_year", "trip_id", "community"))
+rev_by_community <- inmat_comm.melt %>%
+  group_by(community, name) %>%
+  summarise(total_rev = sum(value))
+for(i in unique(rev_by_community$community)){
+  tmp_dat <- rev_by_community %>%
+    filter(community == i) %>%
+    filter(total_rev > 0)
+  myplot <- ggplot(tmp_dat, aes(x=name, y=total_rev, fill=name)) +
+    geom_col() +
+    ggtitle(paste0("metier ", i)) + xlab("species+gear") +
+    ylab("Total revenue") +
+    guides(fill=FALSE) + theme_bw() +
+    theme(axis.text.x = element_text(angle=90, hjust=1))
+  png(here::here(paste0('data/intermediate_metiers/plots/',my.port),paste0("metier_", i, ".png")))
+  print(myplot)
+  dev.off()
+}
+```
+<br>
+
+Time to complete:
+```{r echo=FALSE}
+Sys.time() - section.start
+```
+<br>
+```{r include=FALSE}
+# clean up
+rm(tmp_dat, myplot, inmat_comm, inmat_comm.melt)
+```
+<br>
+
+### 7.2. Generate names for each metier
+
+This can be done automatically or manually (according to the `name` argument). If `automatic_name` is TRUE, then the metier will be named after the highest revenue species/gear combination. IF there are multiple species/gear combinations within 10% of the top grossing species/gear combination, then the metier will be named after both. 
+```{r name_metiers}
+trip_community_key <- metier_key(revenue = rev_by_community, vertices=vertices_ext, name=auto_name)
+```
+<br>
+
+Write out the key
+```{r}
+write.csv(trip_community_key, here::here(outdir, paste0(outfile, "_InfoMap_Metier_Key.csv")),row.names=FALSE)
+```
+<br>
+
+
+## 8: Add Metiers to Fish Tickets
+```{r include = FALSE}
+section.start <- Sys.time()
+```
+
+### 8.1. Join metier key with fish tickets
+
+```{r metiers_on_fishtix}
+rawdat.sub$trip_id <- as.character(rawdat.sub$trip_id)
+trip_community_key$trip_id <- as.character(trip_community_key$trip_id)
+trip_community_key$drvid_year <- as.character(trip_community_key$drvid_year)
+fishtix_w_metiers <- left_join(trip_community_key, rawdat.sub, by=c("trip_id", "drvid_year"))
+rm(rawdat.sub)
+head(fishtix_w_metiers)
+```
+<br>
+
+### 8.2. Write out new fish ticket data
+Re-order the columns
+```{r}
+colnames(fishtix_w_metiers)[which(colnames(fishtix_w_metiers) == "comm_num")] <- "metier.num"
+colnames(fishtix_w_metiers)[which(colnames(fishtix_w_metiers) == "comm_id")] <- "metier.name"
+fishtix_w_metiers <- fishtix_w_metiers[c("trip_id", "year", "crab_year","tdate", "agid", 
+                       "pcgroup", "pcid", "spid", "spid_recode", "council",
+                       "grgroup", "grid", "removal_type","removal_type_code",
+                       "drvid", "drvid_year","proc", "fleet", "pounds", "ppp", "adj_ppp", "revenue", "adj_revenue", "metier.num", "metier.name")]
+head(fishtix_w_metiers)
+```
+<br>
+
+```{r}
+write.csv(fishtix_w_metiers, here::here(outdir, paste0(outfile, "_metiers.csv")), row.names=FALSE)
+```
+
+Time to complete:
+```{r echo=FALSE}
+Sys.time() - section.start
+```
+
+#### FINAL TIME ON SCRIPT
+```{r echo=FALSE}
+Sys.time() - script_start_time
+```
+
+

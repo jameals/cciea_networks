@@ -1,0 +1,220 @@
+---
+title: "Standardize Final GLMs"
+author: "M. Fisher"
+date: "Written Mar. 8, 2019. Last Run `r Sys.Date()`"
+output:
+  html_document:
+    df_print: paged
+    toc: yes
+    toc_depth: '3'
+  pdf_document:
+    highlight: haddock
+    number_sections: yes
+    toc: yes
+    toc_depth: '3'
+geometry: margin=1in
+subtitle: Preparation for network analysis in Fisher et al.
+fontsize: 11pt
+---
+
+# Description
+
+Use the `arm` package to standardize the explanatory variables in the final generalized linear models (GLMs) selected for each network metric. Based on the documentation provided for the `standardize` function, explanatory variables will be rescaled as follows:
+
+*From `standardize` documentation: Numeric variables that take on more than two values are each rescaled to have a mean of 0 and a sd of 0.5; Binary variables are rescaled to have a mean of 0 and a difference of 1 between their two categories; Non-numeric variables that take on more than two values are unchanged*
+
+1. Y: year (2007-2016). Using factor levels, rescaled to have a mean of 0 and a standard deviation of 0.5. 
+
+2. R: region (North - Crescent City, Eureka, Fort Bragg, Bodega Bay; Central - San Francisco, Monterey, Morro Bay). As a binary variable, rescaled to have a mean of 0 and a difference of 1 between categories.
+
+3. P: port group. Using factor levels, treated as a numeric variable with more than two values; rescaled to have a mean of 0 and a standard deviation of 0.5. 
+
+4. D: closure duration (none 0 days, medium =< 50 days, high). Unchanged.
+
+5. N: number of nodes. Rescaled to have a mean of 0 and a standard deviation of 0.5. 
+
+
+This script has hard-coded the network metrics and the final GLM equations; if you want to use any metrics not included in Fisher et al., you will need to manually edit the *metrics* code chunk, and refer to script `08_nested_GLMs` to enter the final models for each metric / season combination in code chunk *scaled_glms*. 
+
+
+<br>
+```{r "setup", include=FALSE}
+if(!require("here")) {install.packages("here")}
+library(here)
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = here::here())
+
+## start time for full script
+script_start_time <- Sys.time()
+```
+<br>
+
+This script requires the following packages. 
+```{r packages, message=FALSE, warning=FALSE}
+if(!require("tidyverse")) {install.packages("tidyverse")}
+if(!require("foreign")) {install.packages("foreign")}
+if(!require("sandwich")) {install.packages("sandwich")}
+if(!require("lmtest")) {install.packages("lmtest")}
+if(!require("lme4")) {install.packages("lme4")}
+if(!require("bbmle")) {install.packages("bbmle")}
+if(!require("arm")) {install.packages("arm")}
+if(!require("stargazer")) {install.packages("stargazer")}
+```
+<br>
+
+And calls the following function:
+```{r}
+source("R/standardize_glm.R")
+```
+<br>
+
+
+# User Inputs
+
+Identify the directory with the network statistics .csv file.
+```{r get_dir}
+indir <- 'results/statistics'
+```
+<br>
+
+What is the name of the `.csv` file with the network statistics from script 06?
+```{r}
+statfile <- "2008_2017_CA_ParticipationNetworkMetrics.csv"
+```
+<br>
+
+Provide the name for the output file with the scaled GLM coefficients. The output will be saved into the same directory as the network statistics file.
+```{r}
+outfile <- "2008_2017_CA_ParticipationNetworkMetrics_ScaledGLMs.csv"
+```
+<br>
+
+
+# 1. Data
+
+Network metrics
+
+Select the three main network metrics, and assign port groups to a region.
+```{r metrics}
+data <- read.csv(here::here(indir, statfile)) %>%
+  dplyr::select(y,period, pcgroup, N, ed, nc_weighted,m_weighted, mean_deg, nc, m) %>%
+  mutate(R = ifelse(pcgroup %in% c("CCA", "ERA", "BGA","BDA"), "North", "Central"))
+
+data$R <- factor(data$R, levels=c("North","Central"))
+
+colnames(data)
+```
+<br>
+
+Add the data on Dungeness crab closures to the network metrics data frame.
+```{r}
+closure_data <- read.csv(here::here('data/input', 'DCRB_Historic_Closures_CA_updated.csv')) %>%
+  mutate(D = ifelse(days.closed == 0, "none", ifelse(days.closed < 50, "medium", "high")))
+
+data <- left_join(data, closure_data, by=c("y", "pcgroup"))
+data$D <- as.factor(data$D)
+data$D <- factor(data$D, levels=c("none", "medium", "high"))
+```
+<br>
+
+Recode port group names as 1-7
+```{r}
+data$pcgroup <- as.numeric(data$pcgroup)
+```
+<br>
+
+Split into early and late season
+```{r}
+edata <- filter(data, period == "early") # early season
+ldata <- filter(data, period == "late") # late season
+```
+<br>
+
+
+# 2. GLMs
+
+Run each GLM, and grab the coefficients from the scaled model using the function `get_sc_coef`.
+```{r scaled_glms}
+##### Edge Density, with Node predictor #####
+ed.e <- glm(ed ~ D*R + N + pcgroup, data = edata, family = quasibinomial('logit'))
+ei <- get_sc_coef(ed.e, name="Edge Density",season="Early Season")
+
+ed.l <- glm(ed ~ D*R + N + pcgroup, data = ldata, family = quasibinomial('logit'))
+el <- get_sc_coef(ed.l, name="Edge Density",season="Late Season")
+
+##### Weighted Centralization, with Node predictor #####
+nc.e <- glm(nc_weighted ~ D*R + N, data = edata, family = quasibinomial('logit'))
+ci <- get_sc_coef(nc.e, name="Centralization",season="Early Season")
+
+nc.l <- glm(nc_weighted ~ D*R + N + pcgroup, data = ldata, family = quasibinomial('logit'))
+cl <- get_sc_coef(nc.l, name="Centralization",season="Late Season")
+
+##### Weighted Modularity, with Node predictor #####
+m.e <- glm(m_weighted ~ D*R + N, data = edata, family = gaussian('identity'))
+mi <- get_sc_coef(m.e, name="Modularity",season="Early Season")
+
+m.l <- glm(m_weighted ~ D*R + N + pcgroup, data = ldata, family = gaussian('identity'))
+ml <- get_sc_coef(m.l, name="Modularity",season="Late Season")
+```
+<br>
+
+Combine coefficients from all GLMs into a data frame. Clean up the variable names.
+```{r coef_df}
+mydat <- ei %>%
+  bind_rows(el) %>%
+  bind_rows(ci) %>%
+  bind_rows(cl) %>%
+  bind_rows(mi) %>%
+  bind_rows(ml) %>%
+  filter(!is.na(coefficients)) %>%
+  filter(variable != "(Intercept)")
+
+mydat$variable <- recode(mydat$variable,Dmedium="D (medium)",Dhigh="D (high)",
+                         `c.R`="R (Central)",`z.N`="Size",`z.pcgroup`="Port Group",
+                         `Dhigh:c.R`="D (high) : R (Central)")
+```
+<br>
+
+Referencing the output from script `08_nested_GLMs`, or the `stargazer` tables written out from script `Tables S6-7.R`, manually add in significance levels for each variable in the early and late season models. 
+```{r sig_df}
+sigdf.e <- data.frame(season="Early Season",
+                      metric=c(rep("Edge Density",6),rep("Centralization",6),rep("Modularity",6)),
+                    variable=rep(c("D (high) : R (Central)",
+                                   "D (medium)","D (high)",
+                                   "R (Central)","Size","Port Group"),3),
+                    sig=c("***","","***","","**",NA,
+                          "***","","***","","***",NA,
+                          "","","","","***",NA))
+sigdf.l <- data.frame(season="Late Season",
+                      metric=c(rep("Edge Density",6),rep("Centralization",6),rep("Modularity",6)),
+                    variable=rep(c("D (high) : R (Central)",
+                                   "D (medium)","D (high)",
+                                   "R (Central)","Size","Port Group"),3),
+                    sig=c("","","","","***",NA,
+                          "","","","","*",NA,
+                          "","","","","***",NA))
+sigdf <- rbind(sigdf.e,sigdf.l)
+```
+<br>
+
+
+# 3. Write out
+
+Combine the manually-coded significance information, and the GLM coefficients data frame. Then add a column `adj_x`, which will be used to mark significance in Figure 2. 
+```{r}
+mydat <- left_join(mydat,sigdf, by=c("variable","metric","season")) %>%
+  mutate(mydat, adj_x=ifelse(coefficients<0,coefficients-0.15,coefficients+0.1))
+```
+<br>
+
+Save the data frame.
+```{r out}
+write.csv(mydat, here::here(indir, outfile),row.names=FALSE)
+```
+<br>
+
+
+*From Gelman 2008: The rescaled coefficients are directly interpretable as changes on the logit scale comparing each input variable at a low value to a high value: for the numeric predictors, this is the mean ?1 standard deviation, and for the indicators, this is each level compared with the mean.*
+
+---
+Time Difference: `r round(Sys.time() - script_start_time, 3)`

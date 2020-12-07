@@ -1,0 +1,5 @@
+Some of the drvids are recorded as NAs when the recoded metier assignments are written out for non-reference years, across port groups.
+Add scripts for calculating vessel length: prep_dcrb_vessel_length_key_for_crabyear.csv
+Add supplemental network metrics GLMs
+
+tags to add: research-compendium
