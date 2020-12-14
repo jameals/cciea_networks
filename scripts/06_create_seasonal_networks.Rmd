@@ -1,7 +1,7 @@
 ---
-title: "Create Seasonal Participation Networks"
-author: "E. Fuller, M. Fisher"
-date: "Written Mar. 8, 2019. Last Run `r Sys.Date()`"
+title: "Create Participation Networks"
+author: "E. Fuller, M. Fisher, J.F. Samhouri"
+date: "Written Dec. 14, 2020. Last Run `r Sys.Date()`"
 output:
   html_document:
     df_print: paged
@@ -13,13 +13,13 @@ output:
     toc: yes
     toc_depth: '3'
 geometry: margin=1in
-subtitle: Preparation for network analysis in Fisher et al.
+subtitle: Preparation for network analysis in CCIEA ESR
 fontsize: 11pt
 ---
 
 # Description
 
-Creates a seasonal fisheries particiation network (igraph object) for each port group, for every crab year. Then calculates summary statistics for each network.
+Creates an annual fisheries particiation network (igraph object) for each port group, for every crab year. Then calculates summary statistics for each network.
 
 Section 3 allows you to calculate network metrics from existing igraph objects. Set Section 2 code chunks to `eval=FALSE` and Section 3 code chunks to `eval=TRUE` to run Section 3. 
 
@@ -59,7 +59,7 @@ source("R/calc_network_stats.R")
 Select your directories.
 ```{r}
 ## location of fish ticket with metiers assigned, metier key for each port group
-indir = 'data/input/metiers'
+indir = '/Users/jameal.samhouri/Documents/CCIEA Networks/processed/'
 
 ## output directory for igraph object
 outdir = 'data/networks/participation'
@@ -75,10 +75,10 @@ statdir = 'results/statistics'
 Identify the crab years and port groups that you would like to produce networks for. The port groups vector should include only those port groups which are present in the single data file produced with script 05. 
 ```{r}
 ## (crab) years
-years <- seq(2008,2017)
+years <- seq(2004,2019)
 
-## port groups
-myports <- c("CCA", "ERA", "BGA", "BDA", "SFA", "MRA", "MNA")
+## IOPAC port groups
+myports <- c("Puget Sound","North WA Coast","WA Coast","Other Coastal Washington","Astoria","Tillamook","Columbia River","Newport","Coos Bay","Brookings","Crescent City","Eureka","Morro Bay","Fort Bragg","Bodega Bay","San Francisco","San Diego","Monterey","Santa Barbara","Los Angeles","Unknown Ports" )
 ```
 <br>
 
@@ -88,7 +88,7 @@ rm_crab = TRUE
 ```
 <br>
 
-For confidentiality, three or more vessels much be participating in a given fishery for that fishery to be included in the networks. To avoid inclusion of rare or minimal fishing activity, a given fishery must contribute to at least 10% of a vessel's seasonal revenue to be included in the network data. 
+For confidentiality, three or more vessels must be participating in a given fishery for that fishery to be included in the networks. To avoid inclusion of rare or minimal fishing activity, a given fishery must contribute to at least 10% of a vessel's seasonal revenue to be included in the network data. 
 Both cutoff values can be increased if more stringent fishery inclusion criteria are preferred, and the contribution cutoff may be decreased (i.e. for summaries over shorter temporal / smaller spatial scales).
 ```{r}
 vessel_cutoff <- 3
@@ -111,6 +111,12 @@ ref_years <- c(2010,2011)
 # 1: Read in data
 
 Read in the landings data, from the file containing all fish tickets across port groups, within a single crab year.
+
+PICK UP HERE 121420
+
+NOTE FOR JAMEAL: read in fish ticket files with this naming convention: fish_tickets_crab2004_processed_for_networks.csv
+
+if species groupings column is named something other than metier.name, you'll have to go through the generate_participation_network.R function to replace it
 ```{r}
 for(y in years){
   if(y %in% ref_years){
@@ -154,38 +160,38 @@ For each crab year and port group, this code will:
 
 4. Calculate network-level statistics, and save to an output data frame.
 
-
+NOTE FOR JAMEAL: remove reference to met_names
 ```{r eval=TRUE}
 for(y in years){
   for(p in myports){
     cat(p, "\n")
     
-    #### Subset data ####
-    # subset dates data frame to get opening date for given port group (not specific for year)
-    open_info <- filter(dates_df, pcgroup == p)
-    open_month <- month(filter(dates_df, pcgroup == p)$odate); open_day <- day(filter(dates_df, pcgroup == p)$odate)
-    # create open date object for the current fishtix year, 'y'
-    if(year(open_info$odate) == open_info$crab_year){
-      open_date <- paste0(y, "-", open_month, "-", open_day)
-    } else{
-      open_date <- paste0(y+1, "-", open_month, "-", open_day)
-    }
-    open_date <- ymd(open_date)
-    # pull fish ticket data for given year, port group, before Dcrab opened
-    early_dat <- fishtix %>%
-      filter(crab_year == y & pcgroup == p) %>%
-      filter(tdate < open_date)
-    if(y==2015 & rm_crab){
-      early_dat <- early_dat %>%
-        filter(spid != "DCRB")
-    }
-    # pull fish ticket data for given year, port group, after Dcrab opened
-    late_dat <- fishtix %>%
-      filter(crab_year == y & pcgroup == p) %>%
-      filter(tdate >= open_date)
-    
-    #### Read in metier names key ####
-    met_names <- read.delim(here::here(indir, paste0(p, "_metier_names.txt")), stringsAsFactors = FALSE)
+    # #### Subset data ####
+    # # subset dates data frame to get opening date for given port group (not specific for year)
+    # open_info <- filter(dates_df, pcgroup == p)
+    # open_month <- month(filter(dates_df, pcgroup == p)$odate); open_day <- day(filter(dates_df, pcgroup == p)$odate)
+    # # create open date object for the current fishtix year, 'y'
+    # if(year(open_info$odate) == open_info$crab_year){
+    #   open_date <- paste0(y, "-", open_month, "-", open_day)
+    # } else{
+    #   open_date <- paste0(y+1, "-", open_month, "-", open_day)
+    # }
+    # open_date <- ymd(open_date)
+    # # pull fish ticket data for given year, port group, before Dcrab opened
+    # early_dat <- fishtix %>%
+    #   filter(crab_year == y & pcgroup == p) %>%
+    #   filter(tdate < open_date)
+    # if(y==2015 & rm_crab){
+    #   early_dat <- early_dat %>%
+    #     filter(spid != "DCRB")
+    # }
+    # # pull fish ticket data for given year, port group, after Dcrab opened
+    # late_dat <- fishtix %>%
+    #   filter(crab_year == y & pcgroup == p) %>%
+    #   filter(tdate >= open_date)
+    # 
+    # #### Read in metier names key ####
+    # met_names <- read.delim(here::here(indir, paste0(p, "_metier_names.txt")), stringsAsFactors = FALSE)
     
     
     ##### EARLY SEASON ####

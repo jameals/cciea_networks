@@ -1,0 +1,335 @@
+---
+title: "Plot Annual Participation Networks"
+author: "M. Fisher"
+date: "Written Dec. 7, 2020. Last Run `r Sys.Date()`"
+output:
+  html_document:
+    df_print: paged
+    toc: yes
+    toc_depth: '3'
+  pdf_document:
+    highlight: haddock
+    number_sections: yes
+    toc: yes
+    toc_depth: '3'
+geometry: margin=1in
+subtitle: Preparation for network analysis in Fisher et al.
+fontsize: 11pt
+---
+
+# Description
+
+Plot annual fisheries participation networks (igraph object) for each port group, for every crab year.
+
+Section 2 will generate network graphs that are colored according to the gear group used in each fishery. You have the option to use either the force-directed layout algorithm developed by [Fruchterman & Reingold (1991)](http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.13.8444&rep=rep1&type=pdf) or a simple circular layout. The Fruchterman & Reingold layout is informative but can result in overlap / odd clustering, especially if there is a fishery that has no / weakly connecting edges to other fisheries in the network.
+
+Section 3 will generate simplified network graphs using a circular layout that highlight the Dungeness crab node (the visualizations used for Figure 1 in Fisher et al.). The plotting function in this section of the script could be adjusted to more flexibly highlight other fisheries.
+
+I did not incorporate this script into the Github repository for Fisher et al., so all functions called in the script are written out in the **Functions** section and not sourced from a separate .R script. Note that file names are hard-coded into the plotting functions (see code chunk `def_fun`). 
+
+
+
+<br>
+```{r "setup", include=FALSE}
+if(!require("here")) {install.packages("here")}
+library(here)
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = here::here())
+
+## start time for full script
+script_start_time <- Sys.time()
+```
+<br>
+
+This script requires the following packages. 
+```{r packages, message=FALSE, warning=FALSE}
+if(!require("tidyverse")) {install.packages("tidyverse")}
+if(!require("ggplot2")) {install.packages("ggplot2")}
+if(!require("igraph")) {install.packages("igraph")}
+```
+<br>
+
+And calls the following functions:
+```{r def_fun}
+### color vertices by gear group
+vertex_color <- function(g){
+  vertex_cols <- c()
+  for(i in seq(1, vcount(g))){
+    tmp_node <- V(g)$name[i]
+    if(grepl("HKL",tmp_node) == TRUE & grepl("POT",tmp_node) == TRUE){
+      tmp_col = "tan1"
+    } else if(grepl("HKL",tmp_node) == TRUE){
+      tmp_col = "darkgoldenrod1"
+    } else if(grepl("NET",tmp_node) == TRUE){
+      tmp_col = "cyan4"
+    } else if(grepl("TLS",tmp_node) == TRUE){
+      tmp_col = "chartreuse3"
+    } else if(grepl("TWL",tmp_node) == TRUE){
+      tmp_col = "chocolate4"
+    } else if(grepl("TWS",tmp_node) == TRUE){
+      tmp_col = "hotpink"
+    } else if(grepl("POT",tmp_node) == TRUE){
+      tmp_col = "darkorange2"
+    } else{
+      if(tmp_node=="other_port" | tmp_node=="no_fishing"){
+        tmp_col="gray"
+      } else if(tmp_node=="none"){
+        tmp_col="gray"
+      } else{
+        tmp_col = "plum3"
+      }
+    }
+    vertex_cols[i] <- tmp_col
+  }
+  return(vertex_cols)
+}
+
+
+### label vertices with viewer-friendly labels, as opposed to metier abbreviations
+rename_vertices <- function(g){
+  new_names <- V(g)$common_name %>%
+    str_replace("Misc. Pot/H&L", "Other (Pot,HL)") %>%  
+    str_replace("Misc. Fisheries", "Other") %>%
+    str_replace("Rockfish/Lcod","RockLing") %>%
+    str_replace("DTS Trawl","Groundfish") %>%
+    str_replace("Dcrab","D.crab")
+  new_names[which(new_names=="Hagfish (pot)")] <- "Hagfish"      # note that you should be able to use str_replace for all replacements, but the function was really buggy on my computer
+  new_names[which(new_names=="Sablefish (Lgl)")] <- "Sablefish"
+  new_names[which(new_names=="Sablefish (pot)")] <- "Sablefish"
+  new_names[which(new_names=="Chinook (trl)")] <- "Chinook"
+  new_names[which(new_names=="Shrimp (pot)")] <- "Shrimp"
+  new_names[which(new_names=="C. Halibut (pole)")] <- "C. Halibut"
+  ## add lines HERE: new_names[which(new_names=="{old name}")] <- "{new name}" ##
+  return(new_names)
+}
+
+
+### plotting function for section 2
+plot_network <- function(g, layout_type, outdir){
+  port_group <- unique(V(g)$p)
+  y <- unique(V(g)$year)
+  if(layout_type=="fr" | layout_type=="both"){
+    l <-  layout.fruchterman.reingold(g)
+    # l <- layout_with_fr(g) #this is not the same as above??
+    l <- cbind(l, 1:vcount(g))           # switched from a solid number to a function to get number of vertices -- M.F. 11/19/2018
+    rownames(l) <- V(g)$name
+    png(here::here(outdir, paste0(port_group,"_", y,"_annual_fr_bygear.png")),bg="transparent")  # if this resolution isn't good enough, add: width = 2000, height = 1500,res=300
+    plot(g, vertex.size = V(g)$importance/(max(V(g)$importance)*0.02), 
+         layout = l, #where to put the nodes on the plot
+         edge.width = sqrt(E(g)$weight)/(0.037*max(sqrt(E(g)$weight))),
+         edge.curved = F, 
+         axes = F,
+         edge.color = 'gray',
+         vertex.label = V(g)$common_name,
+         vertex.color =adjustcolor(V(g)$colors, alpha.f=0.90),
+         vertex.label.family = 'sans', 
+         vertex.label.color = V(g)$colors,
+         vertex.label.cex= 1.2, 
+         vertex.frame.color=NA
+         # vertex.label.dist = c(-9,-8,-9,-10),               # these can be adjusted manually to make it look nicer, which is super annoying
+         # vertex.label.degree = c(pi^(0.9),pi/5,pi/5,pi*1.1) # these can be adjusted manually to make it look nicer, which is super annoying
+         )
+    dev.off()
+  }
+  if (layout_type=="c" | layout_type=="both"){
+    l <-layout.circle(g)
+    l <- cbind(l, 1:vcount(g))
+    rownames(l) <- V(g)$name
+    tmpnames <- list(V(g)$name)
+    png(here::here(outdir, paste0(port_group,"_", y,"_annual_circular_bygear.png")),bg="transparent")  # if this resolution isn't good enough, add: width = 2000, height = 1500,res=300
+    plot(g, vertex.size = V(g)$importance/(max(V(g)$importance)*0.02), 
+         layout = l, #where to put the nodes on the plot
+         edge.width = sqrt(E(g)$weight)/(0.037*max(sqrt(E(g)$weight))),
+         edge.curved = F, 
+         axes = F,
+         edge.color = 'gray',
+         vertex.label = V(g)$common_name,
+         vertex.color =adjustcolor(V(g)$colors, alpha.f=0.90),
+         vertex.label.family = 'sans', 
+         # vertex.label.color = V(g)$colors, # to have same color as vertices
+         vertex.label.color = "gray25",
+         vertex.label.cex= 1.2, 
+         vertex.frame.color=NA
+         # vertex.label.dist = c(-9,-8,-9,-10),               # these can be adjusted manually to make it look nicer, which is super annoying
+         # vertex.label.degree = c(pi^(0.9),pi/5,pi/5,pi*1.1) # these can be adjusted manually to make it look nicer, which is super annoying
+         )
+    dev.off()
+  } 
+  if(!(layout_type %in% c("c","fr","both"))){message("ERROR: don't recognize layout type. try again with [fr/c/both]")}
+
+}
+
+
+
+### plotting function for section 3
+plot_simple <- function(g, outdir){
+  port_group <- unique(V(g)$p)
+  y <- unique(V(g)$year)
+  l <-layout.circle(g)
+  l <- cbind(l, 1:vcount(g))
+  rownames(l) <- V(g)$name
+  tmpnames <- list(V(g)$name)
+  V(g)$colors <- unlist(lapply(tmpnames, function (x) {ifelse(x=="DCRB_POT","darkorange1","gray25")}))
+  png(here::here(outdir, paste0(port_group,"_", y,"_annual_circular_dcrb.png")),bg="transparent")
+  plot(g, vertex.size = V(g)$importance/(max(V(g)$importance)*0.025), 
+       layout = l, #where to put the nodes on the plot
+       edge.width = sqrt(E(g)$weight)/(max(sqrt(E(g)$weight))*0.10),
+       edge.curved=F,
+       axes = F,
+       edge.color = 'gray98',
+       vertex.color = V(g)$colors, 
+       vertex.label = NA, 
+       vertex.frame.color=NA) #vertex.label.color = '#cb4b16'
+  dev.off()
+}
+
+```
+<br>
+
+
+# User Inputs 
+
+Select your directories.
+```{r}
+## location of igraph objects
+indir = 'data/networks/participation'
+
+## output directory for network viz
+pngdir = 'data/networks/participation/plots'
+```
+<br>
+
+Identify the crab years and port groups that you would like to produce networks for. 
+```{r}
+## (crab) years
+years <- seq(2009,2010)
+
+## port groups
+myports <- c("CCA", "ERA", "BGA", "BDA", "SFA", "MRA", "MNA")
+```
+<br>
+
+Do you want to plot using the Fruchterman & Reingold layout ["fr"], a circular layout ["c"], or both ["both"]?
+```{r}
+my_layout <- "both"
+```
+<br>
+
+
+# 1: Read in data
+
+Read the igraph objects into a list. This for loop will also apply the functions to recolor and rename vertices
+```{r}
+graphs_list <- list()
+graph_names <- c()
+i=1
+for(p in myports){
+  for(y in years){
+    tmpgraph <- readRDS(here::here(indir, paste0("igraph_", p, "_", y ,".rds")))
+    V(tmpgraph)$p <- p
+    V(tmpgraph)$year <- y
+    V(tmpgraph)$common_name <- rename_vertices(tmpgraph)
+    V(tmpgraph)$colors <- vertex_color(tmpgraph)
+    graphs_list[[i]] <- tmpgraph
+    graph_names[i] <- paste0(p,"_",y)
+    i = i + 1
+  }
+}
+names(graphs_list) <- graph_names
+```
+<br>
+
+
+# 2: Plot with Gear Legend
+
+graphs will be written out to .png files in the function. 
+
+```{r}
+lapply(graphs_list,plot_network, my_layout, pngdir)
+```
+<br>
+
+An example of the F-R layout:
+```{r echo=FALSE}
+l <-  layout.fruchterman.reingold(graphs_list[[1]])
+# l <- layout_with_fr(g) #this is not the same as above??
+l <- cbind(l, 1:vcount(graphs_list[[1]]))           # switched from a solid number to a function to get number of vertices -- M.F. 11/19/2018
+rownames(l) <- V(graphs_list[[1]])$name
+plot(graphs_list[[1]], vertex.size = V(graphs_list[[1]])$importance/(max(V(graphs_list[[1]])$importance)*0.02), 
+     layout = l, #where to put the nodes on the plot
+     edge.width = sqrt(E(graphs_list[[1]])$weight)/(0.037*max(sqrt(E(graphs_list[[1]])$weight))),
+     edge.curved = F, 
+     axes = F,
+     edge.color = 'gray',
+     vertex.label = V(graphs_list[[1]])$common_name,
+     vertex.color =adjustcolor(V(graphs_list[[1]])$colors, alpha.f=0.90),
+     vertex.label.family = 'sans', 
+     vertex.label.color = V(graphs_list[[1]])$colors,
+     vertex.label.cex= 1.2, 
+     vertex.frame.color=NA
+     # vertex.label.dist = c(-9,-8,-9,-10),               # these can be adjusted manually to make it look nicer, which is super annoying
+     # vertex.label.degree = c(pi^(0.9),pi/5,pi/5,pi*1.1) # these can be adjusted manually to make it look nicer, which is super annoying
+)
+```
+
+An example of the circular layout:
+```{r echo=FALSE}
+l <-layout.circle(graphs_list[[1]])
+l <- cbind(l, 1:vcount(graphs_list[[1]]))
+rownames(l) <- V(graphs_list[[1]])$name
+tmpnames <- list(V(graphs_list[[1]])$name)
+plot(graphs_list[[1]], vertex.size = V(graphs_list[[1]])$importance/(max(V(graphs_list[[1]])$importance)*0.02), 
+     layout = l, #where to put the nodes on the plot
+     edge.width = sqrt(E(graphs_list[[1]])$weight)/(0.037*max(sqrt(E(graphs_list[[1]])$weight))),
+     edge.curved = F, 
+     axes = F,
+     edge.color = 'gray',
+     vertex.label = V(graphs_list[[1]])$common_name,
+     vertex.color =adjustcolor(V(graphs_list[[1]])$colors, alpha.f=0.90),
+     vertex.label.family = 'sans', 
+     # vertex.label.color = V(g)$colors, # to have same color as vertices
+     vertex.label.color = "gray25",
+     vertex.label.cex= 1.2, 
+     vertex.frame.color=NA
+     # vertex.label.dist = c(-9,-8,-9,-10),               # these can be adjusted manually to make it look nicer, which is super annoying
+     # vertex.label.degree = c(pi^(0.9),pi/5,pi/5,pi*1.1) # these can be adjusted manually to make it look nicer, which is super annoying
+)
+```
+
+
+# 3: Simple Plot
+
+graphs will be written out to .png files in the function. 
+```{r}
+lapply(graphs_list,plot_simple, pngdir)
+```
+<br>
+
+An example of the simplified circular graph, highlighting the Dungeness crab node:
+```{r echo=FALSE}
+l <-layout.circle(graphs_list[[1]])
+l <- cbind(l, 1:vcount(graphs_list[[1]]))
+rownames(l) <- V(graphs_list[[1]])$name
+tmpnames <- list(V(graphs_list[[1]])$name)
+V(graphs_list[[1]])$colors <- unlist(lapply(tmpnames, function (x) {ifelse(x=="DCRB_POT","darkorange1","gray25")}))
+plot(graphs_list[[1]], vertex.size = V(graphs_list[[1]])$importance/(max(V(graphs_list[[1]])$importance)*0.025), 
+     layout = l, #where to put the nodes on the plot
+     edge.width = sqrt(E(graphs_list[[1]])$weight)/(max(sqrt(E(graphs_list[[1]])$weight))*0.10),
+     edge.curved=F,
+     axes = F,
+     edge.color = 'gray98',
+     vertex.color = V(graphs_list[[1]])$colors, 
+     vertex.label = NA, 
+     vertex.frame.color=NA) #vertex.label.color = '#cb4b16'
+```
+<br>
+
+
+
+
+
+
+
+
+
+
