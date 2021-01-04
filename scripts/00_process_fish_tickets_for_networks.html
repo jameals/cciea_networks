@@ -9,7 +9,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
 
 
-<meta name="author" content="M. Fisher" />
+<meta name="author" content="M. Fisher, J.F. Samhouri" />
 
 
 <title>Process Fish Tickets for Participation Networks</title>
@@ -1634,9 +1634,9 @@ summary {
 
 
 <h1 class="title toc-ignore">Process Fish Tickets for Participation Networks</h1>
-<h3 class="subtitle">Preparation for network analysis in Fisher et al.</h3>
-<h4 class="author">M. Fisher</h4>
-<h4 class="date">Written Feb. 5, 2019. Last Run 2020-06-20</h4>
+<h3 class="subtitle">Preparation for network analysis in CCIEA ESR</h3>
+<h4 class="author">M. Fisher, J.F. Samhouri</h4>
+<h4 class="date">Written Dec. 7, 2020. Last Run 2021-01-04</h4>
 
 </div>
 
@@ -1645,61 +1645,90 @@ summary {
 <li><a href="#description">Description</a></li>
 <li><a href="#user-inputs">User Inputs</a></li>
 <li><a href="#edit-pacfin-data">1: Edit PacFIN Data</a><ul>
-<li><a href="#read-subset-data">1.1. Read, Subset data</a></li>
+<li><a href="#read-glue-subset-data">1.1. Read, Glue, Subset data</a></li>
 <li><a href="#edit-add-columns">1.2. Edit, Add columns</a></li>
 </ul></li>
 <li><a href="#write-out-fish-tickets">2: Write out fish tickets</a><ul>
 <li><a href="#by-year">2.1. By year</a></li>
-<li><a href="#by-crab-year">2.2. By crab year</a></li>
+<li><a href="#by-crab-year">2.2. By crab year</a><ul>
+<li><a href="#skip-this-section-for-cciea-analysis-dec-2020">SKIP THIS SECTION FOR CCIEA ANALYSIS DEC 2020</a></li>
 </ul></li>
+</ul></li>
+<li><a href="#append-vessel-lengths">3: Append Vessel Lengths</a><ul>
+<li><a href="#vessel-registration-data">3.1. Vessel Registration Data</a></li>
+<li><a href="#calculate-vessel-lengths">3.2. Calculate Vessel Lengths</a></li>
+<li><a href="#check-vessel-lengths">3.3. Check Vessel Lengths</a></li>
+</ul></li>
+<li><a href="#write-out-fish-tickets-with-length">4: Write out fish tickets with length</a></li>
 </ul>
 </div>
 
 <div id="description" class="section level1">
 <h1>Description</h1>
 <p>This code processes raw <a href="www.pacfin.pmsfc.org">PacFIN</a> fish tickets, which will then be used to generate participation networks. It is designed to write out a separate file for each year of input data, by calendar and crab year.</p>
-<p>This version of the script will replace PacFIN’s nominal species IDs with the equivalent regular species IDs. For more on nominal IDs, see the <a href="https://pacfin.psmfc.org/data/faqs/">PacFIN FAQs page</a>. <br> <br></p>
+<p>This version of the script will replace PacFIN’s nominal species IDs with the equivalent regular species IDs. For more on nominal IDs, see the <a href="https://pacfin.psmfc.org/data/faqs/">PacFIN FAQs page</a>.</p>
+<p>Additional Resources: * <a href="https://www.psmfc.org/efin/docs/fleetreport.pdf">PMSC Fleet Report</a>, esp Table 8 * <a href="https://pacfin.psmfc.org//wp-content/uploads/2016/06/PacFIN_Comprehensive_Fish_Tickets.pdf">PacFIN Column names key</a></p>
+<p><br> <br></p>
 <p>This script requires the following packages.</p>
 <pre class="r"><code>library(here)
 library(tidyverse)
 library(foreign)
 library(lubridate)</code></pre>
-<p><br> <br></p>
+<p><br></p>
+<p>And calls the following functions.</p>
+<pre class="r"><code># source(here::here('R','get_vessel_length.R'))
+# source(here::here('R','lengths_2yr_median.R'))
+# source(here::here('R','get_mode.R'))
+# source(here::here('R','lengths_5yr_registration.R'))</code></pre>
+<p><br></p>
 </div>
 <div id="user-inputs" class="section level1">
 <h1>User Inputs</h1>
 <p>Select your directories.</p>
 <pre class="r"><code>## raw PacFIN fish ticket data file location
-indir &lt;- &quot;../Participation_Networks/input_data&quot;
+indir1 &lt;- &quot;/Users/jameal.samhouri/Documents/Koehn et al. cc vulnerability/Data/&quot;
+indir2 &lt;- &quot;/Users/jameal.samhouri/Documents/CCIEA Networks/raw/&quot;
 
-## output directory for processed fish tickets
+## output directory for confidential data
+out_conf_dir &lt;- &quot;/Users/jameal.samhouri/Documents/CCIEA Networks/processed/&quot;
+
+## output directory for processed fish tickets. not confidential
 processdir &lt;- &quot;data/input&quot;</code></pre>
 <p><br></p>
-<p>Specify file name of the raw fish ticket data file. This script takes a flexible input file name, but will write out hard-coded file names for consistency through the rest of the analysis.</p>
-<pre class="r"><code>myfile &lt;- &quot;2006_2016_compFT.csv&quot;
-# myfile &lt;- &quot;fish tickets 2016-2018.csv&quot;</code></pre>
+<p>Specify file name of the raw fish ticket data file and supporting files with species and port grouping keys. This script takes a flexible input file name, but will write out hard-coded file names for consistency through the rest of the analysis.</p>
+<pre class="r"><code># will need to glue 2004-2018 data to 2019-2020 data
+
+myfile1 &lt;- &quot;pacfin_compiled_2004thru2018.rds&quot;
+myfile2 &lt;- &quot;fish tickets 2019-2020.csv&quot;
+
+myfile3 &lt;- &quot;iopac_conversion_table.csv&quot;
+myfile4 &lt;- &quot;species_groupings_spgrpn2_iea.csv&quot; # originally from first tab of species_groupings IEA.xlsx from Dan Holland. see email of 121520
+# myfile4 &lt;- &quot;species_groupings_spgrpn2.csv&quot; # originally from first tab of species_groupings.xlsx from Dan Holland</code></pre>
 <p><br></p>
-<p>Set a few more user inputs <br> <em>If you decide to write out the processed fish ticket data using crab years as time increments (<code>crab_year=TRUE</code>), be sure to supply all of the necessary calendar years. For example, if you are processing fish tickets for the 2014 crab year, you will need to read in raw PacFIN fish ticket data for the calendar years 2013 and 2014; if you are processing fish tickets for the 2014 and 2015 crab years, you will need to read in raw PacFIN fish ticket data for calendar years 2014,2015,2016.</em></p>
+<p>Set a few more user inputs to process the fish tickets <br> <em>If you decide to write out the processed fish ticket data using crab years as time increments (<code>crab_year=TRUE</code>), be sure to supply all of the necessary calendar years. For example, if you are processing fish tickets for the 2014 crab year, you will need to read in raw PacFIN fish ticket data for the calendar years 2013 and 2014; if you are processing fish tickets for the 2014 and 2015 crab years, you will need to read in raw PacFIN fish ticket data for calendar years 2014,2015,2016.</em></p>
 <pre class="r"><code>## do you want to write out the fish ticket data as crab years? [TRUE/FALSE]
 crab_year = TRUE
 
 ## if crab_year = TRUE, which crab years of fish tickets are you processing? [numeric vector]
-crab_years &lt;- seq(2014,2015)
+crab_years &lt;- seq(2004,2019)
 
 ## which years of fish tickets are you processing? [numeric vector]
-years &lt;- seq(2014,2016)
+years &lt;- seq(2004,2020)
 
 ## do you want to write out the average price per pounds calculated from the data? [TRUE/FALSE]
-write_ppp = FALSE</code></pre>
-<p><br></p>
+write_ppp = FALSE
+
+## do you want to only get vessel lengths for Dungeness crab vessels (`dcrb_only` set to TRUE)?
+dcrb_only &lt;- FALSE</code></pre>
+<p><br> <br></p>
 </div>
 <div id="edit-pacfin-data" class="section level1">
 <h1>1: Edit PacFIN Data</h1>
-<div id="read-subset-data" class="section level2">
-<h2>1.1. Read, Subset data</h2>
-<p>This should be a <code>.csv</code> file containing raw PacFIN data.</p>
-<pre class="r"><code>rawdat &lt;- read.csv(here::here(indir,myfile)) %&gt;%
-  filter(LANDING_YEAR %in%  years)
+<div id="read-glue-subset-data" class="section level2">
+<h2>1.1. Read, Glue, Subset data</h2>
+<p>NOTE: you can skip reading in the individual raw data files if “pacfin_compiled_2004thru2020.rds” already exists.</p>
+<p>This should be a <code>.rds</code> or a <code>.csv</code> file containing raw PacFIN data.</p>
+<pre class="r"><code>rawdat &lt;- read_rds(paste0(out_conf_dir,&quot;pacfin_compiled_2004thru2020.rds&quot;))
 colnames(rawdat)</code></pre>
 <pre><code>##   [1] &quot;LANDING_YEAR&quot;                   &quot;LANDING_MONTH&quot;                 
 ##   [3] &quot;LANDING_DAY&quot;                    &quot;LANDING_DATE&quot;                  
@@ -1751,7 +1780,45 @@ colnames(rawdat)</code></pre>
 ##  [95] &quot;IS_LONGLINE_ENDORSED&quot;           &quot;IS_TRAP_ENDORSED&quot;              
 ##  [97] &quot;PACFIN_YEAR&quot;                    &quot;PACFIN_VDATE&quot;                  
 ##  [99] &quot;CFT_ID&quot;                         &quot;IS_EM_LANDING&quot;                 
-## [101] &quot;TICKET_SOURCE_CODE&quot;</code></pre>
+## [101] &quot;TICKET_SOURCE_CODE&quot;             &quot;spid&quot;</code></pre>
+<pre class="r"><code># rawdat1 &lt;- read_rds(paste0(indir1,myfile1)) %&gt;%
+#   filter(LANDING_YEAR %in%  years)
+# print(&quot;2004-2018 fish ticket data column names&quot;)
+# colnames(rawdat1)
+# 
+# rawdat2 &lt;- read.csv(paste0(indir2,myfile2)) %&gt;%
+#   filter(LANDING_YEAR %in%  years)
+# print(&quot;2019-2020 fish ticket data column names&quot;)
+# colnames(rawdat2)
+
+port_grps &lt;- read_csv(here::here(processdir,myfile3))</code></pre>
+<pre><code>## Parsed with column specification:
+## cols(
+##   IOPAC = col_character(),
+##   PACFIN_PORT_CODE = col_character(),
+##   `Pacfin Port Name` = col_character(),
+##   `Pacfin Port Description` = col_character(),
+##   `Agency Name` = col_character(),
+##   PACFIN_LAT = col_double(),
+##   PACFIN_LONG = col_double(),
+##   Map_order = col_double()
+## )</code></pre>
+<pre class="r"><code>sp_grps &lt;- read_csv(here::here(processdir,myfile4))</code></pre>
+<pre><code>## Parsed with column specification:
+## cols(
+##   SPID = col_character(),
+##   PACFIN_SPECIES_COMMON_NAME = col_character(),
+##   SPGRPN2 = col_double()
+## )</code></pre>
+<p><br></p>
+<p>Glue fish ticket data together into single data frame, write out .rds.</p>
+<pre class="r"><code># join fish ticket data for 2019-20, make new RDS
+
+# which(names(rawdat1) != names(rawdat2)) # last 22 columns of 2019-20 data do not match
+# pacfin2019_2020.df &lt;- rawdat2[,1:101]
+# pacfin.df &lt;- bind_rows(rawdat1,pacfin2019_2020.df)
+# write_rds(pacfin.df, paste0(out_conf_dir,&quot;pacfin_compiled_2004thru2020.rds&quot;))
+# rm(pacfin.df, rawdat1, rawdat2, pacfin2019_2020.df)</code></pre>
 <p><br></p>
 <p>Subset the raw data to include only the columns that are needed. Then rename the columns that will be retained in the final processed data. The last three columns are used to calculate per-species / total revenue and landed weight, but will not ultimately be retained.</p>
 <pre class="r"><code>rawdat.sub &lt;- select(rawdat, c(FISH_TICKET_ID, PACFIN_PORT_CODE, PACFIN_GROUP_PORT_CODE, VESSEL_NUM, AGENCY_CODE, COUNCIL_CODE, 
@@ -1778,18 +1845,19 @@ colnames(rawdat.sub) &lt;- c(&quot;trip_id&quot;,&quot;pcid&quot;, &quot;pcgroup
 <pre class="r"><code>rawdat.sub &lt;- rawdat.sub %&gt;%
   ## create combined vessel ID / year variable
   mutate(drvid_year = paste0(drvid,&quot;_&quot;, year)) %&gt;%
-  ## create &#39;date&#39; object for ticket landing date
+  ## create 'date' object for ticket landing date
   mutate(tdate = as.Date(as.character(tdate), &quot;%d-%b-%y&quot;)) %&gt;%
   mutate(tdate = ymd(tdate)) %&gt;%
-  ## create &#39;calendar week of landing&#39; variable
+  ## create 'calendar week of landing' variable
   mutate(tweek=week(tdate))
 
 ## QC: check first and last date of landing for each year, and total tickets per year.
 rawdat.sub %&gt;% group_by(year) %&gt;%
   summarise(first_ticket = min(tdate), last_ticket = max(tdate), total_tickets = length(unique(trip_id)))</code></pre>
+<pre><code>## `summarise()` ungrouping output (override with `.groups` argument)</code></pre>
 <div data-pagedtable="false">
 <script data-pagedtable-source type="application/json">
-{"columns":[{"label":["year"],"name":[1],"type":["int"],"align":["right"]},{"label":["first_ticket"],"name":[2],"type":["date"],"align":["right"]},{"label":["last_ticket"],"name":[3],"type":["date"],"align":["right"]},{"label":["total_tickets"],"name":[4],"type":["int"],"align":["right"]}],"data":[{"1":"2014","2":"2014-01-01","3":"2014-12-31","4":"111286"},{"1":"2015","2":"2015-01-01","3":"2015-12-31","4":"93970"},{"1":"2016","2":"2016-01-01","3":"2016-09-19","4":"53211"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
+{"columns":[{"label":["year"],"name":[1],"type":["int"],"align":["right"]},{"label":["first_ticket"],"name":[2],"type":["date"],"align":["right"]},{"label":["last_ticket"],"name":[3],"type":["date"],"align":["right"]},{"label":["total_tickets"],"name":[4],"type":["int"],"align":["right"]}],"data":[{"1":"2004","2":"2004-01-01","3":"2004-12-31","4":"130845"},{"1":"2005","2":"2005-01-01","3":"2005-12-31","4":"113331"},{"1":"2006","2":"2006-01-01","3":"2006-12-31","4":"109411"},{"1":"2007","2":"2007-01-01","3":"2007-12-31","4":"104192"},{"1":"2008","2":"2008-01-01","3":"2008-12-31","4":"96522"},{"1":"2009","2":"2009-01-01","3":"2009-12-31","4":"103491"},{"1":"2010","2":"2010-01-01","3":"2010-12-31","4":"105066"},{"1":"2011","2":"2011-01-01","3":"2011-12-31","4":"112957"},{"1":"2012","2":"2012-01-01","3":"2012-12-31","4":"110286"},{"1":"2013","2":"2013-01-01","3":"2013-12-31","4":"116531"},{"1":"2014","2":"2014-01-01","3":"2014-12-31","4":"111286"},{"1":"2015","2":"2015-01-01","3":"2015-12-31","4":"93970"},{"1":"2016","2":"2016-01-01","3":"2016-09-19","4":"53211"},{"1":"2017","2":"2017-01-01","3":"2017-12-31","4":"88902"},{"1":"2018","2":"2018-01-01","3":"2018-12-31","4":"85257"},{"1":"2019","2":"2019-01-01","3":"2019-12-31","4":"81803"},{"1":"2020","2":"2020-01-01","3":"2020-12-06","4":"70986"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
   </script>
 </div>
 <p><br></p>
@@ -1807,13 +1875,23 @@ rawdat.sub %&gt;% group_by(year) %&gt;%
                                      POP2 = &quot;POP&quot;, LSP1 = &quot;LSPN&quot;, SSP1 = &quot;SSPN&quot;, THD1 = &quot;THDS&quot;, WDW1=&quot;WDOW&quot;, YEY1 = &quot;YEYE&quot;, CBZ1 = &quot;CBZN&quot;,
                                      KGL1 = &quot;KLPG&quot;, LCD1 = &quot;LCOD&quot;, CHL1=&quot;CHLB&quot;, RGL1 = &quot;RCKG&quot;, SHP1 = &quot;SHPD&quot;))</code></pre>
 <p><br></p>
+<p>Next add columns which describe the species group and port group for landings, based on Holland CCIEA ESR species groupings and IOPAC port codes.</p>
+<pre class="r"><code>rawdat.sub &lt;- rawdat.sub %&gt;%
+  left_join(
+    port_grps, by = c(&quot;pcid&quot; = &quot;PACFIN_PORT_CODE&quot;)
+  ) %&gt;%
+  left_join(
+    sp_grps, by = c(&quot;spid&quot; = &quot;SPID&quot;)
+  )</code></pre>
+<p><br></p>
 <p>Next, add in an estimated exvessel revenue for commercial fish tickets which have no revenue recorded. To do so, we calculate an average price per pound for each species, for every year / week / port group. Then we create an adjusted <code>ppp</code> column for trips without revenue, and calculate the <code>adj_revenue</code> by multiplying <code>adj_ppp * pounds</code>.</p>
 <pre class="r"><code>## get the average ppp for each species/year/week/port group, write out 
 ppp_key &lt;- rawdat.sub %&gt;%
   filter(ppp &gt; 0) %&gt;%
   group_by(year, tweek, spid_recode, pcgroup) %&gt;%
-  summarise(avg_ppp = mean(ppp, na.rm=TRUE))
-if(write_ppp){write.csv(ppp_key, paste0(processdir, &quot;Price_per_Pound_Key_&quot;,paste0(years,collapse=&quot;-&quot;), &quot;.csv&quot;), row.names=FALSE)}
+  summarise(avg_ppp = mean(ppp, na.rm=TRUE))</code></pre>
+<pre><code>## `summarise()` regrouping output by 'year', 'tweek', 'spid_recode' (override with `.groups` argument)</code></pre>
+<pre class="r"><code>if(write_ppp){write.csv(ppp_key, paste0(processdir, &quot;Price_per_Pound_Key_&quot;,paste0(years,collapse=&quot;-&quot;), &quot;.csv&quot;), row.names=FALSE)}
 
 ## recalculate revenue for each ticket
 rawdat.sub &lt;- rawdat.sub %&gt;%
@@ -1821,7 +1899,7 @@ rawdat.sub &lt;- rawdat.sub %&gt;%
   mutate(adj_revenue = ifelse(revenue != 0, revenue, adj_ppp*pounds))
 
 cat(&quot;Added in &quot;, sum(!is.na(rawdat.sub$ppp)) - sum(rawdat.sub$ppp != 0), &quot; adjusted ppp.&quot;)</code></pre>
-<pre><code>## Added in  117943  adjusted ppp.</code></pre>
+<pre><code>## Added in  NA  adjusted ppp.</code></pre>
 <p><br></p>
 </div>
 </div>
@@ -1832,12 +1910,13 @@ cat(&quot;Added in &quot;, sum(!is.na(rawdat.sub$ppp)) - sum(rawdat.sub$ppp != 0
 <pre class="r"><code>for(y in years){
   ## grab data for given year, reorder columns
   tmp_out &lt;- rawdat.sub %&gt;%
-    filter(year == y) %&gt;%
+    filter(year == years[y]) %&gt;%
     dplyr::select(c(trip_id, year, tdate,agid, 
-                       pcgroup, pcid, spid, spid_recode, council,
+                       pcgroup, pcid, IOPAC,
+                       spid, spid_recode, SPGRPN2, council,
                        grgroup, grid, removal_type,removal_type_code,
                        drvid, drvid_year,proc, fleet, pounds, ppp, adj_ppp,revenue,adj_revenue))
-  write.csv(tmp_out, here::here(processdir, paste0(&quot;fish_tickets_&quot;, y, &quot;_processed_for_networks.csv&quot;)), row.names=FALSE)
+  write.csv(tmp_out, paste0(out_conf_dir, paste0(&quot;/fish_tickets_&quot;, y, &quot;_processed_for_networks.csv&quot;)), row.names=FALSE)
 }</code></pre>
 <p><br></p>
 </div>
@@ -1852,20 +1931,176 @@ cat(&quot;Added in &quot;, sum(!is.na(rawdat.sub$ppp)) - sum(rawdat.sub$ppp != 0
   for(y in crab_years){
     ## subset the data frame
     tmp_out &lt;- rawdat.sub %&gt;%
-      filter(crab_year == y) %&gt;%
+      filter(crab_year == crab_years[y]) %&gt;%
       dplyr::select(c(trip_id, year, crab_year, tdate,agid, 
-                       pcgroup, pcid, spid, spid_recode, council,
+                       pcgroup, pcid, IOPAC,
+                       spid, spid_recode, SPGRPN2, council,
                        grgroup, grid, removal_type,removal_type_code,
                        drvid, drvid_year,proc, fleet, pounds, ppp, adj_ppp,revenue,adj_revenue))
     ## write out
-    write.csv(tmp_out, here::here(processdir, paste0(&quot;fish_tickets_crab&quot;, y, &quot;_processed_for_networks.csv&quot;)), row.names=FALSE)
+    write.csv(tmp_out, paste0(out_conf_dir, paste0(&quot;/fish_tickets_crab&quot;, y, &quot;_processed_for_networks.csv&quot;)), row.names=FALSE)
   }
 }</code></pre>
+<p><br></p>
+<div id="skip-this-section-for-cciea-analysis-dec-2020" class="section level3">
+<h3>SKIP THIS SECTION FOR CCIEA ANALYSIS DEC 2020</h3>
+</div>
+</div>
+</div>
+<div id="append-vessel-lengths" class="section level1">
+<h1>3: Append Vessel Lengths</h1>
+<p>Briefly, the method for calculating vessel lengths from vessel registration data are as follows:</p>
+<ul>
+<li><p>Step 1: Pull the registration data up to two years prior to the fish ticket year (3 years total)</p></li>
+<li><p>Step 2: Remove any registration entries with vessels larger than 200 feet and smaller than 10 feet. <em>To change these cutoffs, go to the code chunk length_filter</em></p></li>
+<li><p>Step 3: Find the number of unique vessel lengths for all unique Vessel Number / Agency Code combinations.</p></li>
+<li><p>Step 4: Calculate final vessel length for all unique Vessel Number / Agency Code combinations. <strong>(a)</strong> If vessel length data was available for 2+ years and MAX_LENGTH &lt; MIN_LENGTH + 10: assume this reflects an actual increase or decrease in vessel size, and the final vessel length is the median of the two most recent vessel lengths. <strong>(b)</strong> If vessel length data was available for only one year OR vessel length data was available for 2+ years, but <span class="math inline">\(max.length &gt;= min.length+10\)</span>: Go to Step 5. <strong>(c)</strong> Three or more different vessel lengths were recorded: use the median of these lengths</p></li>
+<li>Step 5: For <strong>(b)</strong> above, Pull registration data up to four years prior to the fish ticket year (5 years total); then if…
+<ul>
+<li>One vessel length was recorded in 2+ years: use this value as vessel length.</li>
+<li>Two different vessel lengths were recorded: <strong>(a)</strong> <span class="math inline">\(max.length &gt;= 2*min.length\)</span> – this is probably a decimal point error that we would need to check manually to determine true length. Denote NA. <strong>(b)</strong> <span class="math inline">\(max.length &lt; 2*min.length\)</span> – Use the mode of these lengths.</li>
+</ul></li>
+</ul>
+<div id="vessel-registration-data" class="section level2">
+<h2>3.1. Vessel Registration Data</h2>
+<p>Load registration data</p>
+<pre class="r"><code># permitsfiles &lt;- list.files(here::here('data','raw','vessel registration'),full.names = T)
+# permits &lt;- purrr::map_df(permitsfiles,function(fl){
+#   read_csv(fl,col_types='ddcddccdcccccdddcccccccddll')
+# }) %&gt;% distinct()</code></pre>
+<p>Choose columns of interest and subset the data frame. Change all entries of <code>777</code> for vessel length to <code>NA</code> (recommendation from Blake Feist)</p>
+<pre class="r"><code># pcols &lt;- c(&quot;VESSEL_NUM&quot;, &quot;AGENCY_CODE&quot;,&quot;REGISTRATION_YEAR&quot;,&quot;VESSEL_LENGTH&quot;, &quot;LENGTH_TYPE_CODE&quot;)
+# pthin &lt;- permits %&gt;%  select(pcols) %&gt;%
+#   mutate(VESSEL_LENGTH=na_if(VESSEL_LENGTH,777))</code></pre>
+<p><br></p>
+<p>Remove any vessel lengths greater than 200 or lower than 10. <em>Note - depending on the fishery, may want to change these cutoffs.</em></p>
+<pre class="r"><code># pthin_length_filter &lt;- pthin %&gt;%
+#   filter(VESSEL_LENGTH &lt; 200,VESSEL_LENGTH &gt; 10)</code></pre>
+<p><br></p>
+<p>If option <code>dcrb_only</code> is true, filter the landings data so that it only includes vessels with positive exvessel revenue for Dungeness crab.</p>
+<pre class="r"><code># if(dcrb_only){
+#   vessels &lt;- rawdat.sub %&gt;%
+#     filter(drvid != &quot;UNKNOWN&quot;, drvid != &quot;MISSING&quot;, drvid != &quot;&quot;, !is.na(drvid)) %&gt;%
+#     filter(DCRB_revenue &gt; 0) %&gt;%
+#     select(drvid, agency_code, year) %&gt;%
+#     distinct()
+# } else{
+#   vessels &lt;- rawdat.sub %&gt;%
+#   filter(drvid != &quot;UNKNOWN&quot;, drvid != &quot;MISSING&quot;, drvid != &quot;&quot;, !is.na(drvid)) %&gt;%
+#   select(drvid, agency_code, year) %&gt;%
+#   distinct()
+# }</code></pre>
+<p><br></p>
+</div>
+<div id="calculate-vessel-lengths" class="section level2">
+<h2>3.2. Calculate Vessel Lengths</h2>
+<p>Initiate empty data frame for all vessel length data across years</p>
+<pre class="r"><code># vessel_length_key_df &lt;- tibble(&quot;drvid&quot; = character(),
+#                                &quot;agency_code&quot; = character(),
+#                                &quot;year&quot; = numeric(),
+#                                &quot;FINAL_LENGTH&quot; = numeric(),
+#                                &quot;TYPE_CALC&quot; = character(),
+#                                &quot;UNIQUE_LENGTHS&quot; = numeric(),
+#                                &quot;N_YEARS_LENGTH_RECORDED&quot; = numeric(),
+#                                &quot;HISTORIC_DATA&quot; = character())</code></pre>
+<p><br></p>
+<p>Do the calculation of vessel lengths.</p>
+<pre class="r"><code># for(y in unique(vessels$year)){
+#   # take only the vessels fishing in year &quot;y&quot;
+#   year_vessels &lt;- filter(vessels, year == y)
+#   
+#   # identify the years of regulation data to pull
+#   target_reg_years &lt;- seq(y-2, y)
+#   
+#   # subset for target registration years and summarise permits for each vessel
+#   cat(&quot;Calculating 3yr summary statistics for vessels in &quot;, y, &quot;\n&quot;)
+#   pthin_sumstats &lt;- pthin_length_filter %&gt;%
+#     filter(REGISTRATION_YEAR %in% target_reg_years,!is.na(VESSEL_LENGTH)) %&gt;%
+#     group_by(VESSEL_NUM, AGENCY_CODE) %&gt;%
+#     arrange(desc(REGISTRATION_YEAR)) %&gt;%
+#     summarise(n_lengths = length(VESSEL_LENGTH),
+#               n_unique = length(unique(VESSEL_LENGTH)),
+#               max_length = max(VESSEL_LENGTH),
+#               min_length = min(VESSEL_LENGTH),
+#               median2yr = get2yrmedian(x=VESSEL_LENGTH, years=REGISTRATION_YEAR)) %&gt;% 
+#     ungroup()
+#   
+#   # create empty vectors for this year
+#   final_vessel_lengths &lt;- c()
+#   length_calc_vec &lt;- c()
+#   n_unique_vec &lt;- c()
+#   n_lengths_vec &lt;- c()
+#   historic_vec &lt;- c()
+#   processed &lt;- 0
+#   
+#   cat(&quot;Calculating vessel lengths for fishing vessels in &quot;, y, &quot;...\n&quot;)
+#   # for each vessel fishing in this year #
+#   for(i in seq(1:length(year_vessels$drvid))){
+#     ## use the calc_length function (loaded from the &quot;functions.R&quot; file) to calculate vessel length
+#     tmp_vessel_length_info &lt;- calc_length(permits=permits, vesseldat = year_vessels, lengthdat = pthin_length_filter, summarydat = pthin_sumstats, index = i)
+#     ## save the calc_length output to the appropriate position (&quot;i&quot;) in the output vectors for this year
+#     n_lengths_vec[i] &lt;- tmp_vessel_length_info[1] %&gt;% as.numeric()
+#     n_unique_vec[i] &lt;- tmp_vessel_length_info[2] %&gt;% as.numeric()
+#     final_vessel_lengths[i] &lt;- tmp_vessel_length_info[3] %&gt;% as.numeric()
+#     length_calc_vec[i] &lt;- tmp_vessel_length_info[4]
+#     ## if the vessel had to be calculated with historical data from over 5 years ago, a warning message will be saved in the calc_length output
+#     if(length(tmp_vessel_length_info) &gt; 4){
+#       ### print the warning message
+#       print(tmp_vessel_length_info[5])
+#       ### save &quot;Y&quot; to the historic_vec for this year
+#       historic_vec[i] &lt;- &quot;Y&quot;
+#     } else{ historic_vec[i] &lt;- &quot;N&quot; }
+#     processed &lt;- processed + 1
+#   }
+#   cat(&quot;Done processing&quot;, processed, &quot;vessels for&quot;, y, &quot;\n&quot;)
+#   # save allof the output vectors to a data frame for this year
+#   tmp_vessel_length_key_df &lt;- tibble(&quot;drvid&quot; = year_vessels$drvid,
+#                                      &quot;agency_code&quot; = year_vessels$agency_code,
+#                                      &quot;year&quot; = year_vessels$year,
+#                                      &quot;FINAL_LENGTH&quot; = final_vessel_lengths,
+#                                      &quot;TYPE_CALC&quot; = length_calc_vec,
+#                                      &quot;UNIQUE_LENGTHS&quot; = n_unique_vec,
+#                                      &quot;N_YEARS_LENGTH_RECORDED&quot; = n_lengths_vec,
+#                                      &quot;HISTORIC_DATA&quot; = historic_vec)
+#   ## bind this year's data frame to the end of the full data frame
+#   vessel_length_key_df &lt;- bind_rows(vessel_length_key_df, tmp_vessel_length_key_df)
+#   cat(&quot;Save&quot;, dim(tmp_vessel_length_key_df)[1], &quot;lengths for&quot;, y, &quot; to final data frame\n\n&quot;)
+# }</code></pre>
+<p><br></p>
+</div>
+<div id="check-vessel-lengths" class="section level2">
+<h2>3.3. Check Vessel Lengths</h2>
+<p>What is the distribution of vessel lengths?</p>
+<p><br></p>
+<p>Which calculations were used to estimate vessel lengths? Ideally, the frequency of <em>unique_1</em> and <em>olddat_unique_1</em> will be low.</p>
+<p><br></p>
+<p>How many vessel lengths are missing?</p>
+<p><br></p>
+<p><br></p>
+<p>Save the vessel lengths key for each year.</p>
+<pre class="r"><code># for(y in unique(vessel_length_key_df$year)){
+#   key_subset &lt;- vessel_length_key_df %&gt;%
+#     filter(year == y)
+#   write_rds(key_subset,here::here('data','input','length',paste0(&quot;vessel_length_key_&quot;, y, &quot;.csv&quot;)))
+# }</code></pre>
 <p><br> <br></p>
+</div>
+</div>
+<div id="write-out-fish-tickets-with-length" class="section level1">
+<h1>4: Write out fish tickets with length</h1>
+<pre class="r"><code># for(y in unique(vessel_length_key_df$year)){
+#   landings_subset &lt;- rawdat.sub %&gt;%
+#     filter(year == y)
+#   vessel_length_key_df_subset &lt;- vessel_length_key_df %&gt;%
+#     filter(year==y) %&gt;%
+#     select(-year)
+#   dcrb_landings_length &lt;- left_join(landings_subset,vessel_length_key_df_subset, by=c(&quot;drvid&quot;, &quot;agency_code&quot;))
+#   write.csv(dcrb_landings_length, file= here::here('data','input',paste0('processed_fishtickets_with_vlength_', y, '.csv')))
+# }</code></pre>
+<p><br></p>
 <hr />
 <p>Script runtime:</p>
-<pre><code>## Time difference of 6.215325 mins</code></pre>
-</div>
+<pre><code>## Time difference of 2.387816 mins</code></pre>
 </div>
 
 
