@@ -59,7 +59,7 @@ source("R/calc_network_stats.R")
 Select your directories.
 ```{r}
 ## location of fish ticket with metiers assigned, metier key for each port group
-indir = '/Users/jameal.samhouri/Documents/CCIEA Networks/processed/'
+indir = '/Users/jameal.samhouri/Documents/CCIEA Networks/processed'
 
 ## output directory for igraph object
 outdir = 'data/networks/participation'
@@ -103,7 +103,8 @@ Set these objects according to your user inputs from Scripts 1 and 3
 k <- 1
 
 ## the reference years first run through infomap
-ref_years <- c(2010,2011)
+## for the cciea network analysis this does not matter because we use a prior sp groupings
+ref_years <- c(2004,2005)
 ```
 <br>
 
@@ -112,37 +113,39 @@ ref_years <- c(2010,2011)
 
 Read in the landings data, from the file containing all fish tickets across port groups, within a single crab year.
 
-PICK UP HERE 121420
-
 NOTE FOR JAMEAL: read in fish ticket files with this naming convention: fish_tickets_crab2004_processed_for_networks.csv
 
-if species groupings column is named something other than metier.name, you'll have to go through the generate_participation_network.R function to replace it
+if species groupings column is named something other than metier.name, you'll have to go through the generate_participation_network.R function to replace it (or just designate a new column called metier.name, JS note 010421)
 ```{r}
 for(y in years){
   if(y %in% ref_years){
-    tmptix <- read.csv(here::here(indir, paste0("FishTix_crab", y, "_metiers.csv")), stringsAsFactors = FALSE) %>%
-    filter(pcgroup %in% myports)
+    tmptix <- read.csv(paste0(indir,"/fish_tickets_crab", y, "_processed_for_networks.csv"), stringsAsFactors = FALSE) %>%
+    filter(IOPAC %in% myports)
   } else{
-  tmptix <- read.csv(here::here(indir, paste0("FishTix_crab", y, "_metiers_k1_recoded.csv")), stringsAsFactors = FALSE) %>%
-    filter(pcgroup %in% myports)
+    tmptix <- read.csv(paste0(indir,"/fish_tickets_crab", y, "_processed_for_networks.csv"), stringsAsFactors = FALSE) %>%
+    filter(IOPAC %in% myports)
   }
   if(exists('fishtix')){
     fishtix <- rbind(fishtix, tmptix)
   } else{ fishtix <- tmptix }
 }
 rm(tmptix)
+
+fishtix <- fishtix %>%
+  mutate(metier.name = as.character(SPGRPN2))
 ```
 <br>
 
 Get the opening dates associated with each port group, for each crab year. 
+NOTE: Not needed for CCIEA networks analysis
 ```{r}
-dates_df <- read.delim(here::here('data/input','crab_open_dates.txt')); head(dates_df)
+#dates_df <- read.delim(here::here('data/input','crab_open_dates.txt')); head(dates_df)
 ```
 <br>
 
 Make sure that all dates are `Posixt` objects.
 ```{r}
-dates_df$odate <- mdy(dates_df$odate)
+#dates_df$odate <- mdy(dates_df$odate)
 fishtix$tdate <- date(parse_date_time(fishtix$tdate, orders=c("ymd", "mdy")))
 ```
 <br>
@@ -151,14 +154,17 @@ fishtix$tdate <- date(parse_date_time(fishtix$tdate, orders=c("ymd", "mdy")))
 # 2: Seasonal Participation Networks
 
 For each crab year and port group, this code will:
+1. Create a `graph` object for each fisheries participation network, and then save the object as an R data file
 
+2. Plot the network graphs
+
+3. Calculate network-level statistics, and save to an output data frame.
+
+
+Legacy from Fisher et al analysis:
 1. split the data into an early and late season
 
-2. Create a `graph` object for each fisheries participation network, and then save the object as an R data file
-
-3. Plot the network graphs
-
-4. Calculate network-level statistics, and save to an output data frame.
+PICK UP HERE 010421
 
 NOTE FOR JAMEAL: remove reference to met_names
 ```{r eval=TRUE}

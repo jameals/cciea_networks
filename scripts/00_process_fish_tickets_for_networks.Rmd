@@ -97,7 +97,8 @@ myfile1 <- "pacfin_compiled_2004thru2018.rds"
 myfile2 <- "fish tickets 2019-2020.csv"
 
 myfile3 <- "iopac_conversion_table.csv"
-myfile4 <- "species_groupings_spgrpn2.csv" # originally from first tab of species_groupings.xlsx from Dan Holland
+myfile4 <- "species_groupings_spgrpn2_iea.csv" # originally from first tab of species_groupings IEA.xlsx from Dan Holland. see email of 121520
+# myfile4 <- "species_groupings_spgrpn2.csv" # originally from first tab of species_groupings.xlsx from Dan Holland
 
 ```
 <br>
@@ -236,7 +237,7 @@ rawdat.sub <- rawdat.sub %>%
 <br>
 
 Next add columns which describe the species group and port group for landings, based on Holland CCIEA ESR species groupings and IOPAC port codes.
-```{r nom_ID}
+```{r nom_ID_2}
 rawdat.sub <- rawdat.sub %>%
   left_join(
     port_grps, by = c("pcid" = "PACFIN_PORT_CODE")
@@ -248,6 +249,9 @@ rawdat.sub <- rawdat.sub %>%
 <br>
 
 Next, add in an estimated exvessel revenue for commercial fish tickets which have no revenue recorded. To do so, we calculate an average price per pound for each species, for every year / week / port group. Then we create an adjusted `ppp` column for trips without revenue, and calculate the `adj_revenue` by multiplying `adj_ppp * pounds`. 
+
+NOTE FROM JS 010421: NOT SURE THIS PPP CHUNK WORKS PROPERLY
+
 ```{r adjust_revenue}
 ## get the average ppp for each species/year/week/port group, write out 
 ppp_key <- rawdat.sub %>%
@@ -272,13 +276,13 @@ cat("Added in ", sum(!is.na(rawdat.sub$ppp)) - sum(rawdat.sub$ppp != 0), " adjus
 for(y in years){
   ## grab data for given year, reorder columns
   tmp_out <- rawdat.sub %>%
-    filter(year == years[y]) %>%
+    filter(year == y) %>%
     dplyr::select(c(trip_id, year, tdate,agid, 
                        pcgroup, pcid, IOPAC,
                        spid, spid_recode, SPGRPN2, council,
                        grgroup, grid, removal_type,removal_type_code,
                        drvid, drvid_year,proc, fleet, pounds, ppp, adj_ppp,revenue,adj_revenue))
-  write.csv(tmp_out, paste0(out_conf_dir, paste0("/fish_tickets_", y, "_processed_for_networks.csv")), row.names=FALSE)
+  write.csv(tmp_out, paste0(out_conf_dir, paste0("fish_tickets_", y, "_processed_for_networks.csv")), row.names=FALSE)
 }
 ```
 <br>
@@ -295,14 +299,14 @@ if(crab_year){
   for(y in crab_years){
     ## subset the data frame
     tmp_out <- rawdat.sub %>%
-      filter(crab_year == crab_years[y]) %>%
+      filter(crab_year == y) %>%
       dplyr::select(c(trip_id, year, crab_year, tdate,agid, 
                        pcgroup, pcid, IOPAC,
                        spid, spid_recode, SPGRPN2, council,
                        grgroup, grid, removal_type,removal_type_code,
                        drvid, drvid_year,proc, fleet, pounds, ppp, adj_ppp,revenue,adj_revenue))
     ## write out
-    write.csv(tmp_out, paste0(out_conf_dir, paste0("/fish_tickets_crab", y, "_processed_for_networks.csv")), row.names=FALSE)
+    write.csv(tmp_out, paste0(out_conf_dir, paste0("fish_tickets_crab", y, "_processed_for_networks.csv")), row.names=FALSE)
   }
 }
 ```
