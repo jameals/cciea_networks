@@ -1636,7 +1636,7 @@ summary {
 <h1 class="title toc-ignore">Process Fish Tickets for Participation Networks</h1>
 <h3 class="subtitle">Preparation for network analysis in CCIEA ESR</h3>
 <h4 class="author">M. Fisher, J.F. Samhouri</h4>
-<h4 class="date">Written Dec. 7, 2020. Last Run 2021-01-04</h4>
+<h4 class="date">Written Dec. 7, 2020. Last Run 2021-01-06</h4>
 
 </div>
 
@@ -1885,6 +1885,7 @@ rawdat.sub %&gt;% group_by(year) %&gt;%
   )</code></pre>
 <p><br></p>
 <p>Next, add in an estimated exvessel revenue for commercial fish tickets which have no revenue recorded. To do so, we calculate an average price per pound for each species, for every year / week / port group. Then we create an adjusted <code>ppp</code> column for trips without revenue, and calculate the <code>adj_revenue</code> by multiplying <code>adj_ppp * pounds</code>.</p>
+<p>NOTE FROM JS 010421: NOT SURE THIS PPP CHUNK WORKS PROPERLY</p>
 <pre class="r"><code>## get the average ppp for each species/year/week/port group, write out 
 ppp_key &lt;- rawdat.sub %&gt;%
   filter(ppp &gt; 0) %&gt;%
@@ -1910,13 +1911,13 @@ cat(&quot;Added in &quot;, sum(!is.na(rawdat.sub$ppp)) - sum(rawdat.sub$ppp != 0
 <pre class="r"><code>for(y in years){
   ## grab data for given year, reorder columns
   tmp_out &lt;- rawdat.sub %&gt;%
-    filter(year == years[y]) %&gt;%
+    filter(year == y) %&gt;%
     dplyr::select(c(trip_id, year, tdate,agid, 
                        pcgroup, pcid, IOPAC,
                        spid, spid_recode, SPGRPN2, council,
                        grgroup, grid, removal_type,removal_type_code,
                        drvid, drvid_year,proc, fleet, pounds, ppp, adj_ppp,revenue,adj_revenue))
-  write.csv(tmp_out, paste0(out_conf_dir, paste0(&quot;/fish_tickets_&quot;, y, &quot;_processed_for_networks.csv&quot;)), row.names=FALSE)
+  write.csv(tmp_out, paste0(out_conf_dir, paste0(&quot;fish_tickets_&quot;, y, &quot;_processed_for_networks.csv&quot;)), row.names=FALSE)
 }</code></pre>
 <p><br></p>
 </div>
@@ -1931,14 +1932,14 @@ cat(&quot;Added in &quot;, sum(!is.na(rawdat.sub$ppp)) - sum(rawdat.sub$ppp != 0
   for(y in crab_years){
     ## subset the data frame
     tmp_out &lt;- rawdat.sub %&gt;%
-      filter(crab_year == crab_years[y]) %&gt;%
+      filter(crab_year == y) %&gt;%
       dplyr::select(c(trip_id, year, crab_year, tdate,agid, 
                        pcgroup, pcid, IOPAC,
                        spid, spid_recode, SPGRPN2, council,
                        grgroup, grid, removal_type,removal_type_code,
                        drvid, drvid_year,proc, fleet, pounds, ppp, adj_ppp,revenue,adj_revenue))
     ## write out
-    write.csv(tmp_out, paste0(out_conf_dir, paste0(&quot;/fish_tickets_crab&quot;, y, &quot;_processed_for_networks.csv&quot;)), row.names=FALSE)
+    write.csv(tmp_out, paste0(out_conf_dir, paste0(&quot;fish_tickets_crab&quot;, y, &quot;_processed_for_networks.csv&quot;)), row.names=FALSE)
   }
 }</code></pre>
 <p><br></p>
@@ -2100,7 +2101,7 @@ cat(&quot;Added in &quot;, sum(!is.na(rawdat.sub$ppp)) - sum(rawdat.sub$ppp != 0
 <p><br></p>
 <hr />
 <p>Script runtime:</p>
-<pre><code>## Time difference of 2.387816 mins</code></pre>
+<pre><code>## Time difference of 4.100062 mins</code></pre>
 </div>
 
 

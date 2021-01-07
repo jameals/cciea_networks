@@ -28,18 +28,18 @@ participation_network_crabyear <- function(tickets, pcid_choose=NA, year_choose=
   # get total number of boats (MF 2/26/2019)
   fleet_size <- length(unique(filter(tickets, drvid!='NONE')))
   
-  # create a df with 2 columns: metier.name and max_boats, the maximum boats that participated in the metier during the specified year(s)
+  # create a df with 2 columns: SPGRPN2 (metier.name in Mary's code) and max_boats, the maximum boats that participated in the metier during the specified year(s)
   n_boats <- tickets %>% filter(drvid!='NONE') %>%
-    group_by(crab_year, metier.name) %>% #changed year to crab_year (MF 2/26/2019)
+    group_by(crab_year, SPGRPN2) %>% #changed year to crab_year (MF 2/26/2019)
     summarise(n_boats = length(unique(drvid))) %>% #changed summarize to summarise, JS 11092018
-    group_by(metier.name) %>%
+    group_by(SPGRPN2) %>%
     summarise(max_boats = max(n_boats)) #changed summarize to summarise, JS
   
-  # create a df where each column is a metier.name, and values represent the total revenue for a boat in a crab year from that metier.name
+  # create a df where each column is a SPGRPN2, and values represent the total revenue for a boat in a crab year from that SPGRPN2
   boats <- tickets %>% filter(drvid != 'NONE') %>%
-    group_by(drvid, metier.name, crab_year) %>% #removed mutate; changed year to crab_year MF 2/26/2019
+    group_by(drvid, SPGRPN2, crab_year) %>% #removed mutate; changed year to crab_year MF 2/26/2019
     summarise(revenue = sum(adj_revenue)) %>% #changed summarize to summarise, JS 11092018
-    spread(metier.name, revenue, fill = NA)
+    spread(SPGRPN2, revenue, fill = NA)
   boats <- as.data.frame(boats)
   rownames(boats) <- paste(boats$drvid, boats$crab_year, sep="_")
   boats$drvid <- NULL
@@ -66,11 +66,11 @@ participation_network_crabyear <- function(tickets, pcid_choose=NA, year_choose=
   }
   
   fishery_df = as.data.frame(percent_contribution)
-  fishery_df$metier.name = rownames(fishery_df)
+  fishery_df$SPGRPN2 = rownames(fishery_df)
   rownames(fishery_df) <- NULL
-  fish_df <- left_join(fishery_df, n_boats, by = 'metier.name')
+  fish_df <- left_join(fishery_df, n_boats, by = 'SPGRPN2')
   # build adjacency matrix, where elements are frac rev fishery i * frac rev fishery j * total dollars (sum)
-  fisheries <- fish_df$metier.name[which(fish_df$max_boats>= nb & 
+  fisheries <- fish_df$SPGRPN2[which(fish_df$max_boats>= nb & 
                                            fish_df$percent_contribution>=percent)] # updated 5/13/2019 from > to >=
   if(length(fisheries)==0){
     return(NA)
