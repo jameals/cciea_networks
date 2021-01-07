@@ -13,27 +13,29 @@ vertex_color <- function(g){
   vertex_cols <- c()
   for(i in seq(1, vcount(g))){
     tmp_node <- V(g)$name[i]
-    if(grepl("HKL",tmp_node) == TRUE & grepl("POT",tmp_node) == TRUE){
-      tmp_col = "tan1"
-    } else if(grepl("HKL",tmp_node) == TRUE){
-      tmp_col = "darkgoldenrod1"
-    } else if(grepl("NET",tmp_node) == TRUE){
-      tmp_col = "cyan4"
-    } else if(grepl("TLS",tmp_node) == TRUE){
-      tmp_col = "chartreuse3"
-    } else if(grepl("TWL",tmp_node) == TRUE){
-      tmp_col = "chocolate4"
-    } else if(grepl("TWS",tmp_node) == TRUE){
-      tmp_col = "hotpink"
-    } else if(grepl("POT",tmp_node) == TRUE){
-      tmp_col = "darkorange2"
+    if(grepl("1",tmp_node) == TRUE | grepl("3",tmp_node) == TRUE |
+       grepl("19",tmp_node) == TRUE | grepl("50",tmp_node) == TRUE | 
+       grepl("55",tmp_node) == TRUE){
+      tmp_col = "tan1" # groundfish species groups
+    } else if(grepl("2",tmp_node) == TRUE){
+      tmp_col = "darkgoldenrod1" # whiting
+    } else if(grepl("20",tmp_node) == TRUE | grepl("21",tmp_node)){
+      tmp_col = "cyan4" # shrimp
+    } else if(grepl("30",tmp_node) == TRUE){
+      tmp_col = "chartreuse3" # salmon
+    } else if(grepl("35",tmp_node) == TRUE){
+      tmp_col = "chocolate4" # tuna
+    } else if(grepl("40",tmp_node) == TRUE | grepl("45",tmp_node)){
+      tmp_col = "hotpink" # pelagics
+    } else if(grepl("25",tmp_node) == TRUE){
+      tmp_col = "darkorange2" # crab
     } else{
-      if(tmp_node=="other_port" | tmp_node=="no_fishing"){
-        tmp_col="gray"
-      } else if(tmp_node=="none"){
-        tmp_col="gray"
+      if(tmp_node=="60" | tmp_node=="65"){
+        tmp_col="gray" # shellfish
+      } else if(tmp_node=="70"){
+        tmp_col="gray" # squid, should change to red
       } else{
-        tmp_col = "plum3"
+        tmp_col = "plum3" # other, group 80
       }
     }
     vertex_cols[i] <- tmp_col

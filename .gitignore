@@ -3,6 +3,3 @@
 .RData
 .Ruserdata
 .DS_Store
-data/networks/participation/*.rds
-data/networks/participation/plots/*
-scripts/*.html
