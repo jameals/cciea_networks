@@ -69,6 +69,17 @@ pngdir = 'data/networks/participation/plots'
 
 ## output file (including directory) for stat summaries
 statdir = 'results/statistics'
+
+## directory for species group key. not confidential
+processdir <- "data/input"
+```
+<br>
+
+Specify file name of the species groupings lookup key that contains labels for the network graphs.
+```{r get_filenames}
+
+myfile5 <- "spgrpn2_iea_key.csv"
+
 ```
 <br>
 
@@ -113,9 +124,11 @@ ref_years <- c(2004,2005)
 
 Read in the landings data, from the file containing all fish tickets across port groups, within a single crab year.
 
-NOTE FOR JAMEAL: read in fish ticket files with this naming convention: fish_tickets_crab2004_processed_for_networks.csv
+NOTE: this step takes a while.
 
-if species groupings column is named something other than metier.name, you'll have to go through the generate_participation_network.R function to replace it (or just designate a new column called metier.name, JS note 010421)
+NOTES FOR JAMEAL: 
+1) read in fish ticket files with this naming convention: fish_tickets_crab2004_processed_for_networks.csv
+2) if species groupings column is named something other than metier.name, you'll have to go through the generate_participation_network.R function to replace it (done, JS note 010521)
 ```{r}
 for(y in years){
   if(y %in% ref_years){
@@ -131,8 +144,14 @@ for(y in years){
 }
 rm(tmptix)
 
-fishtix <- fishtix %>%
-  mutate(metier.name = as.character(SPGRPN2))
+# some checks on species groups
+unique(fishtix$SPGRPN2)
+length(which(is.na(fishtix$SPGRPN2)))
+unique(fishtix[which(is.na(fishtix$SPGRPN2)),]$spid)
+unique(fishtix[which(is.na(fishtix$SPGRPN2)),]$year)
+unique(fishtix[which(is.na(fishtix$SPGRPN2)),]$agid)
+unique(fishtix[which(is.na(fishtix$SPGRPN2)),]$pcid)
+
 ```
 <br>
 
@@ -143,15 +162,16 @@ NOTE: Not needed for CCIEA networks analysis
 ```
 <br>
 
-Make sure that all dates are `Posixt` objects.
+Make sure that all dates are `Posixt` objects and species group labels are characters.
 ```{r}
 #dates_df$odate <- mdy(dates_df$odate)
 fishtix$tdate <- date(parse_date_time(fishtix$tdate, orders=c("ymd", "mdy")))
+fishtix$SPGRPN2 = as.character(fishtix$SPGRPN2)
 ```
 <br>
 
 
-# 2: Seasonal Participation Networks
+# 2: Make Participation Networks
 
 For each crab year and port group, this code will:
 1. Create a `graph` object for each fisheries participation network, and then save the object as an R data file
@@ -164,10 +184,15 @@ For each crab year and port group, this code will:
 Legacy from Fisher et al analysis:
 1. split the data into an early and late season
 
-PICK UP HERE 010421
-
 NOTE FOR JAMEAL: remove reference to met_names
 ```{r eval=TRUE}
+
+#### Read in species group labels key ####
+node_names <- read_csv(here::here(processdir,myfile5),
+                       col_types = list(col_character(), col_character()))
+
+# y=2008
+# p = "BDG"
 for(y in years){
   for(p in myports){
     cat(p, "\n")
@@ -183,15 +208,14 @@ for(y in years){
     #   open_date <- paste0(y+1, "-", open_month, "-", open_day)
     # }
     # open_date <- ymd(open_date)
-    # # pull fish ticket data for given year, port group, before Dcrab opened
-    # early_dat <- fishtix %>%
-    #   filter(crab_year == y & pcgroup == p) %>%
-    #   filter(tdate < open_date)
-    # if(y==2015 & rm_crab){
-    #   early_dat <- early_dat %>%
-    #     filter(spid != "DCRB")
-    # }
-    # # pull fish ticket data for given year, port group, after Dcrab opened
+    
+    # pull fish ticket data for given year, port group, before Dcrab opened
+    dat <- fishtix %>%
+      #filter(crab_year == 2008 & IOPAC == "Bodega Bay") # this line is just for running through for loop manually
+      filter(crab_year == y & IOPAC == p) #%>% # this is the line we want to active in the for loop
+       #filter(tdate < open_date)
+    
+    # pull fish ticket data for given year, port group, after Dcrab opened
     # late_dat <- fishtix %>%
     #   filter(crab_year == y & pcgroup == p) %>%
     #   filter(tdate >= open_date)
@@ -200,72 +224,47 @@ for(y in years){
     # met_names <- read.delim(here::here(indir, paste0(p, "_metier_names.txt")), stringsAsFactors = FALSE)
     
     
-    ##### EARLY SEASON ####
+    ##### Create igraph object ####
     
-    # Create igraph object
     ## using participation_network function
-    early_g <- participation_network_crabyear(early_dat, filter = TRUE, filter_subgraph =FALSE, min_vessels = 3, min_contribution = 0.10)
-    if(any(is.na(early_g))){
+    tmp_g <- participation_network_crabyear(dat, filter = TRUE, filter_subgraph =FALSE, min_vessels = 3, min_contribution = 0.10)
+    if(any(is.na(tmp_g))){
       message("\n\n WARNING: No fishing at ", p, " during early season in crab year ", y, "!\n\n")
-    } else if(vcount(early_g) > 0){
+    } else if(vcount(tmp_g) > 0){
       ## add in the full metier names as vertex attribute
-      filtered_metier_info <- as.data.frame(x = V(early_g)$name)
-      colnames(filtered_metier_info) <- "metier.abbrev"
-      filtered_metier_info <- left_join(filtered_metier_info, met_names, by="metier.abbrev")
-      V(early_g)$common_name <- as.character(filtered_metier_info$metier.name)
+      filtered_metier_info <- as.data.frame(x = V(tmp_g)$name)
+      colnames(filtered_metier_info) <- "SPGRPN2" #"metier.abbrev"
+      filtered_metier_info <- left_join(filtered_metier_info, node_names, by = "SPGRPN2")
+      V(tmp_g)$common_name <- as.character(filtered_metier_info$species_group_2_label)
       ## save vertex colors as attribute
-      vertex_cols <- vertex_color(g = early_g)
-      V(early_g)$colors <- vertex_cols
+      vertex_cols <- vertex_color(g = tmp_g)
+      V(tmp_g)$colors <- vertex_cols
       ## save objects
-      rds_name <- ifelse(rm_crab,  paste0("igraph_", p, "_", y, "_early_rmCrab.rds"),  paste0("igraph_", p, "_", y, "_early.rds"))
-      saveRDS(early_g, file = here::here(outdir, rds_name))
+      rds_name <- ifelse(rm_crab,  paste0("igraph_", p, "_", y, "_rmCrab.rds"),  paste0("igraph_", p, "_", y, ".rds"))
+      saveRDS(tmp_g, file = here::here(outdir, rds_name))
       
     # Calculate network-level statistics
     ## using the `net_stats` function
-    early_stats <- net_stats(early_g, y = y, stats="network")
+    g_stats <- net_stats(tmp_g, y = y, stats="network")
+    #g_stats <- net_stats(tmp_g, y = 2008, stats="network")
     ## add on period (closure/open) and port group info
-    early_stats <- early_stats %>%
-      mutate(period = rep("early", times=dim(early_stats)[1])) %>%
-      mutate(pcgroup = rep(p, times=dim(early_stats)[1]))
+    g_stats <- g_stats %>%
+      #mutate(period = rep("early", times=dim(g_stats)[1])) %>%
+      mutate(pcgroup = rep(p, times=dim(g_stats)[1]))
     } #end 'else' close-g has > 0 vertex
-    
-    
-    ##### LATE SEASON ####
-    # Create igraph object
-    ## using participation_network function
-    late_g <- participation_network_crabyear(late_dat, filter = TRUE, filter_subgraph = FALSE, min_vessels = 3, min_contribution = 0.10)
-    ## add in the full metier names as vertex attribute
-    filtered_metier_info <- as.data.frame(x = V(late_g)$name)
-    colnames(filtered_metier_info) <- "metier.abbrev"
-    filtered_metier_info <- left_join(filtered_metier_info, met_names, by="metier.abbrev")
-    V(late_g)$common_name <- as.character(filtered_metier_info$metier.name)
-    ## save vertex colors as attribute
-    vertex_cols <- vertex_color(g = late_g)
-    V(late_g)$colors <- vertex_cols
-    ## save objects
-    rds_name <- ifelse(rm_crab,  paste0("igraph_", p, "_", y, "_late_rmCrab.rds"),  paste0("igraph_", p, "_", y, "_late.rds"))
-    saveRDS(late_g, file = here::here(outdir, rds_name))
-
-    # Calculate network-level statistics
-    ## using the `net_stats` function
-    late_stats <- net_stats(late_g, y = y, stats="network")
-    ## add on period (closure/open) and port group info
-    late_stats <- late_stats %>%
-      mutate(period = rep("late", times=length(y))) %>%
-      mutate(pcgroup = rep(p, times=length(y)))
     
     #### SAVE NETWORK STATS OUTPUT ####
     ## merge network stats from closure / open period
-    if(length(V(early_g)$name) == 0){
-      tmp_stats <- early_stats
-    } else{
-      tmp_stats <- rbind(early_stats, late_stats)
-    }
+    # if(length(V(tmp_g)$name) == 0){
+    #   tmp_stats <- g_stats
+    # } else{
+    #   tmp_stats <- rbind(g_stats, late_stats)
+    # }
     ## append to network stats output data frame
     if(exists('mystats')){
-      mystats <- rbind(mystats, tmp_stats)
+      mystats <- rbind(mystats, g_stats)
     } else{
-      mystats <- tmp_stats
+      mystats <- g_stats
     }
     
   } #end (p in myports)
@@ -299,59 +298,38 @@ for(y in years){
   for(p in myports){
     cat(p, "\n")
     
-    ##### EARLY SEASON ####
-    
     # Read in igraph object
-    rds_name <- ifelse(rm_crab,  paste0("igraph_", p, "_", y, "_early_rmCrab.rds"),  paste0("igraph_", p, "_", y, "_early.rds"))
+    rds_name <- ifelse(rm_crab,  paste0("igraph_", p, "_", y, "_rmCrab.rds"),  paste0("igraph_", p, "_", y, ".rds"))
     ## (if the object exists)
     if(file_test("-f", here::here(outdir, rds_name))){
-      early_g <- readRDS(here::here(outdir, rds_name))
+      tmp_g <- readRDS(here::here(outdir, rds_name))
       
       # Calculate network-level statistics
       ## using the `net_stats` function
-      early_stats <- net_stats(early_g, y = y, stats="network")
+      g_stats <- net_stats(tmp_g, y = y, stats="network")
       ## add on period (closure/open) and port group info
-      early_stats <- early_stats %>%
-        mutate(period = rep("early", times=dim(early_stats)[1])) %>%
-        mutate(pcgroup = rep(p, times=dim(early_stats)[1]))
+      g_stats <- g_stats %>%
+        #mutate(period = rep("early", times=dim(g_stats)[1])) %>%
+        mutate(pcgroup = rep(p, times=dim(g_stats)[1]))
       ## save
-      tmp_stats <- early_stats
+      tmp_stats <- g_stats
     } else{message("Warning: Could not find early season network for ",p,", ", y, "\n")}
     
     
-    ##### LATE SEASON ####
-    
-    # Read in igraph object
-    rds_name <- ifelse(rm_crab,  paste0("igraph_", p, "_", y, "_late_rmCrab.rds"),  paste0("igraph_", p, "_", y, "_late.rds"))
-    ## (if the object exists)
-    if(file_test("-f", here::here(outdir, rds_name))){
-      late_g <- readRDS(here::here(outdir, rds_name))
-      
-      # Calculate network-level statistics
-      ## using the `net_stats` function
-      late_stats <- net_stats(late_g, y = y, stats="network")
-      ## add on period (closure/open) and port group info
-      late_stats <- late_stats %>%
-        mutate(period = rep("late", times=length(y))) %>%
-        mutate(pcgroup = rep(p, times=length(y)))
-    }
-    
     #### SAVE NETWORK STATS OUTPUT ####
-    ## merge data from early / late season
-    if(!exists('early_stats')){
-      tmp_stats <- late_stats
-      rm(late_stats)
-    } else{
-      tmp_stats <- rbind(early_stats, late_stats)
-      rm(early_stats, late_stats)
-    }
-    
+    ## merge network stats from closure / open period
+    # if(length(V(tmp_g)$name) == 0){
+    #   tmp_stats <- g_stats
+    # } else{
+    #   tmp_stats <- rbind(g_stats, late_stats)
+    # }
     ## append to network stats output data frame
     if(exists('mystats')){
-      mystats <- rbind(mystats, tmp_stats)
+      mystats <- rbind(mystats, g_stats)
     } else{
-      mystats <- tmp_stats
+      mystats <- g_stats
     }
+    
     
   } #end (p in myports)
   cat("\nfinished with all port groups in crab year ", y, "\n-----\n")

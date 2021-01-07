@@ -1,0 +1,280 @@
+---
+title: "Figure 1: 3-year average Participation Networks"
+author: M. Fisher
+date: "Written Mar. 29, 2019. Last Run `r Sys.Date()`"
+output:
+  html_document:
+    df_print: paged
+    toc: yes
+    toc_depth: '3'
+  pdf_document:
+    highlight: haddock
+    number_sections: yes
+    toc: yes
+    toc_depth: '3'
+geometry: margin=1in
+subtitle: Preparation for network analysis in Fisher et al.
+fontsize: 11pt
+---
+
+
+# Description
+
+This code generates the 3-year average "pre-shock" participation networks shown in Figure 1 of Fisher et al. This involves (1) creating a new adjacency matrix with all three crab years of fish ticket data to generate a network object, (2) pulling vertex attributes from the annual networks made for the main analysis, (3) averaging vertex attributes across annual networks, (4) applying averaged vertex attributes to the multi-year network object and filtering out any fisheries for which there are no data in the annual networks.
+
+Section 3 uses network metrics to compare the complexity of the 3-year average network to the annual networks in that crab year range. This section was initially written to help qualitatively compare the different network visualizations; 3-year network metrics were not used in Fisher et al. 
+<br>
+<br>
+
+```{r "setup", include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+## start time for full script
+script_start_time <- Sys.time()
+
+# ggplot theme
+plot_theme <-   theme_minimal()+
+  theme(text=element_text(family="sans",size=12,color="black"),
+        legend.text = element_text(size=14),
+        axis.title=element_text(family="sans",size=14,color="black"),
+        axis.text=element_text(family="sans",size=8,color="black"),
+        panel.grid.major = element_line(color="gray50",linetype=3))
+theme_set(plot_theme)
+```
+
+
+This script requires the following packages. 
+```{r packages, message=FALSE, warning=FALSE}
+if(!require("here")) {install.packages("here")}
+if(!require("tidyverse")) {install.packages("tidyverse")}
+if(!require("igraph")) {install.packages("igraph")}
+```
+<br>
+
+And calls the following functions. 
+```{r}
+source(here::here('R','generate_multiyr_participation_network.R'))
+source(here::here('R','average_participation_network.R'))
+source(here::here('R','calc_network_stats.R'))
+source(here::here('R','plot_3yr_networks.R'))
+```
+<br>
+
+# User Inputs 
+
+Select your directories.
+```{r}
+## location of fish ticket with metiers assigned, metier key for each port group
+indir = 'data/input/metiers'
+
+## location of annual participation networks
+netdir = 'data/networks/participation'
+
+## output directory for igraph object
+outdir = 'data/networks/participation/3yr'
+
+## output directory where annual network stat summaries are saved 
+statdir = 'results/statistics'
+
+## output file for 3-yr stat summaries
+statfile = '2013_2015_CA_CrabPorts_noSubgraph_3yr_avg.csv'
+
+## output directory for network plots
+pngdir = 'results/figures/Fig1'
+```
+<br>
+
+Identify the crab years and port groups that you would like to produce networks for. The port groups vector should include only those port groups which are present in the single data file produced with script 05. 
+```{r}
+## (crab) years
+years <- seq(2013,2015)
+
+## port groups
+myports <- c("CCA", "ERA", "BGA", "BDA", "SFA", "MRA", "MNA")
+```
+<br>
+
+Some Dungeness crab landings may be recorded prior to the official opening date of the season as a part of domoic acid testing. We remove these landings because we are interested in flows of fishers between fisheries as a result of within-season activity.
+```{r}
+rm_crab = TRUE
+```
+<br>
+
+For confidentiality, three or more vessels much be participating in a given fishery for that fishery to be included in the networks. To avoid inclusion of rare or minimal fishing activity, a given fishery must contribute to at least 10% of a vessel's seasonal revenue to be included in the network data. 
+Both cutoff values can be increased if more stringent fishery inclusion criteria are preferred, and the contribution cutoff may be decreased (i.e. for summaries over shorter temporal / smaller spatial scales).
+```{r}
+vessel_cutoff <- 3
+contr_cutoff <- 0.10
+```
+<br>
+
+
+Set these objects according to your user inputs from Scripts 1 and 3
+```{r}
+k <- 1
+```
+<br>
+
+
+# 1: Read in fish ticket data
+
+Read in the landings data, from the file containing all fish tickets across port groups, within a single crab year.
+```{r}
+for(y in years){
+  if(y %in% ref_years){
+    tmptix <- read.csv(here::here(indir, paste0("FishTix_crab", y, "_metiers.csv")), stringsAsFactors = FALSE) %>%
+    filter(pcgroup %in% myports)
+  } else{
+  tmptix <- read.csv(here::here(indir, paste0("FishTix_crab", y, "_metiers_k",k,"_recoded.csv")), stringsAsFactors = FALSE) %>%
+    filter(pcgroup %in% myports)
+  }
+  if(exists('fishtix')){
+    fishtix <- rbind(fishtix, tmptix)
+  } else{ fishtix <- tmptix }
+}
+rm(tmptix)
+```
+<br>
+
+Get the opening dates associated with each port group, for each crab year. 
+```{r}
+dates_df <- read.delim(here::here('data/input','crab_open_dates.txt')); head(dates_df)
+```
+<br>
+
+Make sure that all dates are `Posixt` objects.
+```{r}
+dates_df$odate <- mdy(dates_df$odate)
+fishtix$tdate <- date(parse_date_time(fishtix$tdate, orders=c("ymd", "mdy")))
+```
+<br>
+
+# 2: 3-year Average Participation Networks
+
+For each season and port group, this code will:
+
+1. Save a list of the annual graph objects
+
+2. Split the fish ticket data into an early and late season
+
+2. Create a `graph` object for the multi-year fisheries participation network, and then save the object as an R data file
+
+3. Average the annual graph vertices, then edit the multi-year network
+
+4. Calculate network-level statistics, and save to an output data frame.
+
+```{r}
+for(p in myports){
+  for(c in c("early","late")){
+    ### get igraph objects for each year ###
+    graphs_list = list()
+    for(i in seq(1,length(years))){
+      tmpgraph <- readRDS(here::here(netdir, paste0("igraph_",p,"_",years[i],"_",c,"_rmCrab.rds")))
+      graphs_list[[i]] = tmpgraph
+    }
+    
+    ### get data for multiyr graph ###
+    open_info <- filter(dates_df, pcgroup == p)
+    odate <- open_info$odate
+    ## pull fish ticket data for given year, port group, before Dcrab opened
+    sub_fishtix <- fishtix %>%
+      filter(pcgroup == p) %>%
+      mutate(opening_date = paste0(crab_year+1, "-", month(odate), "-", day(odate))) %>%
+      mutate(response = ifelse(ymd(tdate) < ymd(opening_date), "early", "late"))
+    # filter data for response period
+    mydat <- mydat %>%
+      filter(response==period)
+  
+    ### create avg graph ###
+    # multi-year graph
+    multiyr_g <- participation_network_multiyr(mydat, filter = TRUE, filter_subgraph =FALSE, min_vessels = 3, min_contribution = 0.10)
+    # averaged multi-year graph
+    avg_g <- average_participation_networks(multiyr_graph=multiyr_g,annual_graphs=graphs_list,period=c,years=years)[[1]]
+    
+    # write out graph
+    saveRDS(multiyr_g, here::here(outdir, paste0("igraph_",p,"_3yr_",c,".rds")))
+    saveRDS(avg_g, here::here(outdir, paste0("igraph_",p,"_3yrAVG_",c,".rds")))
+    
+    ### get network stats ###
+    tmp_stats <- net_stats(tmp_g, y = paste0(years[[1]], "_", years[[length(years)]]), stats="network")
+    tmp_stats <- mutate(tmp_stats, period=c, pcgroup=p)
+    
+    # Save network-level statistics output
+    if(p == myports[1] & c=="early"){
+      mystats <- tmp_stats
+    } else{
+      mystats <- rbind(mystats, tmp_stats)
+    }
+
+  } # end (for c)
+  print(paste0("done with port group ", p))
+} # end (for p)
+```
+<br>
+
+Save the network statistics from the averaged graphs.
+```{r}
+write.csv(mystats,here::here(statdir, statfile))
+```
+<br>
+
+
+# 3. Assess 3-year Networks
+
+Compare the network statistics between the annual networks, and the 3-year average network. 
+
+
+```{r}
+stats1 <- read.csv(here::here(statdir, "2008_2017_CA_CrabPorts_2015HAB_NoSubgraph.csv"))
+stats1 <- filter(stats1, y %in% years)
+```
+<br>
+
+```{r}
+myplot.n <- ggplot() +
+  geom_boxplot(data=stats1, aes(x=pcgroup,y=N, fill=period)) +
+  geom_point(data=mystats, aes(x=pcgroup,y=N, col=period), size=2) +
+  geom_point(data=mystats, aes(x=pcgroup,y=N), size=2, pch=1) +
+  scale_color_manual(values=c("red","turquoise4")) +
+  ggtitle("Node Count") +
+  theme(legend.position="none",
+        axis.title.y=element_blank(),
+        axis.text.x = element_text(angle=90,hjust=1,vjust=0.5))
+myplot.ed <- ggplot() +
+  geom_boxplot(data=stats1, aes(x=pcgroup,y=ed, fill=period)) +
+  geom_point(data=mystats, aes(x=pcgroup,y=ed, col=period), size=2) +
+  geom_point(data=mystats, aes(x=pcgroup,y=ed), size=2, pch=1) +
+  scale_color_manual(values=c("red","turquoise4")) +
+  ggtitle("Edge Density") +
+  theme(legend.position="none",
+        axis.title.y=element_blank(),
+        axis.text.x = element_text(angle=90,hjust=1,vjust=0.5))
+myplot.m <- ggplot() +
+  geom_boxplot(data=stats1, aes(x=pcgroup,y=m, fill=period)) +
+  geom_point(data=mystats, aes(x=pcgroup,y=m, col=period), size=2) +
+  geom_point(data=mystats, aes(x=pcgroup,y=m), size=2, pch=1) +
+  scale_color_manual(values=c("red","turquoise4")) +
+  ggtitle("Modularity") +
+  theme(axis.title.y = element_blank(),
+        axis.text.x = element_text(angle=90,hjust=1,vjust=0.5))
+grid.arrange(myplot.n, myplot.ed, myplot.m, ncol=3, widths=c(1,1,1.5))
+```
+<br>
+
+# 4: Plot 3-year Networks
+
+Read back in the graph objects and plot them.
+```{r}
+for(p in myports){
+  tmpgraph <- readRDS(here::here(outdir, paste0("igraph_",p,"_3yrAVG_",c,".rds")))
+  plot_3yr(tmpgraph, outdir=pngdir)
+}
+```
+
+
+
+
+
+
+
+

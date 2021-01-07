@@ -236,7 +236,7 @@ rawdat.sub <- rawdat.sub %>%
 ```
 <br>
 
-Next add columns which describe the species group and port group for landings, based on Holland CCIEA ESR species groupings and IOPAC port codes.
+Next add columns which describe the port group for landings, based on IOPAC port codes, and species group, based on Holland CCIEA ESR species groupings.
 ```{r nom_ID_2}
 rawdat.sub <- rawdat.sub %>%
   left_join(
