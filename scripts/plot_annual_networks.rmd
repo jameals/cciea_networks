@@ -78,6 +78,7 @@ years <- seq(2004,2019)
 ## port groups
 myports <- c("Puget Sound","North WA Coast","WA Coast","Other Coastal Washington","Astoria","Tillamook","Columbia River","Newport","Coos Bay","Brookings","Crescent City","Eureka","Morro Bay","Fort Bragg","Bodega Bay","San Francisco","San Diego","Monterey","Santa Barbara","Los Angeles","Unknown Ports" )
 #myports <- c("BDG") # testing script, 1/6
+#myports <- c("Columbia River") # testing script for single node networks, 1/7
 ```
 <br>
 
@@ -97,6 +98,7 @@ graph_names <- c()
 i=1
 for(p in myports){
   for(y in years){
+  #y=2013 # testing script for single node networks, 1/7
     if(file.exists(here::here(indir, paste0("igraph_", p, "_", y ,"_rmCrab.rds")))){
       tmpgraph <- readRDS(here::here(indir, paste0("igraph_", p, "_", y ,"_rmCrab.rds")))
       V(tmpgraph)$p <- p
