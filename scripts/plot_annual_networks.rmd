@@ -45,6 +45,7 @@ This script requires the following packages.
 if(!require("tidyverse")) {install.packages("tidyverse")}
 if(!require("ggplot2")) {install.packages("ggplot2")}
 if(!require("igraph")) {install.packages("igraph")}
+if(!require("RColorBrewer")) {install.packages("RColorBrewer")}
 ```
 <br>
 
@@ -74,11 +75,13 @@ Identify the crab years and port groups that you would like to produce networks 
 ## (crab) years
 years <- seq(2004,2019)
 # years <- 2008 # testing script, 1/6
+# years <- 2018 # testing script, 1/8
 
 ## port groups
 myports <- c("Puget Sound","North WA Coast","WA Coast","Other Coastal Washington","Astoria","Tillamook","Columbia River","Newport","Coos Bay","Brookings","Crescent City","Eureka","Morro Bay","Fort Bragg","Bodega Bay","San Francisco","San Diego","Monterey","Santa Barbara","Los Angeles","Unknown Ports" )
 #myports <- c("BDG") # testing script, 1/6
 #myports <- c("Columbia River") # testing script for single node networks, 1/7
+# myports <- c("Monterey") # testing script, 1/8
 ```
 <br>
 
@@ -93,6 +96,9 @@ my_layout <- "both"
 
 Read the igraph objects into a list. This for loop will also apply the functions to recolor and rename vertices
 ```{r}
+#palette(brewer.pal(n = 10, name = "Set3"))
+#pal3 <- brewer.pal(n = 10, name = "Set3")
+
 graphs_list <- list()
 graph_names <- c()
 i=1

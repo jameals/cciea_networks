@@ -9,36 +9,52 @@
 #' @examples
 #' vertex_cols <- vertex_color(g = close_g); V(close_g)$colors <- vertex_col
 #' @export
+
+library(RColorBrewer)
+#palette(brewer.pal(n = 10, name = "Set3"))
+pal3 <- brewer.pal(n = 10, name = "Set3")
+
+# need to fix series of if_else. maybe use case_when from tidy
+
 vertex_color <- function(g){
   vertex_cols <- c()
   for(i in seq(1, vcount(g))){
     tmp_node <- V(g)$name[i]
-    if(grepl("1",tmp_node) == TRUE | grepl("3",tmp_node) == TRUE |
-       grepl("19",tmp_node) == TRUE | grepl("50",tmp_node) == TRUE | 
-       grepl("55",tmp_node) == TRUE){
-      tmp_col = "tan1" # groundfish species groups
-    } else if(grepl("2",tmp_node) == TRUE){
-      tmp_col = "darkgoldenrod1" # whiting
-    } else if(grepl("20",tmp_node) == TRUE | grepl("21",tmp_node)){
-      tmp_col = "cyan4" # shrimp
-    } else if(grepl("30",tmp_node) == TRUE){
-      tmp_col = "chartreuse3" # salmon
-    } else if(grepl("35",tmp_node) == TRUE){
-      tmp_col = "chocolate4" # tuna
-    } else if(grepl("40",tmp_node) == TRUE | grepl("45",tmp_node)){
-      tmp_col = "hotpink" # pelagics
-    } else if(grepl("25",tmp_node) == TRUE){
-      tmp_col = "darkorange2" # crab
-    } else{
-      if(tmp_node=="60" | tmp_node=="65"){
-        tmp_col="gray" # shellfish
-      } else if(tmp_node=="70"){
-        tmp_col="gray" # squid, should change to red
-      } else{
-        tmp_col = "plum3" # other, group 80
-      }
-    }
+    # if(grepl("1",tmp_node) == TRUE | grepl("3",tmp_node) == TRUE |
+    #    grepl("19",tmp_node) == TRUE | grepl("50",tmp_node) == TRUE | 
+    #    grepl("55",tmp_node) == TRUE){
+    #   tmp_col = pal3[1] # groundfish species groups
+    # } else if(grepl("2",tmp_node) == TRUE){
+    #   tmp_col = pal3[2] # whiting
+    #} else 
+    if(grepl("20",tmp_node) == TRUE | grepl("21",tmp_node)){
+      tmp_col = pal3[3] # shrimp
+    } 
+    #else if(grepl("30",tmp_node) == TRUE){
+    #   tmp_col = pal3[4] # salmon
+    # } else if(grepl("35",tmp_node) == TRUE){
+    #   tmp_col = pal3[5] # tuna
+    # } else if(grepl("40",tmp_node) == TRUE | grepl("45",tmp_node)){
+    #   tmp_col = pal3[6] # pelagics
+    # } else if(grepl("25",tmp_node) == TRUE){
+    #   tmp_col = pal3[7] # crab
+    # } else if(grepl("70",tmp_node) == TRUE){
+    #     tmp_col = pal3[8] # squid
+    #   } else{
+    #   if(tmp_node=="60" | tmp_node=="65"){
+    #     tmp_col = pal3[9] # shellfish
+    #   } else{
+    #     tmp_col = pal3[10] # other, group 80
+    #   }
+    # }
     vertex_cols[i] <- tmp_col
   }
   return(vertex_cols)
 }
+
+#https://data.library.virginia.edu/setting-up-color-palettes-in-r/
+# display.brewer.pal(10, "Set3")
+# mypalette<-brewer.pal(8, "Set3")
+# image(1:7,1,as.matrix(1:7),col=mypalette,xlab="Greens (sequential)", ylab="",xaxt="n",yaxt="n",bty="n")
+# brewer.pal(n = 10, name = "Set3")
+# palette(brewer.pal(n = 10, name = "Set3"))
