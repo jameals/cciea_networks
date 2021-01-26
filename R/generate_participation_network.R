@@ -10,11 +10,12 @@
 #' @param filter_subgraph a filtering option from the original function that was turned off for Fisher et al.
 #' @param min_vessels the minimum number of vessels participating in a fishery for that fishery to be retained in the network
 #' @param min_contribution the minimum contribution (as a proportion) to total exvessel revenue for a fishery to be retained for a given vessel
+#' @param write_out specificy whether to write out the adjacency matrix A that is used to build the graph. not yet coded in below, will make it easier if you want to manually adjust the igraph vertex / edge attributes later. 
 #' @return non-confidential fisheries partition network as an igraph object
 #' @examples
 #' close_g <- participation_network_crabyear(close_dat, filter = TRUE, filter_subgraph = FALSE)
 #' @export
-participation_network_crabyear <- function(tickets, pcid_choose=NA, year_choose=NA, filter, filter_subgraph, min_vessels = 3, min_contribution = 0.10){
+participation_network_crabyear <- function(tickets, pcid_choose=NA, year_choose=NA, filter, filter_subgraph, min_vessels = 3, min_contribution = 0.10, write_out){
   if(!is.na(pcid_choose)){
     tickets = dplyr::filter(tickets, pcgroup %in% pcid_choose)
   }
@@ -72,6 +73,10 @@ participation_network_crabyear <- function(tickets, pcid_choose=NA, year_choose=
   # build adjacency matrix, where elements are frac rev fishery i * frac rev fishery j * total dollars (sum)
   fisheries <- fish_df$SPGRPN2[which(fish_df$max_boats>= nb & 
                                            fish_df$percent_contribution>=percent)] # updated 5/13/2019 from > to >=
+  
+  vessels <- fish_df$max_boats[which(fish_df$max_boats>= nb & 
+                                       fish_df$percent_contribution>=percent)]  # added JS 01/26/2021
+  
   if(length(fisheries)==0){
     return(NA)
   }
@@ -103,6 +108,7 @@ participation_network_crabyear <- function(tickets, pcid_choose=NA, year_choose=
   V(g)$importance = V(g)$size*V(g)$percent_size #how much revenue from each fishery
   
   V(g)$fleet = fleet_size #total number of vessels in fishery (MF2/26/2019)
+  V(g)$vessels = vessels # added JS 01/26/2021
   
   ##########  changed 2/26/2019 ############
   # if filter_subgraph = TRUE, keep V which make up to 99% of revenue
