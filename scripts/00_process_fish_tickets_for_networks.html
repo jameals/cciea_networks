@@ -1636,7 +1636,7 @@ summary {
 <h1 class="title toc-ignore">Process Fish Tickets for Participation Networks</h1>
 <h3 class="subtitle">Preparation for network analysis in CCIEA ESR</h3>
 <h4 class="author">M. Fisher, J.F. Samhouri</h4>
-<h4 class="date">Written Dec. 7, 2020. Last Run 2021-01-06</h4>
+<h4 class="date">Written Dec. 7, 2020. Last Run 2021-01-27</h4>
 
 </div>
 
@@ -1699,7 +1699,7 @@ processdir &lt;- &quot;data/input&quot;</code></pre>
 <pre class="r"><code># will need to glue 2004-2018 data to 2019-2020 data
 
 myfile1 &lt;- &quot;pacfin_compiled_2004thru2018.rds&quot;
-myfile2 &lt;- &quot;fish tickets 2019-2020.csv&quot;
+myfile2 &lt;- &quot;fish tickets 2019-2020.csv&quot; # latest pull from PacFIN: 01-27-21
 
 myfile3 &lt;- &quot;iopac_conversion_table.csv&quot;
 myfile4 &lt;- &quot;species_groupings_spgrpn2_iea.csv&quot; # originally from first tab of species_groupings IEA.xlsx from Dan Holland. see email of 121520
@@ -1875,7 +1875,7 @@ rawdat.sub %&gt;% group_by(year) %&gt;%
                                      POP2 = &quot;POP&quot;, LSP1 = &quot;LSPN&quot;, SSP1 = &quot;SSPN&quot;, THD1 = &quot;THDS&quot;, WDW1=&quot;WDOW&quot;, YEY1 = &quot;YEYE&quot;, CBZ1 = &quot;CBZN&quot;,
                                      KGL1 = &quot;KLPG&quot;, LCD1 = &quot;LCOD&quot;, CHL1=&quot;CHLB&quot;, RGL1 = &quot;RCKG&quot;, SHP1 = &quot;SHPD&quot;))</code></pre>
 <p><br></p>
-<p>Next add columns which describe the species group and port group for landings, based on Holland CCIEA ESR species groupings and IOPAC port codes.</p>
+<p>Next add columns which describe the port group for landings, based on IOPAC port codes, and species group, based on Holland CCIEA ESR species groupings.</p>
 <pre class="r"><code>rawdat.sub &lt;- rawdat.sub %&gt;%
   left_join(
     port_grps, by = c(&quot;pcid&quot; = &quot;PACFIN_PORT_CODE&quot;)
@@ -2101,7 +2101,7 @@ cat(&quot;Added in &quot;, sum(!is.na(rawdat.sub$ppp)) - sum(rawdat.sub$ppp != 0
 <p><br></p>
 <hr />
 <p>Script runtime:</p>
-<pre><code>## Time difference of 4.100062 mins</code></pre>
+<pre><code>## Time difference of 4.513357 mins</code></pre>
 </div>
 
 

@@ -94,7 +94,7 @@ Specify file name of the raw fish ticket data file and supporting files with spe
 # will need to glue 2004-2018 data to 2019-2020 data
 
 myfile1 <- "pacfin_compiled_2004thru2018.rds"
-myfile2 <- "fish tickets 2019-2020.csv"
+myfile2 <- "fish tickets 2019-2020.csv" # latest pull from PacFIN: 01-27-21
 
 myfile3 <- "iopac_conversion_table.csv"
 myfile4 <- "species_groupings_spgrpn2_iea.csv" # originally from first tab of species_groupings IEA.xlsx from Dan Holland. see email of 121520
