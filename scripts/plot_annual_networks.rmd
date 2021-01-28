@@ -213,6 +213,17 @@ plot(graphs_list[[1]], vertex.size = V(graphs_list[[1]])$importance/(max(V(graph
 <br>
 
 
+Put the 2019 and all Newport circular graphs in their own directories
+```{r}
+
+list.of.files_2019 <- list.files(here::here(pngdir), "2019_circular_cciea")
+file.copy(here::here(pngdir,list.of.files_2019), here::here(pngdir, "2019 only"))
+
+list.of.files_newport <- intersect(list.files(here::here(pngdir), pattern = "Newport"), list.files(here::here(pngdir), pattern = "circular")) 
+file.copy(here::here(pngdir,list.of.files_newport), here::here(pngdir, "newport"))
+
+
+```
 
 
 

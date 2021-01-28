@@ -32,7 +32,7 @@ plot_network <- function(g, layout_type, outdir, file_suffix="_cciea", verbose=F
            edge.curved = F, 
            axes = F,
            edge.color = brewer.pal(n = 11, name = "Set3")[9],
-           vertex.label = V(g)$common_name,
+           vertex.label = paste0(V(g)$common_name, " (", V(g)$vessels, ")"), # JS updated 01-27-2021
            vertex.color =adjustcolor(V(g)$colors, alpha.f=0.90),
            vertex.label.family = 'sans', 
            vertex.label.color = "gray25",
@@ -48,7 +48,7 @@ plot_network <- function(g, layout_type, outdir, file_suffix="_cciea", verbose=F
            edge.curved = F, 
            axes = F,
            edge.color = brewer.pal(n = 11, name = "Set3")[9],
-           vertex.label = V(g)$common_name,
+           vertex.label = paste0(V(g)$common_name, " (", V(g)$vessels, ")"), # JS updated 01-27-2021
            vertex.color =adjustcolor(V(g)$colors, alpha.f=0.90),
            vertex.label.family = 'sans', 
            # vertex.label.color = V(g)$colors, # to have same color as vertices
@@ -73,7 +73,7 @@ plot_network <- function(g, layout_type, outdir, file_suffix="_cciea", verbose=F
            edge.curved = F, 
            axes = F,
            edge.color = brewer.pal(n = 11, name = "Set3")[9],
-           vertex.label = V(g)$common_name,
+           vertex.label = paste0(V(g)$common_name, " (", V(g)$vessels, ")"), # JS updated 01-27-2021
            vertex.color =adjustcolor(V(g)$colors, alpha.f=0.90),
            vertex.label.family = 'sans', 
            # vertex.label.color = V(g)$colors, # to have same color as vertices
@@ -90,7 +90,7 @@ plot_network <- function(g, layout_type, outdir, file_suffix="_cciea", verbose=F
            edge.curved = F, 
            axes = F,
            edge.color = brewer.pal(n = 11, name = "Set3")[9],
-           vertex.label = paste0(V(g)$common_name, " (", V(g)$vessels, ")"),
+           vertex.label = paste0(V(g)$common_name, " (", V(g)$vessels, ")"), # JS updated 01-27-2021
            vertex.color =adjustcolor(V(g)$colors, alpha.f=0.90),
            vertex.label.family = 'sans', 
            # vertex.label.color = V(g)$colors, # to have same color as vertices
