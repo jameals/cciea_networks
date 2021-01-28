@@ -1636,7 +1636,7 @@ summary {
 <h1 class="title toc-ignore">Create Participation Networks</h1>
 <h3 class="subtitle">Preparation for network analysis in CCIEA ESR</h3>
 <h4 class="author">E. Fuller, M. Fisher, J.F. Samhouri</h4>
-<h4 class="date">Written Dec. 14, 2020. Last Run 2021-01-06</h4>
+<h4 class="date">Written Dec. 14, 2020. Last Run 2021-01-27</h4>
 
 </div>
 
@@ -1766,9 +1766,9 @@ fishtix$SPGRPN2 = as.character(fishtix$SPGRPN2)</code></pre>
 <p>NOTE FOR JAMEAL: remove reference to met_names</p>
 <pre class="r"><code>#### Read in species group labels key ####
 node_names &lt;- read_csv(here::here(processdir,myfile5),
-                       col_types = list(col_character(), col_character()))
+                       col_types = list(col_character(), col_character(), col_character()))
 
-# y=2008
+# y=2014
 # p = &quot;BDG&quot;
 for(y in years){
   for(p in myports){
@@ -1812,7 +1812,7 @@ for(y in years){
       filtered_metier_info &lt;- as.data.frame(x = V(tmp_g)$name)
       colnames(filtered_metier_info) &lt;- &quot;SPGRPN2&quot; #&quot;metier.abbrev&quot;
       filtered_metier_info &lt;- left_join(filtered_metier_info, node_names, by = &quot;SPGRPN2&quot;)
-      V(tmp_g)$common_name &lt;- as.character(filtered_metier_info$species_group_2_label)
+      V(tmp_g)$common_name &lt;- as.character(filtered_metier_info$species_group_2_label2)
       ## save vertex colors as attribute
       vertex_cols &lt;- vertex_color(g = tmp_g)
       V(tmp_g)$colors &lt;- vertex_cols
@@ -3327,7 +3327,7 @@ write.csv(mystats,here::here(statdir, filename), row.names=FALSE)</code></pre>
 <hr />
 <p>Script Runtime:</p>
 <pre class="r"><code>Sys.time() - script_start_time</code></pre>
-<pre><code>## Time difference of 3.465705 mins</code></pre>
+<pre><code>## Time difference of 2.130063 mins</code></pre>
 </div>
 
 

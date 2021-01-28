@@ -26,8 +26,8 @@ participation_network_crabyear <- function(tickets, pcid_choose=NA, year_choose=
   if(nrow(tickets)==0){
     return(NA)
   }
-  # get total number of boats (MF 2/26/2019)
-  fleet_size <- length(unique(filter(tickets, drvid!='NONE')))
+  # get total number of boats (MF 2/26/2019, JS/MF 1/27/21)
+  fleet_size <- length(unique(filter(dat, drvid!='NONE')$drvid))
   
   # create a df with 2 columns: SPGRPN2 (metier.name in Mary's code) and max_boats, the maximum boats that participated in the metier during the specified year(s)
   n_boats <- tickets %>% filter(drvid!='NONE') %>%
@@ -77,6 +77,9 @@ participation_network_crabyear <- function(tickets, pcid_choose=NA, year_choose=
   vessels <- fish_df$max_boats[which(fish_df$max_boats>= nb & 
                                        fish_df$percent_contribution>=percent)]  # added JS 01/26/2021
   
+  vessel_df <- data.frame(v=fisheries,
+                          n=vessels) # added JS 01/27/2021
+  
   if(length(fisheries)==0){
     return(NA)
   }
@@ -108,7 +111,10 @@ participation_network_crabyear <- function(tickets, pcid_choose=NA, year_choose=
   V(g)$importance = V(g)$size*V(g)$percent_size #how much revenue from each fishery
   
   V(g)$fleet = fleet_size #total number of vessels in fishery (MF2/26/2019)
-  V(g)$vessels = vessels # added JS 01/26/2021
+  
+  vessel_df2 <- left_join(data.frame(v=V(g)$name),vessel_df, by = "v") # added JS 01/27/2021
+  V(g)$vessels <- vessel_df2$n # added JS 01/27/2021
+  #V(g)$vessels = vessels # added JS 01/26/2021, replaced with 2 lines above
   
   ##########  changed 2/26/2019 ############
   # if filter_subgraph = TRUE, keep V which make up to 99% of revenue
