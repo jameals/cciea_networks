@@ -1,6 +1,6 @@
 ---
 title: "Plot Annual Participation Networks"
-author: "M. Fisher"
+author: "M. Fisher, J.F. Samhouri"
 date: "Written Jan. 6, 2021. Last Run `r Sys.Date()`"
 output:
   html_document:
@@ -46,6 +46,7 @@ if(!require("tidyverse")) {install.packages("tidyverse")}
 if(!require("ggplot2")) {install.packages("ggplot2")}
 if(!require("igraph")) {install.packages("igraph")}
 if(!require("RColorBrewer")) {install.packages("RColorBrewer")}
+if(!require("stringr")) {install.packages("stringr")}
 ```
 <br>
 
