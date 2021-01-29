@@ -37,7 +37,7 @@ plot_network <- function(g, layout_type, outdir, file_suffix="_cciea", verbose=F
            vertex.color =adjustcolor(V(g)$colors, alpha.f=0.90),
            vertex.label.family = 'sans', 
            vertex.label.color = "gray25",
-           vertex.label.cex= 1.4, # changed from 1.2, JS 01-29-21
+           vertex.label.cex= 1.6, # changed from 1.2, JS 01-29-21
            vertex.frame.color=NA
            # vertex.label.dist = c(-9,-8,-9,-10),               # these can be adjusted manually to make it look nicer, which is super annoying
            # vertex.label.degree = c(pi^(0.9),pi/5,pi/5,pi*1.1) # these can be adjusted manually to make it look nicer, which is super annoying
@@ -55,7 +55,7 @@ plot_network <- function(g, layout_type, outdir, file_suffix="_cciea", verbose=F
            vertex.label.family = 'sans', 
            # vertex.label.color = V(g)$colors, # to have same color as vertices
            vertex.label.color = "gray25",
-           vertex.label.cex= 1.4, # changed from 1.2, JS 01-29-21
+           vertex.label.cex= 1.6, # changed from 1.2, JS 01-29-21
            vertex.frame.color=NA
            # vertex.label.dist = c(-9,-8,-9,-10),               # these can be adjusted manually to make it look nicer, which is super annoying
            # vertex.label.degree = c(pi^(0.9),pi/5,pi/5,pi*1.1) # these can be adjusted manually to make it look nicer, which is super annoying
@@ -81,7 +81,7 @@ plot_network <- function(g, layout_type, outdir, file_suffix="_cciea", verbose=F
            vertex.label.family = 'sans', 
            # vertex.label.color = V(g)$colors, # to have same color as vertices
            vertex.label.color = "gray25",
-           vertex.label.cex= 1.4, # changed from 1.2, JS 01-29-21
+           vertex.label.cex= 1.6, # changed from 1.2, JS 01-29-21
            vertex.frame.color=NA
            # vertex.label.dist = c(-9,-8,-9,-10),               # these can be adjusted manually to make it look nicer, which is super annoying
            # vertex.label.degree = c(pi^(0.9),pi/5,pi/5,pi*1.1) # these can be adjusted manually to make it look nicer, which is super annoying
@@ -99,7 +99,7 @@ plot_network <- function(g, layout_type, outdir, file_suffix="_cciea", verbose=F
            vertex.label.family = 'sans', 
            # vertex.label.color = V(g)$colors, # to have same color as vertices
            vertex.label.color = "gray25",
-           vertex.label.cex= 1.4, # changed from 1.2, JS 01-29-21
+           vertex.label.cex= 1.6, # changed from 1.2, JS 01-29-21
            vertex.frame.color=NA
            # vertex.label.dist = c(-9,-8,-9,-10),               # these can be adjusted manually to make it look nicer, which is super annoying
            # vertex.label.degree = c(pi^(0.9),pi/5,pi/5,pi*1.1) # these can be adjusted manually to make it look nicer, which is super annoying
