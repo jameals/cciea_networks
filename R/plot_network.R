@@ -32,11 +32,12 @@ plot_network <- function(g, layout_type, outdir, file_suffix="_cciea", verbose=F
            edge.curved = F, 
            axes = F,
            edge.color = brewer.pal(n = 11, name = "Set3")[9],
-           vertex.label = paste0(V(g)$common_name, " (", V(g)$vessels, ")"), # JS updated 01-27-2021
+           vertex.label = str_wrap(paste0(V(g)$common_name, " (", V(g)$vessels, ")"),
+                                   width = 10), # JS updated 01-29-2021
            vertex.color =adjustcolor(V(g)$colors, alpha.f=0.90),
            vertex.label.family = 'sans', 
            vertex.label.color = "gray25",
-           vertex.label.cex= 1.2, 
+           vertex.label.cex= 1.4, # changed from 1.2, JS 01-29-21
            vertex.frame.color=NA
            # vertex.label.dist = c(-9,-8,-9,-10),               # these can be adjusted manually to make it look nicer, which is super annoying
            # vertex.label.degree = c(pi^(0.9),pi/5,pi/5,pi*1.1) # these can be adjusted manually to make it look nicer, which is super annoying
@@ -48,12 +49,13 @@ plot_network <- function(g, layout_type, outdir, file_suffix="_cciea", verbose=F
            edge.curved = F, 
            axes = F,
            edge.color = brewer.pal(n = 11, name = "Set3")[9],
-           vertex.label = paste0(V(g)$common_name, " (", V(g)$vessels, ")"), # JS updated 01-27-2021
+           vertex.label = str_wrap(paste0(V(g)$common_name, " (", V(g)$vessels, ")"),
+                                   width = 10), # JS updated 01-29-2021
            vertex.color =adjustcolor(V(g)$colors, alpha.f=0.90),
            vertex.label.family = 'sans', 
            # vertex.label.color = V(g)$colors, # to have same color as vertices
            vertex.label.color = "gray25",
-           vertex.label.cex= 1.2, 
+           vertex.label.cex= 1.4, # changed from 1.2, JS 01-29-21
            vertex.frame.color=NA
            # vertex.label.dist = c(-9,-8,-9,-10),               # these can be adjusted manually to make it look nicer, which is super annoying
            # vertex.label.degree = c(pi^(0.9),pi/5,pi/5,pi*1.1) # these can be adjusted manually to make it look nicer, which is super annoying
@@ -73,12 +75,13 @@ plot_network <- function(g, layout_type, outdir, file_suffix="_cciea", verbose=F
            edge.curved = F, 
            axes = F,
            edge.color = brewer.pal(n = 11, name = "Set3")[9],
-           vertex.label = paste0(V(g)$common_name, " (", V(g)$vessels, ")"), # JS updated 01-27-2021
+           vertex.label = str_wrap(paste0(V(g)$common_name, " (", V(g)$vessels, ")"),
+                                   width = 10), # JS updated 01-29-2021
            vertex.color =adjustcolor(V(g)$colors, alpha.f=0.90),
            vertex.label.family = 'sans', 
            # vertex.label.color = V(g)$colors, # to have same color as vertices
            vertex.label.color = "gray25",
-           vertex.label.cex= 1.2, 
+           vertex.label.cex= 1.4, # changed from 1.2, JS 01-29-21
            vertex.frame.color=NA
            # vertex.label.dist = c(-9,-8,-9,-10),               # these can be adjusted manually to make it look nicer, which is super annoying
            # vertex.label.degree = c(pi^(0.9),pi/5,pi/5,pi*1.1) # these can be adjusted manually to make it look nicer, which is super annoying
@@ -90,12 +93,13 @@ plot_network <- function(g, layout_type, outdir, file_suffix="_cciea", verbose=F
            edge.curved = F, 
            axes = F,
            edge.color = brewer.pal(n = 11, name = "Set3")[9],
-           vertex.label = paste0(V(g)$common_name, " (", V(g)$vessels, ")"), # JS updated 01-27-2021
+           vertex.label = str_wrap(paste0(V(g)$common_name, " (", V(g)$vessels, ")"),
+                                   width = 10), # JS updated 01-29-2021
            vertex.color =adjustcolor(V(g)$colors, alpha.f=0.90),
            vertex.label.family = 'sans', 
            # vertex.label.color = V(g)$colors, # to have same color as vertices
            vertex.label.color = "gray25",
-           vertex.label.cex= 1.2, 
+           vertex.label.cex= 1.4, # changed from 1.2, JS 01-29-21
            vertex.frame.color=NA
            # vertex.label.dist = c(-9,-8,-9,-10),               # these can be adjusted manually to make it look nicer, which is super annoying
            # vertex.label.degree = c(pi^(0.9),pi/5,pi/5,pi*1.1) # these can be adjusted manually to make it look nicer, which is super annoying
