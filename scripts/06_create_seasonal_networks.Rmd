@@ -226,8 +226,9 @@ for(y in years){
     
     ##### Create igraph object ####
     
-    ## using participation_network function
-    tmp_g <- participation_network_crabyear(dat, filter = TRUE, filter_subgraph =FALSE, min_vessels = 3, min_contribution = 0.10)
+    ## using participation_network function *if write_out = true, set pcid_choose/year_choose to p/y for file naming!
+    tmp_g <- participation_network_crabyear(dat, filter = TRUE, filter_subgraph =FALSE, min_vessels = 3, min_contribution = 0.10,
+                                            write_out=TRUE, out_dir=outdir, pcid_choose=p, year_choose=y)
     if(any(is.na(tmp_g))){
       message("\n\n WARNING: No fishing at ", p, " during early season in crab year ", y, "!\n\n")
     } else if(vcount(tmp_g) > 0){
