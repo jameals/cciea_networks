@@ -4,7 +4,7 @@
 #' Emma Fuller; edits specified in comments.
 #'
 #' @param tickets fish tickets data frame
-#' @param pcid_choose specify a port group
+#' @param pcid_choose specify an IOPAC port group
 #' @param year_choose Specify a crab year
 #' @param filter use the `min_vessels` and `min_contribution` objects to filter the data
 #' @param filter_subgraph a filtering option from the original function that was turned off for Fisher et al.
@@ -17,7 +17,7 @@
 #' @export
 participation_network_crabyear <- function(tickets, pcid_choose=NA, year_choose=NA, filter, filter_subgraph, min_vessels = 3, min_contribution = 0.10, write_out, out_dir){
   if(!is.na(pcid_choose)){
-    tickets = dplyr::filter(tickets, pcgroup %in% pcid_choose)
+    tickets = dplyr::filter(tickets, IOPAC %in% pcid_choose) # updated 03-01-21, was pcgroup %in% pcid_choose
   }
   if(any(!is.na(year_choose))){
     tickets = dplyr::filter(tickets, crab_year %in% year_choose)
