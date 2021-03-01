@@ -1636,7 +1636,7 @@ summary {
 <h1 class="title toc-ignore">Create Participation Networks</h1>
 <h3 class="subtitle">Preparation for network analysis in CCIEA ESR</h3>
 <h4 class="author">E. Fuller, M. Fisher, J.F. Samhouri</h4>
-<h4 class="date">Written Dec. 14, 2020. Last Run 2021-01-27</h4>
+<h4 class="date">Written Dec. 14, 2020. Last Run 2021-03-01</h4>
 
 </div>
 
@@ -1768,11 +1768,12 @@ fishtix$SPGRPN2 = as.character(fishtix$SPGRPN2)</code></pre>
 node_names &lt;- read_csv(here::here(processdir,myfile5),
                        col_types = list(col_character(), col_character(), col_character()))
 
-# y=2014
-# p = &quot;BDG&quot;
+# y=2019
+# # p = &quot;AST&quot;
+# iopac = &quot;Astoria&quot;
 for(y in years){
-  for(p in myports){
-    cat(p, &quot;\n&quot;)
+  for(iopac in myports){ # updated to iopac 03-10-21, was p
+    cat(iopac, &quot;\n&quot;)
     
     # #### Subset data ####
     # # subset dates data frame to get opening date for given port group (not specific for year)
@@ -1789,8 +1790,8 @@ for(y in years){
     # pull fish ticket data for given year, port group, before Dcrab opened
     dat &lt;- fishtix %&gt;%
       #filter(crab_year == 2008 &amp; IOPAC == &quot;Bodega Bay&quot;) # this line is just for running through for loop manually
-      filter(crab_year == y &amp; IOPAC == p) #%&gt;% # this is the line we want to active in the for loop
-       #filter(tdate &lt; open_date)
+      filter(crab_year == y &amp; IOPAC == iopac) #%&gt;% # this is the line we want to active in the for loop
+       #filter(tdate &lt; open_date) # updated to iopac 03-10-21, was IOPAC == p
     
     # pull fish ticket data for given year, port group, after Dcrab opened
     # late_dat &lt;- fishtix %&gt;%
@@ -1803,10 +1804,11 @@ for(y in years){
     
     ##### Create igraph object ####
     
-    ## using participation_network function
-    tmp_g &lt;- participation_network_crabyear(dat, filter = TRUE, filter_subgraph =FALSE, min_vessels = 3, min_contribution = 0.10)
+    ## using participation_network function *if write_out = true, set pcid_choose/year_choose to p/y for file naming!
+    tmp_g &lt;- participation_network_crabyear(dat, filter = TRUE, filter_subgraph =FALSE, min_vessels = 3, min_contribution = 0.10,
+                                            write_out=TRUE, out_dir=outdir, pcid_choose=iopac, year_choose=y) # updated to pcid_choose=iopac 03-10-21
     if(any(is.na(tmp_g))){
-      message(&quot;\n\n WARNING: No fishing at &quot;, p, &quot; during early season in crab year &quot;, y, &quot;!\n\n&quot;)
+      message(&quot;\n\n WARNING: No fishing at &quot;, iopac, &quot; during early season in crab year &quot;, y, &quot;!\n\n&quot;) # updated to iopac 03-10-21, was No fishing at &quot;, p, &quot;
     } else if(vcount(tmp_g) &gt; 0){
       ## add in the full metier names as vertex attribute
       filtered_metier_info &lt;- as.data.frame(x = V(tmp_g)$name)
@@ -1817,7 +1819,7 @@ for(y in years){
       vertex_cols &lt;- vertex_color(g = tmp_g)
       V(tmp_g)$colors &lt;- vertex_cols
       ## save objects
-      rds_name &lt;- ifelse(rm_crab,  paste0(&quot;igraph_&quot;, p, &quot;_&quot;, y, &quot;_rmCrab.rds&quot;),  paste0(&quot;igraph_&quot;, p, &quot;_&quot;, y, &quot;.rds&quot;))
+      rds_name &lt;- ifelse(rm_crab,  paste0(&quot;igraph_&quot;, iopac, &quot;_&quot;, y, &quot;_rmCrab.rds&quot;),  paste0(&quot;igraph_&quot;, iopac, &quot;_&quot;, y, &quot;.rds&quot;)) # updated to iopac 03-10-21, was &quot;igraph_&quot;, p
       saveRDS(tmp_g, file = here::here(outdir, rds_name))
       
     # Calculate network-level statistics
@@ -1827,7 +1829,7 @@ for(y in years){
     ## add on period (closure/open) and port group info
     g_stats &lt;- g_stats %&gt;%
       #mutate(period = rep(&quot;early&quot;, times=dim(g_stats)[1])) %&gt;%
-      mutate(pcgroup = rep(p, times=dim(g_stats)[1]))
+      mutate(pcgroup = rep(iopac, times=dim(g_stats)[1])) # updated to iopac 03-10-21, was rep(p
     } #end 'else' close-g has &gt; 0 vertex
     
     #### SAVE NETWORK STATS OUTPUT ####
@@ -3276,11 +3278,11 @@ write.csv(mystats,here::here(statdir, filename), row.names=FALSE)</code></pre>
 <h1>3: Seasonal Participation Network Statistics</h1>
 <p>If you have already produced a <code>graph</code> object for each fisheries participation network, this section of the script will read in those objects and calculate network-level statistics</p>
 <pre class="r"><code>for(y in years){
-  for(p in myports){
-    cat(p, &quot;\n&quot;)
+  for(iopac in myports){
+    cat(iopac, &quot;\n&quot;)
     
     # Read in igraph object
-    rds_name &lt;- ifelse(rm_crab,  paste0(&quot;igraph_&quot;, p, &quot;_&quot;, y, &quot;_rmCrab.rds&quot;),  paste0(&quot;igraph_&quot;, p, &quot;_&quot;, y, &quot;.rds&quot;))
+    rds_name &lt;- ifelse(rm_crab,  paste0(&quot;igraph_&quot;, iopac, &quot;_&quot;, y, &quot;_rmCrab.rds&quot;),  paste0(&quot;igraph_&quot;, iopac, &quot;_&quot;, y, &quot;.rds&quot;))
     ## (if the object exists)
     if(file_test(&quot;-f&quot;, here::here(outdir, rds_name))){
       tmp_g &lt;- readRDS(here::here(outdir, rds_name))
@@ -3291,10 +3293,10 @@ write.csv(mystats,here::here(statdir, filename), row.names=FALSE)</code></pre>
       ## add on period (closure/open) and port group info
       g_stats &lt;- g_stats %&gt;%
         #mutate(period = rep(&quot;early&quot;, times=dim(g_stats)[1])) %&gt;%
-        mutate(pcgroup = rep(p, times=dim(g_stats)[1]))
+        mutate(pcgroup = rep(iopac, times=dim(g_stats)[1]))
       ## save
       tmp_stats &lt;- g_stats
-    } else{message(&quot;Warning: Could not find early season network for &quot;,p,&quot;, &quot;, y, &quot;\n&quot;)}
+    } else{message(&quot;Warning: Could not find early season network for &quot;,iopac,&quot;, &quot;, y, &quot;\n&quot;)}
     
     
     #### SAVE NETWORK STATS OUTPUT ####
@@ -3327,7 +3329,7 @@ write.csv(mystats,here::here(statdir, filename), row.names=FALSE)</code></pre>
 <hr />
 <p>Script Runtime:</p>
 <pre class="r"><code>Sys.time() - script_start_time</code></pre>
-<pre><code>## Time difference of 2.130063 mins</code></pre>
+<pre><code>## Time difference of 2.020654 mins</code></pre>
 </div>
 
 
