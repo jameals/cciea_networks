@@ -15,7 +15,7 @@
 #' @examples
 #' close_g <- participation_network_crabyear(close_dat, filter = TRUE, filter_subgraph = FALSE)
 #' @export
-participation_network_crabyear <- function(tickets, pcid_choose=NA, year_choose=NA, filter, filter_subgraph, min_vessels = 3, min_contribution = 0.10, write_out){
+participation_network_crabyear <- function(tickets, pcid_choose=NA, year_choose=NA, filter, filter_subgraph, min_vessels = 3, min_contribution = 0.10, write_out, out_dir){
   if(!is.na(pcid_choose)){
     tickets = dplyr::filter(tickets, pcgroup %in% pcid_choose)
   }
@@ -101,6 +101,10 @@ participation_network_crabyear <- function(tickets, pcid_choose=NA, year_choose=
       }
     }
     #if(k %% 1000 == 0){cat(paste(' iteration', k))}
+  }
+  
+  if(write_out){
+    write.csv(A, here::here(out_dir,paste0("A_confidential_",pcid_choose, "_", year_choose,".csv")), row.names=FALSE)
   }
   
   # create graph
