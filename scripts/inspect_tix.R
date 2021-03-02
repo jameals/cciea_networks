@@ -118,3 +118,28 @@ tix_2019 %>%
     tot_adj_rev = sum(adj_revenue),
     num_vessels = length(unique(drvid))
   )
+
+# check out Monterey, because it changed with the updates made on 03-01-21 (updated fish tix data and changing the pcid_choose argument)
+tix_2019 %>%
+  filter(
+    IOPAC == "Monterey"
+  ) %>%
+  summarise(
+    unique_groups = unique(SPGRPN2)
+  )
+
+tix_2019 %>%
+  filter(
+    IOPAC == "Monterey"
+  ) %>%
+  summarise(
+   unique_ports = unique(pcid)
+  )
+
+tix_2019 %>%
+  filter(
+    IOPAC == "Monterey"
+  ) %>%
+  summarise(
+    unique_port_groups = unique(pcgroup)
+  )
