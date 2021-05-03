@@ -192,7 +192,7 @@ node_names <- read_csv(here::here(processdir,myfile5),
                        col_types = list(col_character(), col_character(), col_character()))
 
 # y=2019
-# # p = "AST"
+# p = "AST"
 # iopac = "Astoria"
 for(y in years){
   for(iopac in myports){ # updated to iopac 03-10-21, was p
