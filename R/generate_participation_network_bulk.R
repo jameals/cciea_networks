@@ -17,7 +17,7 @@
 #' @export
 
 #the line below is here to allow us to interact with the script without running the function
-tickets <- dat; pcid_choose <- iopac; year_choose <- y; min_vessels <- 3; min_contribution <- 0.10
+#tickets <- dat; pcid_choose <- iopac; year_choose <- y; min_vessels <- 3; min_contribution <- 0.10
 
 participation_network_crabyear_bulk <- function(tickets, pcid_choose=NA, year_choose=NA, filter, filter_subgraph, min_vessels = 3, min_contribution = 0.10, write_out, out_dir){
   if(!is.na(pcid_choose)){
@@ -90,7 +90,7 @@ participation_network_crabyear_bulk <- function(tickets, pcid_choose=NA, year_ch
   A <- matrix(ncol = length(fisheries2), nrow = length(fisheries2), data = 0)
   colnames(A) <- fisheries2
   rownames(A) <- fisheries2
-  for(k in 1:nrow(boats)){
+  for(k in 1:nrow(fisheries)){
     
     for(i in 1:nrow(A)){
       frac_rev_i = percent_fisheries[k,fisheries2[i]]
