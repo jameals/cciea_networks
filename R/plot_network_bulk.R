@@ -16,7 +16,7 @@
 #' @examples
 #' plot_network(tmpgraph, layout_type="both", outdir="data/networks/participation/plots")
 #' @export
-plot_network <- function(g, layout_type, outdir, file_suffix="_cciea_bulk", verbose=FALSE){
+plot_network <- function(g, layout_type, outdir, file_suffix=paste0("_cciea_bulk_",contr_cutoff*100), verbose=FALSE){
   port_group <- unique(V(g)$p)
   y <- unique(V(g)$year)
   if(layout_type=="fr" | layout_type=="both"){
