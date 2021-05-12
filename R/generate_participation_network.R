@@ -27,7 +27,7 @@ participation_network_crabyear <- function(tickets, pcid_choose=NA, year_choose=
     return(NA)
   }
   # get total number of boats (MF 2/26/2019, JS/MF 1/27/21)
-  fleet_size <- length(unique(filter(dat, drvid!='NONE')$drvid))
+  fleet_size <- length(unique(filter(tickets, drvid!='NONE')$drvid))
   
   # create a df with 2 columns: SPGRPN2 (metier.name in Mary's code) and max_boats, the maximum boats that participated in the metier during the specified year(s)
   n_boats <- tickets %>% filter(drvid!='NONE') %>%
@@ -52,7 +52,7 @@ participation_network_crabyear <- function(tickets, pcid_choose=NA, year_choose=
   # make a new df with annual % revenue from each metier for each boat
   percent_boats <- boats/rowSums(boats, na.rm = T)
   
-  # find median contribution of fisheries to each vessel
+  # find median contribution of fisheries across vessels
   percent_contribution = apply(percent_boats, MARGIN = 2, FUN = function(x) median(x, na.rm=T))
   
   # process data: drop metiers if fewer than 3 boats participate
@@ -104,7 +104,7 @@ participation_network_crabyear <- function(tickets, pcid_choose=NA, year_choose=
   }
   
   if(write_out){
-    write.csv(A, here::here(out_dir,paste0("A_confidential_",pcid_choose, "_", year_choose,".csv")), row.names=FALSE)
+    write.csv(A, here::here(out_dir,paste0("A_",pcid_choose, "_", year_choose,".csv")), row.names=FALSE)
   }
   
   # create graph
