@@ -15,7 +15,7 @@
 #' @examples
 #' plot_network(tmpgraph, outdir="data/networks/participation/plots")
 #' @export
-plot_simple <- function(g, highlight="WOC_CRAB", outdir, file_suffix="_cciea_bulk", verbose=FALSE){
+plot_simple <- function(g, highlight="WOC_CRAB", outdir, file_suffix=paste0("_cciea_bulk_",contr_cutoff*100), verbose=FALSE){
   port_group <- unique(V(g)$p)
   y <- unique(V(g)$year)
   l <-layout.circle(g)

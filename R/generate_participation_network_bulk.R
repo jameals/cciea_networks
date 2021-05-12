@@ -112,7 +112,7 @@ participation_network_crabyear_bulk <- function(tickets, pcid_choose=NA, year_ch
   }
   
   if(write_out){
-    write.csv(A, here::here(out_dir,paste0("A_",pcid_choose, "_", year_choose,".csv")), row.names=FALSE)
+    write.csv(A, here::here(out_dir,paste0("A_",pcid_choose, "_", year_choose,"_",contr_cutoff*100,".csv")), row.names=FALSE)
   }
   
   # create graph
