@@ -187,9 +187,10 @@ plot(graphs_list[[1]], vertex.size = V(graphs_list[[1]])$importance/(max(V(graph
 # 3: Simple Plot
 
 Plots will be written out to .png files in the function. This is because the igraph `plot` function won't save into an object that can be returned.
+The *highlight* argument in the `plot_simple` function draws on the common name associated with network nodes (`V(g)$common_name`). 
 
 ```{r}
-lapply(graphs_list,plot_simple, outdir=pngdir)
+lapply(graphs_list,plot_simple, outdir=pngdir, highlight="Crab")
 ```
 <br>
 
