@@ -10,88 +10,91 @@ library(here)
 ## directory for network viz
 mydir = 'data/networks/participation_bulk/plots/2019_only'
 
+## To avoid inclusion of rare or minimal fishing activity, a given fishery must contribute to at least contr_cutoff% of a port's seasonal revenue to be included in the network data. This cutoff value can be increased if more stringent fishery inclusion criteria are preferred, and decreased (i.e. for summaries over shorter temporal / smaller spatial scales).
+contr_cutoff = 0.1
+
 #load network node images
 #wa
 img_nwc <- magick::image_read(here::here(mydir,
-                                         "North WA Coast_2019_circular_cciea_bulk.png"
+                                         paste0("North WA Coast_2019_circular_cciea_bulk_",contr_cutoff*100, ".png")
                                          )
 )
 img_wc <- magick::image_read(here::here(mydir,
-                                        "WA Coast_2019_circular_cciea_bulk.png"
+                                        paste0("WA Coast_2019_circular_cciea_bulk_",contr_cutoff*100, ".png")
                                         )
 )
 img_ps <- magick::image_read(here::here(mydir,
-                                        "Puget Sound_2019_circular_cciea_bulk.png"
+                                        paste0("Puget Sound_2019_circular_cciea_bulk_",contr_cutoff*100, ".png")
                                         )
 )
 
 #or
 img_ast <- magick::image_read(here::here(mydir,
-                                         "Astoria_2019_circular_cciea_bulk.png"
+                                         paste0("Astoria_2019_circular_cciea_bulk_",contr_cutoff*100, ".png")
                                          )
 )
 img_tl <- magick::image_read(here::here(mydir,
-                                        "Tillamook_2019_circular_cciea_bulk.png"
+                                        paste0("Tillamook_2019_circular_cciea_bulk_",contr_cutoff*100, ".png")
                                         )
 )
 img_nwp <- magick::image_read(here::here(mydir,
-                                         "Newport_2019_circular_cciea_bulk.png"
+                                         paste0("Newport_2019_circular_cciea_bulk_",contr_cutoff*100, ".png")
                                          )
 )
 img_cb <- magick::image_read(here::here(mydir,
-                                        "Coos Bay_2019_circular_cciea_bulk.png"
+                                        paste0("Coos Bay_2019_circular_cciea_bulk_",contr_cutoff*100, ".png")
                                         )
 )
 img_brk <- magick::image_read(here::here(mydir,
-                                         "Brookings_2019_circular_cciea_bulk.png"
+                                         paste0("Brookings_2019_circular_cciea_bulk_",contr_cutoff*100, ".png")
                                          )
 )
 img_cr <- magick::image_read(here::here(mydir,
-                                        "Columbia River_2019_circular_cciea_bulk.png"
+                                        paste0("Columbia River_2019_circular_cciea_bulk_",contr_cutoff*100, ".png")
                                         )
 )
 
 #nca
 img_cc <- magick::image_read(here::here(mydir,
-                                        "Crescent City_2019_circular_cciea_bulk.png"
+                                        paste0("Crescent City_2019_circular_cciea_bulk_",contr_cutoff*100, ".png")
                                         )
 )
 img_eu <- magick::image_read(here::here(mydir,
-                                        "Eureka_2019_circular_cciea_bulk.png"
+                                        paste0("Eureka_2019_circular_cciea_bulk_",contr_cutoff*100, ".png")
                                         )
 )
 img_fb <- magick::image_read(here::here(mydir,
-                                        "Fort Bragg_2019_circular_cciea_bulk.png"
+                                        paste0("Fort Bragg_2019_circular_cciea_bulk_",contr_cutoff*100, ".png")
                                         )
 )
 img_bb <- magick::image_read(here::here(mydir,
-                                        "Bodega Bay_2019_circular_cciea_bulk.png"
+                                        paste0("Bodega Bay_2019_circular_cciea_bulk_",contr_cutoff*100, ".png")
                                         )
 )
 img_sf <- magick::image_read(here::here(mydir,
-                                        "San Francisco_2019_circular_cciea_bulk.png"
+                                        paste0("San Francisco_2019_circular_cciea_bulk_",contr_cutoff*100, ".png")
                                         )
 )
 img_mt <- magick::image_read(here::here(mydir,
-                                        "Morro Bay_2019_circular_cciea_bulk.png"
+                                        paste0("Morro Bay_2019_circular_cciea_bulk_",contr_cutoff*100, ".png")
                                         )
 )
 
 #sca
 img_sd <- magick::image_read(here::here(mydir,
-                                        "San Diego_2019_circular_cciea_bulk.png"
+                                        paste0("San Diego_2019_circular_cciea_bulk_",contr_cutoff*100, ".png")
                                         )
 )
 img_sb <- magick::image_read(here::here(mydir,
-                                        "Santa Barbara_2019_circular_cciea_bulk.png"
+                                        paste0("Santa Barbara_2019_circular_cciea_bulk_",contr_cutoff*100, ".png")
                                         )
 )
 img_la <- magick::image_read(here::here(mydir,
-                                        "Los Angeles_2019_circular_cciea_bulk.png"
+                                        paste0("Los Angeles_2019_circular_cciea_bulk_",contr_cutoff*100, ".png")
                                         )
 )
 img_mb <- magick::image_read(here::here(mydir,
-                                        "Morro Bay_2019_circular_cciea_bulk.png"
+                                        paste0("Morro Bay_2019_circular_cciea_bulk_",contr_cutoff*100, ".png")
                                         )
 )
 
@@ -206,17 +209,17 @@ SCA_map <- ggdraw(box_iopac(base_map_iopac("california", c(-130, -117), c(36, 29
 #save figures
 #cw
 ggsave(here::here(mydir,
-                  'iopac-node_full-coast_rect_font.png'), 
+                  paste0("iopac-node_full-coast_rect_font_",contr_cutoff*100, ".png")), 
        CW_map, width = 6, height = 10, dpi =600)
 ggsave(here::here(mydir,
-                  'iopac-node_WA_rect.png'), 
+                  paste0("iopac-node_WA_rect_",contr_cutoff*100, ".png")), 
        WA_map, width = 6, height = 6, dpi =600)
 ggsave(here::here(mydir,
-                  'iopac-node_OR_rect.png'), 
+                  paste0("iopac-node_OR_rect_",contr_cutoff*100, ".png")), 
        OR_map, width = 6, height = 6, dpi =600)
 ggsave(here::here(mydir,
-                  'iopac-node_NCA_rect.png'), 
+                  paste0("iopac-node_NCA_rect_",contr_cutoff*100, ".png")), 
        NCA_map, width = 6, height = 6, dpi =600)
 ggsave(here::here(mydir,
-                  'iopac-node_SCA_rect.png'), 
+                  paste0("iopac-node_SCA_rect_",contr_cutoff*100, ".png")), 
        SCA_map, width = 6, height = 6, dpi =600)
