@@ -103,7 +103,7 @@ For confidentiality, three or more vessels must be participating in a given fish
 Both cutoff values can be increased if more stringent fishery inclusion criteria are preferred, and the contribution cutoff may be decreased (i.e. for summaries over shorter temporal / smaller spatial scales).
 ```{r}
 vessel_cutoff <- 3
-contr_cutoff <- 0.1
+contr_cutoff <- 0.05
 ```
 <br>
 
@@ -243,7 +243,7 @@ for(y in years){
       vertex_cols <- vertex_color(g = tmp_g)
       V(tmp_g)$colors <- vertex_cols
       ## save objects
-      rds_name <- ifelse(rm_crab,  paste0("igraph_", iopac, "_", y, "_rmCrab_bulk.rds"),  paste0("igraph_", iopac, "_", y, "_bulk.rds")) # updated to iopac 03-10-21, was "igraph_", p
+      rds_name <- ifelse(rm_crab,  paste0("igraph_", iopac, "_", y, "_rmCrab_bulk_",contr_cutoff*100,".rds"),  paste0("igraph_", iopac, "_", y, "_bulk_",contr_cutoff*100,".rds")) # updated to iopac 03-10-21, was "igraph_", p
       saveRDS(tmp_g, file = here::here(outdir, rds_name))
       
     # Calculate network-level statistics

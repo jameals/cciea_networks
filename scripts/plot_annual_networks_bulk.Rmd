@@ -71,7 +71,7 @@ pngdir = 'data/networks/participation_bulk/plots'
 ```
 <br>
 
-Identify the crab years and port groups that you would like to produce networks for. 
+Identify the crab years, port groups, and % contributions to port-level bulk revenue that you would like to produce networks for. 
 ```{r}
 ## (crab) years
 years <- seq(2004,2019)
@@ -85,6 +85,10 @@ myports <- c("Puget Sound","North WA Coast","WA Coast","Other Coastal Washington
 #myports <- c("Columbia River") # testing script for single node networks, 1/7
 # myports <- c("Monterey") # testing script, 1/8
 # myports <- c("Bodega Bay") # testing script, 1/27/21
+
+## To avoid inclusion of rare or minimal fishing activity, a given fishery must contribute to at least contr_cutoff% of a port's seasonal revenue to be included in the network data. This cutoff value can be increased if more stringent fishery inclusion criteria are preferred, and decreased (i.e. for summaries over shorter temporal / smaller spatial scales).
+contr_cutoff <- 0.1
+
 ```
 <br>
 
@@ -109,8 +113,8 @@ for(p in myports){
   for(y in years){
   #y=2013 # testing script for single node networks, 1/7
   # y=2014 # testing script for single node networks, 1/27
-    if(file.exists(here::here(indir, paste0("igraph_", p, "_", y ,"_rmCrab_bulk.rds")))){
-      tmpgraph <- readRDS(here::here(indir, paste0("igraph_", p, "_", y ,"_rmCrab_bulk.rds")))
+    if(file.exists(here::here(indir, paste0("igraph_", p, "_", y ,"_rmCrab_bulk_",contr_cutoff*100,".rds")))){
+      tmpgraph <- readRDS(here::here(indir, paste0("igraph_", p, "_", y ,"_rmCrab_bulk_",contr_cutoff*100,".rds")))
       V(tmpgraph)$p <- p
       V(tmpgraph)$year <- y
       V(tmpgraph)$colors <- vertex_color(tmpgraph)
