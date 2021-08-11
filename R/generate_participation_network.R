@@ -49,6 +49,9 @@ participation_network_crabyear <- function(tickets, pcid_choose=NA, year_choose=
   # remove the one boat that didn't sell catch (i.e. rev = 0)
   if(any(rowSums(boats,na.rm=T)==0)){boats <- boats[-which(rowSums(boats, na.rm=T)==0),]}
   
+  # remove boats that don't generate at least $5000 in revenue annually. added 08112021
+  if(any(rowSums(boats,na.rm=T)<5000)){boats <- boats[-which(rowSums(boats, na.rm=T)<5000),]}
+  
   # make a new df with annual % revenue from each metier for each boat
   percent_boats <- boats/rowSums(boats, na.rm = T)
   
@@ -56,11 +59,11 @@ participation_network_crabyear <- function(tickets, pcid_choose=NA, year_choose=
   percent_contribution = apply(percent_boats, MARGIN = 2, FUN = function(x) median(x, na.rm=T))
   
   # process data: drop metiers if fewer than 3 boats participate
-  # in any year, and have to be on average 25% of boats annual revenue
+  # in any year, and have to be on average (min_contribution*100)% of boats annual revenue
   
   if(filter){
     nb = as.numeric(min_vessels) # changed from 3 to f(x) argument
-    percent = as.numeric(min_contribution) # changed from 0.25 to f(x) argument
+      percent = as.numeric(min_contribution) # changed from 0.25 to f(x) argument
   }else{
     nb = 0
     percent = 0
