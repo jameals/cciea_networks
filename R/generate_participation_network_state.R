@@ -4,7 +4,7 @@
 #' Emma Fuller; edits specified in comments.
 #'
 #' @param tickets fish tickets data frame
-#' @param pcid_choose specify an IOPAC port group
+#' @param state_choose specify a state
 #' @param year_choose Specify a crab year
 #' @param filter use the `min_vessels` and `min_contribution` objects to filter the data
 #' @param filter_subgraph a filtering option from the original function that was turned off for Fisher et al.
@@ -16,9 +16,9 @@
 #' @examples
 #' close_g <- participation_network_crabyear(close_dat, filter = TRUE, filter_subgraph = FALSE)
 #' @export
-participation_network_crabyear <- function(tickets, pcid_choose=NA, year_choose=NA, filter, filter_subgraph, min_vessels = 3, min_contribution = 0.10, min_rev = 1, write_out, out_dir){
-  if(!is.na(pcid_choose)){
-    tickets = dplyr::filter(tickets, IOPAC %in% pcid_choose) # updated 03-01-21, was pcgroup %in% pcid_choose
+participation_network_crabyear_states <- function(tickets, state_choose=NA, year_choose=NA, filter, filter_subgraph, min_vessels = 3, min_contribution = 0.10, min_rev = 1, write_out, out_dir){
+  if(!is.na(state_choose)){
+    tickets = dplyr::filter(tickets, agid %in% state_choose) # updated 08-13-21
   }
   if(any(!is.na(year_choose))){
     tickets = dplyr::filter(tickets, crab_year %in% year_choose)
@@ -108,7 +108,7 @@ participation_network_crabyear <- function(tickets, pcid_choose=NA, year_choose=
   }
   
   if(write_out){
-    write.csv(A, here::here(out_dir,paste0("A_",pcid_choose, "_", year_choose,".csv")), row.names=FALSE)
+    write.csv(A, here::here(out_dir,paste0("A_",state_choose, "_", year_choose,".csv")), row.names=FALSE)
   }
   
   # create graph
@@ -116,7 +116,7 @@ participation_network_crabyear <- function(tickets, pcid_choose=NA, year_choose=
   vertex_size = sum(boats[,fisheries], na.rm=T)
   V(g)$size <- vertex_size #total revenue in all fisheries
   V(g)$percent_size = apply(percent_boats[,fisheries, drop=FALSE], MARGIN = 2, FUN = function(x) median(x, na.rm=T))
-  V(g)$importance = V(g)$size*V(g)$percent_size #how much revenue from each fishery. note that the plot_networks.R function relies on the igraph library, which scales all nodes to the max size. so in practice, node size is based simply on percent_size and all node sizes are rellattive within a networ
+  V(g)$importance = V(g)$size*V(g)$percent_size #how much revenue from each fishery. note that the plot_networks.R function relies on the igraph library, which scales all nodes to the max size. so in practice, node size is based simply on percent_size and all node sizes are rellattive within a network
   
   V(g)$fleet = fleet_size #total number of vessels in fishery (MF2/26/2019)
   
