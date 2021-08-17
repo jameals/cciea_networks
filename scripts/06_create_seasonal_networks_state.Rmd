@@ -83,13 +83,16 @@ myfile5 <- "spgrpn2_iea_key.csv"
 ```
 <br>
 
-Identify the crab years and states that you would like to produce networks for. The states vector should include only those states which are present in the agid column of the fishtix data produced with script 00. 
+Identify the crab years, port groups, and states that you would like to produce networks for. The states vector should include only those states which are present in the agid column of the fishtix data produced with script 00. 
 ```{r}
 ## (crab) years
 years <- seq(2004,2019)
 
 ## west coast states
 mystates <- c("C", "O","W")
+
+## IOPAC port groups
+myports <- c("Puget Sound","North WA Coast","WA Coast","Other Coastal Washington","Astoria","Tillamook","Columbia River","Newport","Coos Bay","Brookings","Crescent City","Eureka","Morro Bay","Fort Bragg","Bodega Bay","San Francisco","San Diego","Monterey","Santa Barbara","Los Angeles","Unknown Ports" )
 
 ```
 <br>
