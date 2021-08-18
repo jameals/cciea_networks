@@ -4,6 +4,7 @@
 #' Emma Fuller; edits specified in comments.
 #'
 #' @param tickets fish tickets data frame
+#' @param edge_type type of edge weighting to use - the connectivity statistic ("connectivity"), or just number of vessels ("vessels")
 #' @param pcid_choose specify an IOPAC port group
 #' @param year_choose Specify a crab year
 #' @param filter use the `min_vessels` and `min_contribution` objects to filter the data
@@ -16,7 +17,9 @@
 #' @examples
 #' close_g <- participation_network_crabyear(close_dat, filter = TRUE, filter_subgraph = FALSE)
 #' @export
-participation_network_crabyear <- function(tickets, pcid_choose=NA, year_choose=NA, filter, filter_subgraph, min_vessels = 3, min_contribution = 0.10, min_rev = 1, write_out, out_dir){
+
+participation_network_crabyear <- function(tickets, edge_type="connectivity", pcid_choose=NA, year_choose=NA, filter, filter_subgraph, min_vessels = 3, min_contribution = 0.10, min_rev = 1, write_out, out_dir){
+
   if(!is.na(pcid_choose)){
     tickets = dplyr::filter(tickets, IOPAC %in% pcid_choose) # updated 03-01-21, was pcgroup %in% pcid_choose
   }
@@ -61,7 +64,6 @@ participation_network_crabyear <- function(tickets, pcid_choose=NA, year_choose=
   
   # process data: drop metiers if fewer than 3 boats participate
   # in any year, and have to be on average (min_contribution*100)% of boats annual revenue
-  
   if(filter){
     nb = as.numeric(min_vessels) # changed from 3 to f(x) argument
       percent = as.numeric(min_contribution) # changed from 0.25 to f(x) argument
@@ -74,7 +76,7 @@ participation_network_crabyear <- function(tickets, pcid_choose=NA, year_choose=
   fishery_df$SPGRPN2 = rownames(fishery_df)
   rownames(fishery_df) <- NULL
   fish_df <- left_join(fishery_df, n_boats, by = 'SPGRPN2')
-  # build adjacency matrix, where elements are frac rev fishery i * frac rev fishery j * total dollars (sum)
+  
   fisheries <- fish_df$SPGRPN2[which(fish_df$max_boats>= nb & 
                                            fish_df$percent_contribution>=percent)] # updated 5/13/2019 from > to >=
   
@@ -87,25 +89,45 @@ participation_network_crabyear <- function(tickets, pcid_choose=NA, year_choose=
   if(length(fisheries)==0){
     return(NA)
   }
+  
+  # build adjacency matrix
   A <- matrix(ncol = length(fisheries), nrow = length(fisheries), data = 0)
   colnames(A) <- fisheries
   rownames(A) <- fisheries
-  for(k in 1:nrow(boats)){
-    
-    for(i in 1:nrow(A)){
-      frac_rev_i = percent_boats[k,fisheries[i]]
-      if(is.na(frac_rev_i)){next} # if don't fish this, then can skip all other combos
+  
+  if(edge_type=="connectivity"){
+    #  matrix where elements are frac rev fishery i * frac rev fishery j * total dollars (sum)
+    for(k in 1:nrow(boats)){
       
-      for(j in i:ncol(A)){
-        frac_rev_j = percent_boats[k,fisheries[j]]
-        if(is.na(frac_rev_j)){next}
+      for(i in 1:nrow(A)){
+        frac_rev_i = percent_boats[k,fisheries[i]]
+        if(is.na(frac_rev_i)){next} # if don't fish this, then can skip all other combos
         
-        total_rev = boats[k, fisheries[i]] + boats[k, fisheries[j]]
-        A[i,j] = A[i,j] + frac_rev_i * frac_rev_j * total_rev
+        for(j in i:ncol(A)){
+          frac_rev_j = percent_boats[k,fisheries[j]]
+          if(is.na(frac_rev_j)){next}
+          
+          total_rev = boats[k, fisheries[i]] + boats[k, fisheries[j]]
+          A[i,j] = A[i,j] + frac_rev_i * frac_rev_j * total_rev
+        }
       }
-    }
-    #if(k %% 1000 == 0){cat(paste(' iteration', k))}
-  }
+      #if(k %% 1000 == 0){cat(paste(' iteration', k))}
+    } #end "connectivity"
+  } else if(edge_type=="vessels"){
+    #   matrix where elements are counts of vessels participating in fishery i & j
+    for(k in 1:nrow(boats)){
+      for(i in 1:nrow(A)){
+        for(j in i:ncol(A)){
+          if(!is.na(percent_boats[k,fisheries[i]]) & !is.na(percent_boats[k,fisheries[j]])){
+            A[i,j] = A[i,j] + 1
+          }
+        }
+      }
+      #if(k %% 1000 == 0){cat(paste(' iteration', k))}
+    } #end "vessels"
+    
+  } else{stop("ERROR: unrecognized edge type; cannot generate input matrix.")}
+  
   
   if(write_out){
     write.csv(A, here::here(out_dir,paste0("A_",pcid_choose, "_", year_choose,".csv")), row.names=FALSE)
