@@ -4,8 +4,7 @@
 #' Emma Fuller; edits specified in comments.
 #'
 #' @param tickets fish tickets data frame
-#' @param edge_type type of edge weighting to use - the connectivity statistic ("connectivity"), or just number of vessels ("vessels")
-#' @param pcid_choose specify an IOPAC port group
+#' @param state_choose specify a state
 #' @param year_choose Specify a crab year
 #' @param filter use the `min_vessels` and `min_contribution` objects to filter the data
 #' @param filter_subgraph a filtering option from the original function that was turned off for Fisher et al.
@@ -17,11 +16,9 @@
 #' @examples
 #' close_g <- participation_network_crabyear(close_dat, filter = TRUE, filter_subgraph = FALSE)
 #' @export
-
-participation_network_crabyear <- function(tickets, edge_type="connectivity", pcid_choose=NA, year_choose=NA, filter, filter_subgraph, min_vessels = 3, min_contribution = 0.10, min_rev = 1, write_out, out_dir){
-
-  if(!is.na(pcid_choose)){
-    tickets = dplyr::filter(tickets, IOPAC %in% pcid_choose) # updated 03-01-21, was pcgroup %in% pcid_choose
+participation_network_crabyear_states <- function(tickets, state_choose=NA, year_choose=NA, filter, filter_subgraph, min_vessels = 3, min_contribution = 0.10, min_rev = 1, write_out, out_dir){
+  if(!is.na(state_choose)){
+    tickets = dplyr::filter(tickets, agid %in% state_choose) # updated 08-13-21
   }
   if(any(!is.na(year_choose))){
     tickets = dplyr::filter(tickets, crab_year %in% year_choose)
@@ -64,6 +61,7 @@ participation_network_crabyear <- function(tickets, edge_type="connectivity", pc
   
   # process data: drop metiers if fewer than 3 boats participate
   # in any year, and have to be on average (min_contribution*100)% of boats annual revenue
+  
   if(filter){
     nb = as.numeric(min_vessels) # changed from 3 to f(x) argument
       percent = as.numeric(min_contribution) # changed from 0.25 to f(x) argument
@@ -76,7 +74,7 @@ participation_network_crabyear <- function(tickets, edge_type="connectivity", pc
   fishery_df$SPGRPN2 = rownames(fishery_df)
   rownames(fishery_df) <- NULL
   fish_df <- left_join(fishery_df, n_boats, by = 'SPGRPN2')
-  
+  # build adjacency matrix, where elements are frac rev fishery i * frac rev fishery j * total dollars (sum)
   fisheries <- fish_df$SPGRPN2[which(fish_df$max_boats>= nb & 
                                            fish_df$percent_contribution>=percent)] # updated 5/13/2019 from > to >=
   
@@ -89,48 +87,28 @@ participation_network_crabyear <- function(tickets, edge_type="connectivity", pc
   if(length(fisheries)==0){
     return(NA)
   }
-  
-  # build adjacency matrix
   A <- matrix(ncol = length(fisheries), nrow = length(fisheries), data = 0)
   colnames(A) <- fisheries
   rownames(A) <- fisheries
-  
-  if(edge_type=="connectivity"){
-    #  matrix where elements are frac rev fishery i * frac rev fishery j * total dollars (sum)
-    for(k in 1:nrow(boats)){
-      
-      for(i in 1:nrow(A)){
-        frac_rev_i = percent_boats[k,fisheries[i]]
-        if(is.na(frac_rev_i)){next} # if don't fish this, then can skip all other combos
-        
-        for(j in i:ncol(A)){
-          frac_rev_j = percent_boats[k,fisheries[j]]
-          if(is.na(frac_rev_j)){next}
-          
-          total_rev = boats[k, fisheries[i]] + boats[k, fisheries[j]]
-          A[i,j] = A[i,j] + frac_rev_i * frac_rev_j * total_rev
-        }
-      }
-      #if(k %% 1000 == 0){cat(paste(' iteration', k))}
-    } #end "connectivity"
-  } else if(edge_type=="vessels"){
-    #   matrix where elements are counts of vessels participating in fishery i & j
-    for(k in 1:nrow(boats)){
-      for(i in 1:nrow(A)){
-        for(j in i:ncol(A)){
-          if(!is.na(percent_boats[k,fisheries[i]]) & !is.na(percent_boats[k,fisheries[j]])){
-            A[i,j] = A[i,j] + 1
-          }
-        }
-      }
-      #if(k %% 1000 == 0){cat(paste(' iteration', k))}
-    } #end "vessels"
+  for(k in 1:nrow(boats)){
     
-  } else{stop("ERROR: unrecognized edge type; cannot generate input matrix.")}
-  
+    for(i in 1:nrow(A)){
+      frac_rev_i = percent_boats[k,fisheries[i]]
+      if(is.na(frac_rev_i)){next} # if don't fish this, then can skip all other combos
+      
+      for(j in i:ncol(A)){
+        frac_rev_j = percent_boats[k,fisheries[j]]
+        if(is.na(frac_rev_j)){next}
+        
+        total_rev = boats[k, fisheries[i]] + boats[k, fisheries[j]]
+        A[i,j] = A[i,j] + frac_rev_i * frac_rev_j * total_rev
+      }
+    }
+    #if(k %% 1000 == 0){cat(paste(' iteration', k))}
+  }
   
   if(write_out){
-    write.csv(A, here::here(out_dir,paste0("A_",pcid_choose, "_", year_choose,".csv")), row.names=FALSE)
+    write.csv(A, here::here(out_dir,paste0("A_",state_choose, "_", year_choose,".csv")), row.names=FALSE)
   }
   
   # create graph
@@ -138,7 +116,7 @@ participation_network_crabyear <- function(tickets, edge_type="connectivity", pc
   vertex_size = sum(boats[,fisheries], na.rm=T)
   V(g)$size <- vertex_size #total revenue in all fisheries
   V(g)$percent_size = apply(percent_boats[,fisheries, drop=FALSE], MARGIN = 2, FUN = function(x) median(x, na.rm=T))
-  V(g)$importance = V(g)$size*V(g)$percent_size #how much revenue from each fishery. note that the plot_networks.R function relies on the igraph library, which scales all nodes to the max size. so in practice, node size is based simply on percent_size and all node sizes are rellattive within a networ
+  V(g)$importance = V(g)$size*V(g)$percent_size #how much revenue from each fishery. note that the plot_networks.R function relies on the igraph library, which scales all nodes to the max size. so in practice, node size is based simply on percent_size and all node sizes are rellattive within a network
   
   V(g)$fleet = fleet_size #total number of vessels in fishery (MF2/26/2019)
   
