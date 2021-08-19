@@ -18,7 +18,7 @@
 #' close_g <- participation_network_crabyear(close_dat, filter = TRUE, filter_subgraph = FALSE)
 #' @export
 
-participation_network_crabyear <- function(tickets, edge_type="connectivity", pcid_choose=NA, year_choose=NA, filter, filter_subgraph, min_vessels = 3, min_contribution = 0.10, min_rev = 1, write_out, out_dir){
+participation_network_crabyear <- function(tickets, edge_type="connectivity", pcid_choose=NA, year_choose=NA, filter, filter_subgraph, min_vessels = 3, min_contribution = 0.10, min_rev = 1, min_rev_indiv = 1, write_out, out_dir){
 
   if(!is.na(pcid_choose)){
     tickets = dplyr::filter(tickets, IOPAC %in% pcid_choose) # updated 03-01-21, was pcgroup %in% pcid_choose
@@ -55,6 +55,17 @@ participation_network_crabyear <- function(tickets, edge_type="connectivity", pc
   
   # remove boats that don't generate at least min_rev in revenue annually. added 08112021
   if(any(rowSums(boats,na.rm=T)<min_rev)){boats <- boats[-which(rowSums(boats, na.rm=T)<min_rev),]}
+  
+  # remove boats that don't generate at least min_rev_indiv in revenue from each fishery annually. added 08192021
+if(any(boats < min_rev_indiv, na.rm=TRUE)){boats[which(boats<min_rev_indiv),] <- NA}
+  
+  boats <- boats %>%
+    mutate(
+      revenue = case_when(
+      revenue < min_rev_indiv ~ NA,
+      revenue == revenue
+      )
+    )
   
   # make a new df with annual % revenue from each metier for each boat
   percent_boats <- boats/rowSums(boats, na.rm = T)
