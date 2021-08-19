@@ -59,13 +59,13 @@ participation_network_crabyear <- function(tickets, edge_type="connectivity", pc
   # remove boats that don't generate at least min_rev_indiv in revenue from each fishery annually. added 08192021
 if(any(boats < min_rev_indiv, na.rm=TRUE)){boats[which(boats<min_rev_indiv),] <- NA}
   
-  boats <- boats %>%
-    mutate(
-      revenue = case_when(
-      revenue < min_rev_indiv ~ NA,
-      revenue == revenue
-      )
-    )
+  # boats <- boats %>%
+  #   mutate(
+  #     revenue = case_when(
+  #     revenue < min_rev_indiv ~ NA,
+  #     revenue == revenue
+  #     )
+  #   )
   
   # make a new df with annual % revenue from each metier for each boat
   percent_boats <- boats/rowSums(boats, na.rm = T)
