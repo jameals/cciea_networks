@@ -10,9 +10,14 @@
 #' @param filter use the `min_vessels` and `min_contribution` objects to filter the data
 #' @param filter_subgraph a filtering option from the original function that was turned off for Fisher et al.
 #' @param min_vessels the minimum number of vessels participating in a fishery for that fishery to be retained in the network
+<<<<<<< HEAD
 #' @param min_contribution the minimum contribution (as a proportion) to total exvessel revenue across all vessels for a fishery to be retained in the network
 #' @param min_rev the minimum revenue (in dollars) generated from all fisheries for a given vessel in a given year
 #' @param min_rev_indiv the minimum revenue (in dollars) generated from any one fishery for a given vessel in a given year
+=======
+#' @param min_contribution the minimum contribution (as a proportion) to total exvessel revenue for a fishery to be retained for a given vessel
+#' @param min_rev the minimum revenue (in dollars) generated from all fisheries for a given vessel in a given year
+>>>>>>> 1ae125c79dfa0968df9ab515a1964b73086b24e4
 #' @param write_out specificy whether to write out the adjacency matrix A that is used to build the graph. not yet coded in below, will make it easier if you want to manually adjust the igraph vertex / edge attributes later. 
 #' @return non-confidential fisheries partition network as an igraph object
 #' @examples
