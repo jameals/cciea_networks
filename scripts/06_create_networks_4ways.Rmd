@@ -1,0 +1,1175 @@
+---
+title: "SSC-ES fisheries participation networks review September 2021"
+author: "Jameal Samhouri, Mary Fisher"
+date: "Written 8/20/2021. Last Run `r Sys.Date()`"
+output: 
+  html_document:
+    df_print: paged
+    toc: yes
+    toc_depth: '3'
+  pdf_document:
+    highlight: haddock
+    number_sections: yes
+    toc: yes
+    toc_depth: '3'
+geometry: margin=1in
+subtitle: Preparation for network analysis in CCIEA ESR
+fontsize: 11pt
+---
+
+# Description
+
+This document generates fisheries participation networks for the US West Coast using a variety of approaches. 
+
+The first portion of the code makes network graphs and calculates network statistics.
+
+The second portion of the code summarizes a subset of these networks for presentation to the SSC-ES in September 2021.
+
+# Setup
+
+<br>
+```{r "setup", include=FALSE}
+if(!require("here")) {install.packages("here")}
+library(here)
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = here::here())
+
+## start time for full script
+script_start_time <- Sys.time()
+```
+<br>
+
+This script requires the following packages. 
+```{r packages, message=FALSE, warning=FALSE}
+if(!require("tidyverse")) {install.packages("tidyverse")}
+if(!require("lubridate")) {install.packages("lubridate")}
+if(!require("ggplot2")) {install.packages("ggplot2")}
+if(!require("igraph")) {install.packages("igraph")}
+```
+<br>
+
+And calls the following functions:
+```{r}
+source("R/generate_participation_network.R") # this function is for vessel-level networks, summarized at the port or state scale
+source("R/generate_participation_network_bulk.R") # this function is for aggregate networks, summarized at the port or state scale
+source("R/color_network_nodes.R")
+source("R/network_stats_functions.R")
+source("R/calc_network_stats.R")
+```
+<br>
+
+# User Inputs 
+
+Select your directories.
+```{r}
+## location of fish ticket with metiers assigned, metier key for each port group
+indir = '/Users/jameal.samhouri/Documents/CCIEA Networks/processed'
+
+## output directory for igraph objects
+outdir_ports = 'data/networks/participation_vessel_ports'
+outdir_states = 'data/networks/participation_vessel_states'
+outdir_ports_agg = 'data/networks/participation_agg_ports'
+outdir_states_agg = 'data/networks/participation_agg_states'
+
+## output directory for network viz
+pngdir_ports = 'data/networks/participation_vessel_ports/plots'
+pngdir_states = 'data/networks/participation_vessel_states/plots'
+pngdir_ports_agg = 'data/networks/participation_agg_ports/plots'
+pngdir_states_agg = 'data/networks/participation_agg_ports/plots'
+
+## output file (including directory) for stat summaries
+statdir = 'results/statistics'
+
+## directory for species group key. not confidential
+processdir <- "data/input"
+```
+<br>
+
+Specify file name of the species groupings lookup key that contains labels for the network graphs.
+```{r get_filenames}
+
+myfile5 <- "spgrpn2_iea_key.csv"
+
+```
+<br>
+
+
+Identify the crab years, port groups, and states that you would like to produce networks for. The port groups vector should include only those port groups which are present in the single data file produced with script 00. The states vector should include only those states which are present in the agid column of the fishtix data produced with script 00. 
+```{r}
+## (crab) years
+years <- seq(2004,2019)
+
+## IOPAC port groups
+myports <- c("Puget Sound","North WA Coast","WA Coast","Other Coastal Washington","Astoria","Tillamook","Columbia River","Newport","Coos Bay","Brookings","Crescent City","Eureka","Morro Bay","Fort Bragg","Bodega Bay","San Francisco","San Diego","Monterey","Santa Barbara","Los Angeles","Unknown Ports" )
+
+## west coast states
+mystates <- c("C", "O","W")
+
+```
+<br>
+
+Some Dungeness crab landings may be recorded prior to the official opening date of the season as a part of domoic acid testing. We remove these landings because we are interested in flows of fishers between fisheries as a result of within-season activity.
+```{r}
+rm_crab = TRUE
+```
+<br>
+
+For confidentiality, three or more vessels must be participating in a given fishery for that fishery to be included in the networks. To avoid inclusion of rare or minimal fishing activity, a given fishery must contribute to at least 10% of a vessel's seasonal revenue to be included in the network data. 
+
+The cutoff values can be increased if more stringent fishery inclusion criteria are preferred, and the contribution cutoff may be decreased (i.e. for summaries over shorter temporal / smaller spatial scales).
+```{r}
+
+vessel_cutoff <- 3
+contr_cutoff <- 0.10
+
+```
+<br>
+
+
+Set these objects according to your user inputs from Scripts 1 and 3
+```{r}
+## the value of `k` for the k-nearest neighbor function
+k <- 1
+
+## the reference years first run through infomap
+## for the cciea network analysis this does not matter because we use a prior sp groupings
+ref_years <- c(2004,2005)
+```
+<br>
+
+
+# Generate all networks
+
+Overall my hope is to develop networks 4 ways (also see https://docs.google.com/document/d/1aIT1-5g2DL1G_ru0lsewWjwo7lzi6KTjz4Gq_gT_yyI/edit#heading=h.ivbgl81113fr for definitions): 
+
+1) vessel-level summarized by port group (n=21)
+2) vessel-level summarized by state (n=3)
+3) aggregate summarized by port group (n=21)
+4) aggregate summarized by state (n=3).
+
+I will make these network graphs for 2004-2020, with all of the various permutations of our assumptions. These assumptions include:
+A) For vessel-level networks, a minimum annual individual fisheries revenue cutoff for each vessel of `$1`, with a minimum annual total fisheries revenue cutoff for each vessel of (i) `$1` vs (ii) `$5,000`.
+B) For vessel-level networks, a minimum annual total fisheries revenue cutoff for each vessel of `$5,000`, with a minimum annual individual fisheries revenue cutoff for each vessel of (i) `$1` vs (ii) `$500`.
+C) For both vessel-level and aggregate networks, edges defined based on (i) connectivity vs (ii) number of vessels. For vessel-level networks, I will use a minimum annual total fisheries revenue cutoff for each vessel of `$5,000` and a minimum annual individual fisheries revenue cutoff for each vessel of `$1`.
+
+So that is 4 versions of each of the vessel-level networks and 2 versions of the aggregate networks, for each of the 16 years, which will lead to 2,304 network graphs. 
+
+## Read in data
+
+Read in the landings data, from the file containing all fish tickets across port groups, within a single crab year.
+
+NOTE: this step takes a while.
+
+NOTES FOR JAMEAL: 
+1) read in fish ticket files with this naming convention: fish_tickets_crab2004_processed_for_networks.csv
+2) if species groupings column is named something other than metier.name, you'll have to go through the generate_participation_network.R function to replace it (done, JS note 010521)
+```{r}
+for(y in years){
+  if(y %in% ref_years){
+    tmptix <- read.csv(paste0(indir,"/fish_tickets_crab", y, "_processed_for_networks.csv"), stringsAsFactors = FALSE) %>%
+    filter(IOPAC %in% myports)
+  } else{
+    tmptix <- read.csv(paste0(indir,"/fish_tickets_crab", y, "_processed_for_networks.csv"), stringsAsFactors = FALSE) %>%
+    filter(IOPAC %in% myports)
+  }
+  if(exists('fishtix')){
+    fishtix <- rbind(fishtix, tmptix)
+  } else{ fishtix <- tmptix }
+}
+rm(tmptix)
+
+# some checks on species groups
+unique(fishtix$SPGRPN2)
+length(which(is.na(fishtix$SPGRPN2)))
+unique(fishtix[which(is.na(fishtix$SPGRPN2)),]$spid)
+unique(fishtix[which(is.na(fishtix$SPGRPN2)),]$year)
+unique(fishtix[which(is.na(fishtix$SPGRPN2)),]$agid)
+unique(fishtix[which(is.na(fishtix$SPGRPN2)),]$pcid)
+
+```
+<br>
+
+Make sure that all dates are `Posixt` objects and species group labels are characters.
+```{r}
+#dates_df$odate <- mdy(dates_df$odate)
+fishtix$tdate <- date(parse_date_time(fishtix$tdate, orders=c("ymd", "mdy")))
+fishtix$SPGRPN2 = as.character(fishtix$SPGRPN2)
+```
+<br>
+
+Node names
+```{r}
+
+#### Read in species group labels key ####
+node_names <- read_csv(here::here(processdir,myfile5),
+                       col_types = list(col_character(), col_character(), col_character()))
+
+```
+<br>
+
+## Make Participation Networks
+
+For each crab year and port group, this code will:
+1. Create a `graph` object for each fisheries participation network, and then save the object as an R data file
+
+2. Plot the network graphs
+
+3. Calculate network-level statistics, and save to an output data frame.
+
+### 1) Vessel-level networks summarized by port group
+
+#### A)(i) A minimum annual total and individual fisheries revenue cutoff for each vessel of $1
+
+We only include vessels that generate >=`$1` in total fisheries revenue each year and >=`$1` in revenue from individual fisheries.
+
+```{r}
+
+total_rev_cutoff <- 1
+indiv_rev_cutoff <- 1
+edgetype <- "connectivity"
+
+```
+<br>
+
+```{r eval=TRUE}
+
+
+# y=2019
+# p = "AST"
+# iopac = "Astoria"
+# wc_state = "W"
+for(y in years){
+  for(iopac in myports){ # updated to iopac 03-10-21, was p
+    cat(iopac, "\n")
+    
+    ### pull fish ticket data for given year, port group ###
+    
+    dat <- fishtix %>%
+      #filter(crab_year == 2008 & IOPAC == "Bodega Bay") # this line is just for running through for loop manually
+      filter(crab_year == y & IOPAC == iopac) 
+    
+    ##### Create igraph object ####
+    
+    ## using participation_network function *if write_out = true, set pcid_choose/year_choose to p/y for file naming!
+    tmp_g <- participation_network_crabyear(
+      dat, 
+      filter = TRUE, filter_subgraph = FALSE,
+      edge_type="connectivity", pcid_choose=iopac, state_choose = NA, year_choose=y, min_vessels = vessel_cutoff, min_contribution = contr_cutoff, min_rev = total_rev_cutoff, min_rev = indiv_rev_cutoff,
+      write_out=TRUE, out_dir=outdir_ports)
+    
+    if(any(is.na(tmp_g))){
+      message("\n\n WARNING: No fishing at ", iopac, " in crab year ", y, "!\n\n") # updated to iopac 03-10-21, was No fishing at ", p, "
+    } else if(vcount(tmp_g) > 0){
+      ## add in the full metier names as vertex attribute
+      filtered_metier_info <- as.data.frame(x = V(tmp_g)$name)
+      colnames(filtered_metier_info) <- "SPGRPN2" #"metier.abbrev"
+      filtered_metier_info <- left_join(filtered_metier_info, node_names, by = "SPGRPN2")
+      V(tmp_g)$common_name <- as.character(filtered_metier_info$species_group_2_label2)
+      ## save vertex colors as attribute
+      vertex_cols <- vertex_color(g = tmp_g)
+      V(tmp_g)$colors <- vertex_cols
+      ## save objects
+      rds_name <- ifelse(rm_crab,  paste0("igraph_", iopac, "_", y, "_totalrev", total_rev_cutoff,"_indivrev", indiv_rev_cutoff,"_", edgetype,"_rmCrab.rds"),  paste0("igraph_", iopac, "_", y, "_", total_rev_cutoff,"_", indiv_rev_cutoff,"_", edgetype,".rds")) # updated to iopac 03-10-21, was "igraph_", p
+      saveRDS(tmp_g, file = here::here(outdir_ports, rds_name))
+      
+    # Calculate network-level statistics
+    ## using the `net_stats` function
+    g_stats <- net_stats(tmp_g, y = y, stats="network")
+    #g_stats <- net_stats(tmp_g, y = 2008, stats="network")
+    ## add on period (closure/open) and port group info
+    g_stats <- g_stats %>%
+      #mutate(period = rep("early", times=dim(g_stats)[1])) %>%
+      mutate(pcgroup = rep(iopac, times=dim(g_stats)[1])) # updated to iopac 03-10-21, was rep(p
+    } #end 'else' close-g has > 0 vertex
+    
+    #### SAVE NETWORK STATS OUTPUT ####
+    ## merge network stats from closure / open period
+    # if(length(V(tmp_g)$name) == 0){
+    #   tmp_stats <- g_stats
+    # } else{
+    #   tmp_stats <- rbind(g_stats, late_stats)
+    # }
+    ## append to network stats output data frame
+    if(exists('mystats')){
+      mystats <- rbind(mystats, g_stats)
+    } else{
+      mystats <- g_stats
+    }
+    
+  } #end (p in myports)
+  cat("\nfinished with all port groups in crab year ", y, "\n-----\n")
+} #end (y in years)
+```
+<br>
+
+Write stats out to file. 2008_2015_CA_CrabPorts_NoSubgraph_01contribution.csv
+```{r eval=TRUE}
+filename <- paste0("NetworkStats_", min(years), "_", max(years), "_", length(myports), "pcgroups_", "totalrev", total_rev_cutoff,"_indivrev", indiv_rev_cutoff,"_", edgetype, "_", ifelse(rm_crab, 'rmCrab_','_'), contr_cutoff*100, "pContribution.csv")
+
+write.csv(mystats,here::here(statdir, filename), row.names=FALSE)
+```
+<br>
+
+#### A)(ii) and B(i) A minimum annual total fisheries revenue cutoff for each vessel of $5,000, and an individual fisheries cutoff for each vessel of $1
+
+We only include vessels that generate `>=$5,000` in total fisheries revenue each year and `>=$1` in revenue from individual fisheries.
+
+```{r}
+
+total_rev_cutoff <- 5000
+indiv_rev_cutoff <- 1
+edgetype <- "connectivity"
+
+```
+<br>
+
+```{r eval=TRUE}
+
+
+# y=2019
+# p = "AST"
+# iopac = "Astoria"
+# wc_state = "W"
+for(y in years){
+  for(iopac in myports){ # updated to iopac 03-10-21, was p
+    cat(iopac, "\n")
+    
+    ### pull fish ticket data for given year, port group ###
+    
+    dat <- fishtix %>%
+      #filter(crab_year == 2008 & IOPAC == "Bodega Bay") # this line is just for running through for loop manually
+      filter(crab_year == y & IOPAC == iopac) 
+    
+    ##### Create igraph object ####
+    
+    ## using participation_network function *if write_out = true, set pcid_choose/year_choose to p/y for file naming!
+    tmp_g <- participation_network_crabyear(
+      dat, 
+      filter = TRUE, filter_subgraph = FALSE,
+      edge_type="connectivity", pcid_choose=iopac, state_choose = NA, year_choose=y, min_vessels = vessel_cutoff, min_contribution = contr_cutoff, min_rev = total_rev_cutoff, min_rev = indiv_rev_cutoff,
+      write_out=TRUE, out_dir=outdir_ports)
+    
+    if(any(is.na(tmp_g))){
+      message("\n\n WARNING: No fishing at ", iopac, " in crab year ", y, "!\n\n") # updated to iopac 03-10-21, was No fishing at ", p, "
+    } else if(vcount(tmp_g) > 0){
+      ## add in the full metier names as vertex attribute
+      filtered_metier_info <- as.data.frame(x = V(tmp_g)$name)
+      colnames(filtered_metier_info) <- "SPGRPN2" #"metier.abbrev"
+      filtered_metier_info <- left_join(filtered_metier_info, node_names, by = "SPGRPN2")
+      V(tmp_g)$common_name <- as.character(filtered_metier_info$species_group_2_label2)
+      ## save vertex colors as attribute
+      vertex_cols <- vertex_color(g = tmp_g)
+      V(tmp_g)$colors <- vertex_cols
+      ## save objects
+      rds_name <- ifelse(rm_crab,  paste0("igraph_", iopac, "_", y, "_totalrev", total_rev_cutoff,"_indivrev", indiv_rev_cutoff,"_", edgetype,"_rmCrab.rds"),  paste0("igraph_", iopac, "_", y, "_", total_rev_cutoff,"_", indiv_rev_cutoff,"_", edgetype,".rds")) # updated to iopac 03-10-21, was "igraph_", p
+      saveRDS(tmp_g, file = here::here(outdir_ports, rds_name))
+      
+    # Calculate network-level statistics
+    ## using the `net_stats` function
+    g_stats <- net_stats(tmp_g, y = y, stats="network")
+    #g_stats <- net_stats(tmp_g, y = 2008, stats="network")
+    ## add on period (closure/open) and port group info
+    g_stats <- g_stats %>%
+      #mutate(period = rep("early", times=dim(g_stats)[1])) %>%
+      mutate(pcgroup = rep(iopac, times=dim(g_stats)[1])) # updated to iopac 03-10-21, was rep(p
+    } #end 'else' close-g has > 0 vertex
+    
+    #### SAVE NETWORK STATS OUTPUT ####
+    ## merge network stats from closure / open period
+    # if(length(V(tmp_g)$name) == 0){
+    #   tmp_stats <- g_stats
+    # } else{
+    #   tmp_stats <- rbind(g_stats, late_stats)
+    # }
+    ## append to network stats output data frame
+    if(exists('mystats')){
+      mystats <- rbind(mystats, g_stats)
+    } else{
+      mystats <- g_stats
+    }
+    
+  } #end (p in myports)
+  cat("\nfinished with all port groups in crab year ", y, "\n-----\n")
+} #end (y in years)
+```
+<br>
+
+Write stats out to file. 2008_2015_CA_CrabPorts_NoSubgraph_01contribution.csv
+```{r eval=TRUE}
+filename <- paste0("NetworkStats_", min(years), "_", max(years), "_", length(myports), "pcgroups_", "totalrev", total_rev_cutoff,"_indivrev", indiv_rev_cutoff,"_", edgetype, "_", ifelse(rm_crab, 'rmCrab_','_'), contr_cutoff*100, "pContribution.csv")
+
+write.csv(mystats,here::here(statdir, filename), row.names=FALSE)
+```
+<br>
+
+#### B)(ii) and C)(i) A minimum annual total fisheries revenue cutoff for each vessel of $5,000, and a minimum annual individual fisheries revenue cutoff for each vessel of $500.
+
+We only include vessels that generate >=`$5,000` in total fisheries revenue each year and >=`$500` in revenue from individual fisheries.
+
+```{r}
+
+total_rev_cutoff <- 5000
+indiv_rev_cutoff <- 500
+edgetype <- "connectivity"
+
+```
+<br>
+
+```{r eval=TRUE}
+
+
+# y=2019
+# p = "AST"
+# iopac = "Astoria"
+# wc_state = "W"
+for(y in years){
+  for(iopac in myports){ # updated to iopac 03-10-21, was p
+    cat(iopac, "\n")
+    
+    ### pull fish ticket data for given year, port group ###
+    
+    dat <- fishtix %>%
+      #filter(crab_year == 2008 & IOPAC == "Bodega Bay") # this line is just for running through for loop manually
+      filter(crab_year == y & IOPAC == iopac) 
+    
+    ##### Create igraph object ####
+    
+    ## using participation_network function *if write_out = true, set pcid_choose/year_choose to p/y for file naming!
+    tmp_g <- participation_network_crabyear(
+      dat, 
+      filter = TRUE, filter_subgraph = FALSE,
+      edge_type="connectivity", pcid_choose=iopac, state_choose = NA, year_choose=y, min_vessels = vessel_cutoff, min_contribution = contr_cutoff, min_rev = total_rev_cutoff, min_rev_indiv = 500,
+      write_out=TRUE, out_dir=outdir_ports)
+    
+    if(any(is.na(tmp_g))){
+      message("\n\n WARNING: No fishing at ", iopac, " in crab year ", y, "!\n\n") # updated to iopac 03-10-21, was No fishing at ", p, "
+    } else if(vcount(tmp_g) > 0){
+      ## add in the full metier names as vertex attribute
+      filtered_metier_info <- as.data.frame(x = V(tmp_g)$name)
+      colnames(filtered_metier_info) <- "SPGRPN2" #"metier.abbrev"
+      filtered_metier_info <- left_join(filtered_metier_info, node_names, by = "SPGRPN2")
+      V(tmp_g)$common_name <- as.character(filtered_metier_info$species_group_2_label2)
+      ## save vertex colors as attribute
+      vertex_cols <- vertex_color(g = tmp_g)
+      V(tmp_g)$colors <- vertex_cols
+      ## save objects
+      rds_name <- ifelse(rm_crab,  paste0("igraph_", iopac, "_", y, "_totalrev", total_rev_cutoff,"_indivrev", indiv_rev_cutoff,"_", edgetype,"_rmCrab.rds"),  paste0("igraph_", iopac, "_", y, "_", total_rev_cutoff,"_", indiv_rev_cutoff,"_", edgetype,".rds")) # updated to iopac 03-10-21, was "igraph_", p
+      saveRDS(tmp_g, file = here::here(outdir_ports, rds_name))
+      
+    # Calculate network-level statistics
+    ## using the `net_stats` function
+    g_stats <- net_stats(tmp_g, y = y, stats="network")
+    #g_stats <- net_stats(tmp_g, y = 2008, stats="network")
+    ## add on period (closure/open) and port group info
+    g_stats <- g_stats %>%
+      #mutate(period = rep("early", times=dim(g_stats)[1])) %>%
+      mutate(pcgroup = rep(iopac, times=dim(g_stats)[1])) # updated to iopac 03-10-21, was rep(p
+    } #end 'else' close-g has > 0 vertex
+    
+    #### SAVE NETWORK STATS OUTPUT ####
+    ## merge network stats from closure / open period
+    # if(length(V(tmp_g)$name) == 0){
+    #   tmp_stats <- g_stats
+    # } else{
+    #   tmp_stats <- rbind(g_stats, late_stats)
+    # }
+    ## append to network stats output data frame
+    if(exists('mystats')){
+      mystats <- rbind(mystats, g_stats)
+    } else{
+      mystats <- g_stats
+    }
+    
+  } #end (p in myports)
+  cat("\nfinished with all port groups in crab year ", y, "\n-----\n")
+} #end (y in years)
+```
+<br>
+
+Write stats out to file. 2008_2015_CA_CrabPorts_NoSubgraph_01contribution.csv
+```{r eval=TRUE}
+filename <- paste0("NetworkStats_", min(years), "_", max(years), "_", length(myports), "pcgroups_", "totalrev", total_rev_cutoff,"_indivrev", indiv_rev_cutoff,"_", edgetype, "_", ifelse(rm_crab, 'rmCrab_','_'), contr_cutoff*100, "pContribution.csv")
+
+write.csv(mystats,here::here(statdir, filename), row.names=FALSE)
+```
+<br>
+
+
+#### C)(ii) Edges defined based on number of vessels, with a minimum annual total fisheries revenue cutoff for each vessel of `$5,000` and a minimum annual individual fisheries revenue cutoff for each vessel of `$1`.
+
+We only include vessels that generate >=`$5,000` in total fisheries revenue each year and >=`$500` in revenue from individual fisheries.
+
+```{r}
+
+total_rev_cutoff <- 5000
+indiv_rev_cutoff <- 500
+edgetype <- "vessels"
+
+```
+<br>
+
+```{r eval=TRUE}
+
+
+# y=2019
+# p = "AST"
+# iopac = "Astoria"
+# wc_state = "W"
+for(y in years){
+  for(iopac in myports){ # updated to iopac 03-10-21, was p
+    cat(iopac, "\n")
+    
+    ### pull fish ticket data for given year, port group ###
+    
+    dat <- fishtix %>%
+      #filter(crab_year == 2008 & IOPAC == "Bodega Bay") # this line is just for running through for loop manually
+      filter(crab_year == y & IOPAC == iopac) 
+    
+    ##### Create igraph object ####
+    
+    ## using participation_network function *if write_out = true, set pcid_choose/year_choose to p/y for file naming!
+    tmp_g <- participation_network_crabyear(
+      dat, 
+      filter = TRUE, filter_subgraph = FALSE,
+      edge_type="vessels", pcid_choose=iopac, state_choose = NA, year_choose=y, min_vessels = vessel_cutoff, min_contribution = contr_cutoff, min_rev = total_rev_cutoff, min_rev_indiv = 500,
+      write_out=TRUE, out_dir=outdir_ports)
+    
+    if(any(is.na(tmp_g))){
+      message("\n\n WARNING: No fishing at ", iopac, " in crab year ", y, "!\n\n") # updated to iopac 03-10-21, was No fishing at ", p, "
+    } else if(vcount(tmp_g) > 0){
+      ## add in the full metier names as vertex attribute
+      filtered_metier_info <- as.data.frame(x = V(tmp_g)$name)
+      colnames(filtered_metier_info) <- "SPGRPN2" #"metier.abbrev"
+      filtered_metier_info <- left_join(filtered_metier_info, node_names, by = "SPGRPN2")
+      V(tmp_g)$common_name <- as.character(filtered_metier_info$species_group_2_label2)
+      ## save vertex colors as attribute
+      vertex_cols <- vertex_color(g = tmp_g)
+      V(tmp_g)$colors <- vertex_cols
+      ## save objects
+      rds_name <- ifelse(rm_crab,  paste0("igraph_", iopac, "_", y, "_totalrev", total_rev_cutoff,"_indivrev", indiv_rev_cutoff,"_", edgetype,"_rmCrab.rds"),  paste0("igraph_", iopac, "_", y, "_", total_rev_cutoff,"_", indiv_rev_cutoff,"_", edgetype,".rds")) # updated to iopac 03-10-21, was "igraph_", p
+      saveRDS(tmp_g, file = here::here(outdir_ports, rds_name))
+      
+    # Calculate network-level statistics
+    ## using the `net_stats` function
+    g_stats <- net_stats(tmp_g, y = y, stats="network")
+    #g_stats <- net_stats(tmp_g, y = 2008, stats="network")
+    ## add on period (closure/open) and port group info
+    g_stats <- g_stats %>%
+      #mutate(period = rep("early", times=dim(g_stats)[1])) %>%
+      mutate(pcgroup = rep(iopac, times=dim(g_stats)[1])) # updated to iopac 03-10-21, was rep(p
+    } #end 'else' close-g has > 0 vertex
+    
+    #### SAVE NETWORK STATS OUTPUT ####
+    ## merge network stats from closure / open period
+    # if(length(V(tmp_g)$name) == 0){
+    #   tmp_stats <- g_stats
+    # } else{
+    #   tmp_stats <- rbind(g_stats, late_stats)
+    # }
+    ## append to network stats output data frame
+    if(exists('mystats')){
+      mystats <- rbind(mystats, g_stats)
+    } else{
+      mystats <- g_stats
+    }
+    
+  } #end (p in myports)
+  cat("\nfinished with all port groups in crab year ", y, "\n-----\n")
+} #end (y in years)
+```
+<br>
+
+Write stats out to file. 2008_2015_CA_CrabPorts_NoSubgraph_01contribution.csv
+```{r eval=TRUE}
+filename <- paste0("NetworkStats_", min(years), "_", max(years), "_", length(myports), "pcgroups_", "totalrev", total_rev_cutoff,"_indivrev", indiv_rev_cutoff,"_", edgetype, "_", ifelse(rm_crab, 'rmCrab_','_'), contr_cutoff*100, "pContribution.csv")
+
+write.csv(mystats,here::here(statdir, filename), row.names=FALSE)
+```
+<br>
+
+### 2) Vessel-level networks summarized by state
+
+#### A)(i) A minimum annual total and individual fisheries revenue cutoff for each vessel of $1
+
+We only include vessels that generate >=`$1` in total fisheries revenue each year and >=`$1` in revenue from individual fisheries.
+
+```{r}
+
+total_rev_cutoff <- 1
+indiv_rev_cutoff <- 1
+edgetype <- "connectivity"
+
+```
+<br>
+
+```{r eval=TRUE}
+
+
+# y=2019
+# p = "AST"
+# iopac = "Astoria"
+# wc_state = "W"
+for(y in years){
+  for(state in mystates){
+    cat(wc_state, "\n")
+    
+    ### pull fish ticket data for given year, port group ###
+    
+    dat <- fishtix %>%
+      filter(crab_year == y & agid == wc_state) 
+    
+    ##### Create igraph object ####
+    
+    ## using participation_network function *if write_out = true, set pcid_choose/year_choose to p/y for file naming!
+    tmp_g <- participation_network_crabyear(
+      dat, 
+      filter = TRUE, filter_subgraph = FALSE,
+      edge_type="connectivity", pcid_choose=NA, state_choose = wc_state, year_choose=y, min_vessels = vessel_cutoff, min_contribution = contr_cutoff, min_rev = total_rev_cutoff, min_rev = indiv_rev_cutoff,
+      write_out=TRUE, out_dir=outdir_states)
+    
+    if(any(is.na(tmp_g))){
+      message("\n\n WARNING: No fishing at ", wc_state, " in crab year ", y, "!\n\n") # updated to iopac 03-10-21, was No fishing at ", p, "
+    } else if(vcount(tmp_g) > 0){
+      ## add in the full metier names as vertex attribute
+      filtered_metier_info <- as.data.frame(x = V(tmp_g)$name)
+      colnames(filtered_metier_info) <- "SPGRPN2" #"metier.abbrev"
+      filtered_metier_info <- left_join(filtered_metier_info, node_names, by = "SPGRPN2")
+      V(tmp_g)$common_name <- as.character(filtered_metier_info$species_group_2_label2)
+      ## save vertex colors as attribute
+      vertex_cols <- vertex_color(g = tmp_g)
+      V(tmp_g)$colors <- vertex_cols
+      ## save objects
+      rds_name <- ifelse(rm_crab,  paste0("igraph_", wc_state, "_", y, "_totalrev", total_rev_cutoff,"_indivrev", indiv_rev_cutoff,"_", edgetype,"_rmCrab.rds"),  paste0("igraph_", wc_state, "_", y, "_", total_rev_cutoff,"_", indiv_rev_cutoff,"_", edgetype,".rds")) # updated to iopac 03-10-21, was "igraph_", p
+      saveRDS(tmp_g, file = here::here(outdir_states, rds_name))
+      
+    # Calculate network-level statistics
+    ## using the `net_stats` function
+    g_stats <- net_stats(tmp_g, y = y, stats="network")
+    #g_stats <- net_stats(tmp_g, y = 2008, stats="network")
+    ## add on period (closure/open) and port group info
+    g_stats <- g_stats %>%
+      #mutate(period = rep("early", times=dim(g_stats)[1])) %>%
+      mutate(state = rep(wc_state, times=dim(g_stats)[1])) # updated to iopac 03-10-21, was rep(p
+    } #end 'else' close-g has > 0 vertex
+    
+    #### SAVE NETWORK STATS OUTPUT ####
+    ## merge network stats from closure / open period
+    # if(length(V(tmp_g)$name) == 0){
+    #   tmp_stats <- g_stats
+    # } else{
+    #   tmp_stats <- rbind(g_stats, late_stats)
+    # }
+    ## append to network stats output data frame
+    if(exists('mystats')){
+      mystats <- rbind(mystats, g_stats)
+    } else{
+      mystats <- g_stats
+    }
+    
+  } #end (p in myports)
+  cat("\nfinished with all port groups in crab year ", y, "\n-----\n")
+} #end (y in years)
+```
+<br>
+
+Write stats out to file. 2008_2015_CA_CrabPorts_NoSubgraph_01contribution.csv
+```{r eval=TRUE}
+filename <- paste0("NetworkStats_", min(years), "_", max(years), "_", length(mystates), "states_", "totalrev", total_rev_cutoff,"_indivrev", indiv_rev_cutoff,"_", edgetype, "_", ifelse(rm_crab, 'rmCrab_','_'), contr_cutoff*100, "pContribution.csv")
+
+write.csv(mystats,here::here(statdir, filename), row.names=FALSE)
+```
+<br>
+
+#### A)(ii) and B(i) A minimum annual total fisheries revenue cutoff for each vessel of $5,000, and an individual fisheries cutoff for each vessel of $1
+
+We only include vessels that generate `>=$5,000` in total fisheries revenue each year and `>=$1` in revenue from individual fisheries.
+
+```{r}
+
+total_rev_cutoff <- 5000
+indiv_rev_cutoff <- 1
+edgetype <- "connectivity"
+
+```
+<br>
+
+```{r eval=TRUE}
+
+
+# y=2019
+# p = "AST"
+# iopac = "Astoria"
+# wc_state = "W"
+for(y in years){
+  for(state in mystates){
+    cat(wc_state, "\n")
+    
+    ### pull fish ticket data for given year, port group ###
+    
+    dat <- fishtix %>%
+      filter(crab_year == y & agid == wc_state) 
+    
+    ##### Create igraph object ####
+    
+    ## using participation_network function *if write_out = true, set pcid_choose/year_choose to p/y for file naming!
+    tmp_g <- participation_network_crabyear(
+      dat, 
+      filter = TRUE, filter_subgraph = FALSE,
+      edge_type="connectivity", pcid_choose=NA, state_choose = wc_state, year_choose=y, min_vessels = vessel_cutoff, min_contribution = contr_cutoff, min_rev = total_rev_cutoff, min_rev = indiv_rev_cutoff,
+      write_out=TRUE, out_dir=outdir_states)
+    
+    if(any(is.na(tmp_g))){
+      message("\n\n WARNING: No fishing at ", wc_state, " in crab year ", y, "!\n\n") # updated to iopac 03-10-21, was No fishing at ", p, "
+    } else if(vcount(tmp_g) > 0){
+      ## add in the full metier names as vertex attribute
+      filtered_metier_info <- as.data.frame(x = V(tmp_g)$name)
+      colnames(filtered_metier_info) <- "SPGRPN2" #"metier.abbrev"
+      filtered_metier_info <- left_join(filtered_metier_info, node_names, by = "SPGRPN2")
+      V(tmp_g)$common_name <- as.character(filtered_metier_info$species_group_2_label2)
+      ## save vertex colors as attribute
+      vertex_cols <- vertex_color(g = tmp_g)
+      V(tmp_g)$colors <- vertex_cols
+      ## save objects
+      rds_name <- ifelse(rm_crab,  paste0("igraph_", wc_state, "_", y, "_totalrev", total_rev_cutoff,"_indivrev", indiv_rev_cutoff,"_", edgetype,"_rmCrab.rds"),  paste0("igraph_", wc_state, "_", y, "_", total_rev_cutoff,"_", indiv_rev_cutoff,"_", edgetype,".rds")) # updated to iopac 03-10-21, was "igraph_", p
+      saveRDS(tmp_g, file = here::here(outdir_states, rds_name))
+      
+    # Calculate network-level statistics
+    ## using the `net_stats` function
+    g_stats <- net_stats(tmp_g, y = y, stats="network")
+    #g_stats <- net_stats(tmp_g, y = 2008, stats="network")
+    ## add on period (closure/open) and port group info
+    g_stats <- g_stats %>%
+      #mutate(period = rep("early", times=dim(g_stats)[1])) %>%
+      mutate(state = rep(wc_state, times=dim(g_stats)[1])) # updated to iopac 03-10-21, was rep(p
+    } #end 'else' close-g has > 0 vertex
+    
+    #### SAVE NETWORK STATS OUTPUT ####
+    ## merge network stats from closure / open period
+    # if(length(V(tmp_g)$name) == 0){
+    #   tmp_stats <- g_stats
+    # } else{
+    #   tmp_stats <- rbind(g_stats, late_stats)
+    # }
+    ## append to network stats output data frame
+    if(exists('mystats')){
+      mystats <- rbind(mystats, g_stats)
+    } else{
+      mystats <- g_stats
+    }
+    
+  } #end (p in myports)
+  cat("\nfinished with all port groups in crab year ", y, "\n-----\n")
+} #end (y in years)
+```
+<br>
+
+Write stats out to file. 2008_2015_CA_CrabPorts_NoSubgraph_01contribution.csv
+```{r eval=TRUE}
+filename <- paste0("NetworkStats_", min(years), "_", max(years), "_", length(mystates), "states_", "totalrev", total_rev_cutoff,"_indivrev", indiv_rev_cutoff,"_", edgetype, "_", ifelse(rm_crab, 'rmCrab_','_'), contr_cutoff*100, "pContribution.csv")
+
+write.csv(mystats,here::here(statdir, filename), row.names=FALSE)
+```
+<br>
+
+#### B)(ii) and C)(i) A minimum annual total fisheries revenue cutoff for each vessel of $5,000, and a minimum annual individual fisheries revenue cutoff for each vessel of $500.
+
+We only include vessels that generate >=`$5,000` in total fisheries revenue each year and >=`$500` in revenue from individual fisheries.
+
+```{r}
+
+total_rev_cutoff <- 5000
+indiv_rev_cutoff <- 500
+edgetype <- "connectivity"
+
+```
+<br>
+
+```{r eval=TRUE}
+
+
+# y=2019
+# p = "AST"
+# iopac = "Astoria"
+# wc_state = "W"
+for(y in years){
+  for(state in mystates){
+    cat(wc_state, "\n")
+    
+    ### pull fish ticket data for given year, port group ###
+    
+    dat <- fishtix %>%
+      filter(crab_year == y & agid == wc_state) 
+    
+    ##### Create igraph object ####
+    
+    ## using participation_network function *if write_out = true, set pcid_choose/year_choose to p/y for file naming!
+    tmp_g <- participation_network_crabyear(
+      dat, 
+      filter = TRUE, filter_subgraph = FALSE,
+      edge_type="connectivity", pcid_choose=NA, state_choose = wc_state, year_choose=y, min_vessels = vessel_cutoff, min_contribution = contr_cutoff, min_rev = total_rev_cutoff, min_rev_indiv = 500,
+      write_out=TRUE, out_dir=outdir_states)
+    
+    if(any(is.na(tmp_g))){
+      message("\n\n WARNING: No fishing at ", wc_state, " in crab year ", y, "!\n\n") # updated to iopac 03-10-21, was No fishing at ", p, "
+    } else if(vcount(tmp_g) > 0){
+      ## add in the full metier names as vertex attribute
+      filtered_metier_info <- as.data.frame(x = V(tmp_g)$name)
+      colnames(filtered_metier_info) <- "SPGRPN2" #"metier.abbrev"
+      filtered_metier_info <- left_join(filtered_metier_info, node_names, by = "SPGRPN2")
+      V(tmp_g)$common_name <- as.character(filtered_metier_info$species_group_2_label2)
+      ## save vertex colors as attribute
+      vertex_cols <- vertex_color(g = tmp_g)
+      V(tmp_g)$colors <- vertex_cols
+      ## save objects
+      rds_name <- ifelse(rm_crab,  paste0("igraph_", wc_state, "_", y, "_totalrev", total_rev_cutoff,"_indivrev", indiv_rev_cutoff,"_", edgetype,"_rmCrab.rds"),  paste0("igraph_", wc_state, "_", y, "_", total_rev_cutoff,"_", indiv_rev_cutoff,"_", edgetype,".rds")) # updated to iopac 03-10-21, was "igraph_", p
+      saveRDS(tmp_g, file = here::here(outdir_states, rds_name))
+      
+    # Calculate network-level statistics
+    ## using the `net_stats` function
+    g_stats <- net_stats(tmp_g, y = y, stats="network")
+    #g_stats <- net_stats(tmp_g, y = 2008, stats="network")
+    ## add on period (closure/open) and port group info
+    g_stats <- g_stats %>%
+      #mutate(period = rep("early", times=dim(g_stats)[1])) %>%
+      mutate(state = rep(wc_state, times=dim(g_stats)[1])) # updated to iopac 03-10-21, was rep(p
+    } #end 'else' close-g has > 0 vertex
+    
+    #### SAVE NETWORK STATS OUTPUT ####
+    ## merge network stats from closure / open period
+    # if(length(V(tmp_g)$name) == 0){
+    #   tmp_stats <- g_stats
+    # } else{
+    #   tmp_stats <- rbind(g_stats, late_stats)
+    # }
+    ## append to network stats output data frame
+    if(exists('mystats')){
+      mystats <- rbind(mystats, g_stats)
+    } else{
+      mystats <- g_stats
+    }
+    
+  } #end (p in myports)
+  cat("\nfinished with all port groups in crab year ", y, "\n-----\n")
+} #end (y in years)
+```
+<br>
+
+Write stats out to file. 2008_2015_CA_CrabPorts_NoSubgraph_01contribution.csv
+```{r eval=TRUE}
+filename <- paste0("NetworkStats_", min(years), "_", max(years), "_", length(mystates), "states_", "totalrev", total_rev_cutoff,"_indivrev", indiv_rev_cutoff,"_", edgetype, "_", ifelse(rm_crab, 'rmCrab_','_'), contr_cutoff*100, "pContribution.csv")
+
+write.csv(mystats,here::here(statdir, filename), row.names=FALSE)
+```
+<br>
+
+
+#### C)(ii) Edges defined based on number of vessels.
+
+We only include vessels that generate >=`$5,000` in total fisheries revenue each year and >=`$500` in revenue from individual fisheries.
+
+```{r}
+
+total_rev_cutoff <- 5000
+indiv_rev_cutoff <- 500
+edgetype <- "vessels"
+
+```
+<br>
+
+```{r eval=TRUE}
+
+
+# y=2019
+# p = "AST"
+# iopac = "Astoria"
+# wc_state = "W"
+for(y in years){
+  for(state in mystates){
+    cat(wc_state, "\n")
+    
+    ### pull fish ticket data for given year, port group ###
+    
+    dat <- fishtix %>%
+      filter(crab_year == y & agid == wc_state) 
+    
+    ##### Create igraph object ####
+    
+    ## using participation_network function *if write_out = true, set pcid_choose/year_choose to p/y for file naming!
+    tmp_g <- participation_network_crabyear(
+      dat, 
+      filter = TRUE, filter_subgraph = FALSE,
+      edge_type="vessels", pcid_choose=NA, state_choose = wc_state, year_choose=y, min_vessels = vessel_cutoff, min_contribution = contr_cutoff, min_rev = total_rev_cutoff, min_rev_indiv = 500,
+      write_out=TRUE, out_dir=outdir_states)
+    
+    if(any(is.na(tmp_g))){
+      message("\n\n WARNING: No fishing at ", wc_state, " in crab year ", y, "!\n\n") # updated to iopac 03-10-21, was No fishing at ", p, "
+    } else if(vcount(tmp_g) > 0){
+      ## add in the full metier names as vertex attribute
+      filtered_metier_info <- as.data.frame(x = V(tmp_g)$name)
+      colnames(filtered_metier_info) <- "SPGRPN2" #"metier.abbrev"
+      filtered_metier_info <- left_join(filtered_metier_info, node_names, by = "SPGRPN2")
+      V(tmp_g)$common_name <- as.character(filtered_metier_info$species_group_2_label2)
+      ## save vertex colors as attribute
+      vertex_cols <- vertex_color(g = tmp_g)
+      V(tmp_g)$colors <- vertex_cols
+      ## save objects
+      rds_name <- ifelse(rm_crab,  paste0("igraph_", wc_state, "_", y, "_totalrev", total_rev_cutoff,"_indivrev", indiv_rev_cutoff,"_", edgetype,"_rmCrab.rds"),  paste0("igraph_", wc_state, "_", y, "_", total_rev_cutoff,"_", indiv_rev_cutoff,"_", edgetype,".rds")) # updated to iopac 03-10-21, was "igraph_", p
+      saveRDS(tmp_g, file = here::here(outdir_states, rds_name))
+      
+    # Calculate network-level statistics
+    ## using the `net_stats` function
+    g_stats <- net_stats(tmp_g, y = y, stats="network")
+    #g_stats <- net_stats(tmp_g, y = 2008, stats="network")
+    ## add on period (closure/open) and port group info
+    g_stats <- g_stats %>%
+      #mutate(period = rep("early", times=dim(g_stats)[1])) %>%
+      mutate(state = rep(wc_state, times=dim(g_stats)[1])) # updated to iopac 03-10-21, was rep(p
+    } #end 'else' close-g has > 0 vertex
+    
+    #### SAVE NETWORK STATS OUTPUT ####
+    ## merge network stats from closure / open period
+    # if(length(V(tmp_g)$name) == 0){
+    #   tmp_stats <- g_stats
+    # } else{
+    #   tmp_stats <- rbind(g_stats, late_stats)
+    # }
+    ## append to network stats output data frame
+    if(exists('mystats')){
+      mystats <- rbind(mystats, g_stats)
+    } else{
+      mystats <- g_stats
+    }
+    
+  } #end (p in myports)
+  cat("\nfinished with all port groups in crab year ", y, "\n-----\n")
+} #end (y in years)
+```
+<br>
+
+Write stats out to file. 2008_2015_CA_CrabPorts_NoSubgraph_01contribution.csv
+```{r eval=TRUE}
+filename <- paste0("NetworkStats_", min(years), "_", max(years), "_", length(mystates), "states_", "totalrev", total_rev_cutoff,"_indivrev", indiv_rev_cutoff,"_", edgetype, "_", ifelse(rm_crab, 'rmCrab_','_'), contr_cutoff*100, "pContribution.csv")
+
+write.csv(mystats,here::here(statdir, filename), row.names=FALSE)
+```
+<br>
+
+### 3) Aggregate networks summarized by port
+
+Notes JFS has just started to code this. 08-20-2021
+
+*** Will require updated generate_participation_networks_bulk.R
+
+#### B)(ii) and C)(i) Edges defined based on connectivity.
+
+We only include ports that generate >=`$5,000` in total fisheries revenue each year and only include individual fisheries that generate >=`$500` in revenue in each port.
+
+```{r}
+
+total_rev_cutoff <- 5000
+indiv_rev_cutoff <- 500
+edgetype <- "connectivity"
+
+```
+<br>
+
+```{r eval=TRUE}
+
+
+# y=2019
+# p = "AST"
+# iopac = "Astoria"
+# wc_state = "W"
+for(y in years){
+  for(iopac in myports){ # updated to iopac 03-10-21, was p
+    cat(iopac, "\n")
+    
+    ### pull fish ticket data for given year, port group ###
+    
+    dat <- fishtix %>%
+      #filter(crab_year == 2008 & IOPAC == "Bodega Bay") # this line is just for running through for loop manually
+      filter(crab_year == y & IOPAC == iopac) 
+    
+    ##### Create igraph object ####
+    
+    ## using participation_network function *if write_out = true, set pcid_choose/year_choose to p/y for file naming!
+    
+    tmp_g <- participation_network_crabyear_bulk(
+      dat, 
+      filter = TRUE, filter_subgraph = FALSE,
+      edge_type="connectivity", pcid_choose=iopac, state_choose = NA, year_choose=y, min_vessels = vessel_cutoff, min_contribution = contr_cutoff, min_rev = total_rev_cutoff, min_rev_indiv = 500,
+      write_out=TRUE, out_dir=outdir_ports)
+    
+    if(any(is.na(tmp_g))){
+      message("\n\n WARNING: No fishing at ", iopac, " in crab year ", y, "!\n\n") # updated to iopac 03-10-21, was No fishing at ", p, "
+    } else if(vcount(tmp_g) > 0){
+      ## add in the full metier names as vertex attribute
+      filtered_metier_info <- as.data.frame(x = V(tmp_g)$name)
+      colnames(filtered_metier_info) <- "SPGRPN2" #"metier.abbrev"
+      filtered_metier_info <- left_join(filtered_metier_info, node_names, by = "SPGRPN2")
+      V(tmp_g)$common_name <- as.character(filtered_metier_info$species_group_2_label2)
+      ## save vertex colors as attribute
+      vertex_cols <- vertex_color(g = tmp_g)
+      V(tmp_g)$colors <- vertex_cols
+      ## save objects
+      rds_name <- ifelse(rm_crab,  paste0("igraph_", iopac, "_", y, "_totalrev", total_rev_cutoff,"_indivrev", indiv_rev_cutoff,"_", edgetype,"_rmCrab.rds"),  paste0("igraph_", iopac, "_", y, "_", total_rev_cutoff,"_", indiv_rev_cutoff,"_", edgetype,".rds")) # updated to iopac 03-10-21, was "igraph_", p
+      saveRDS(tmp_g, file = here::here(outdir_ports, rds_name))
+      
+    # Calculate network-level statistics
+    ## using the `net_stats` function
+    g_stats <- net_stats(tmp_g, y = y, stats="network")
+    #g_stats <- net_stats(tmp_g, y = 2008, stats="network")
+    ## add on period (closure/open) and port group info
+    g_stats <- g_stats %>%
+      #mutate(period = rep("early", times=dim(g_stats)[1])) %>%
+      mutate(pcgroup = rep(iopac, times=dim(g_stats)[1])) # updated to iopac 03-10-21, was rep(p
+    } #end 'else' close-g has > 0 vertex
+    
+    #### SAVE NETWORK STATS OUTPUT ####
+    ## merge network stats from closure / open period
+    # if(length(V(tmp_g)$name) == 0){
+    #   tmp_stats <- g_stats
+    # } else{
+    #   tmp_stats <- rbind(g_stats, late_stats)
+    # }
+    ## append to network stats output data frame
+    if(exists('mystats')){
+      mystats <- rbind(mystats, g_stats)
+    } else{
+      mystats <- g_stats
+    }
+    
+  } #end (p in myports)
+  cat("\nfinished with all port groups in crab year ", y, "\n-----\n")
+} #end (y in years)
+```
+<br>
+
+Write stats out to file. 2008_2015_CA_CrabPorts_NoSubgraph_01contribution.csv
+```{r eval=TRUE}
+filename <- paste0("NetworkStats_", min(years), "_", max(years), "_", length(myports), "pcgroups_", "totalrev", total_rev_cutoff,"_indivrev", indiv_rev_cutoff,"_", edgetype, "_", ifelse(rm_crab, 'rmCrab_','_'), contr_cutoff*100, "pContribution.csv")
+
+write.csv(mystats,here::here(statdir, filename), row.names=FALSE)
+```
+<br>
+
+
+#### C)(ii) Edges defined based on number of vessels, with a minimum annual total fisheries revenue cutoff for each vessel of `$5,000` and a minimum annual individual fisheries revenue cutoff for each vessel of `$1`.
+
+We only include vessels that generate >=`$5,000` in total fisheries revenue each year and >=`$500` in revenue from individual fisheries.
+
+```{r}
+
+total_rev_cutoff <- 5000
+indiv_rev_cutoff <- 500
+edgetype <- "vessels"
+
+```
+<br>
+
+```{r eval=TRUE}
+
+
+# y=2019
+# p = "AST"
+# iopac = "Astoria"
+# wc_state = "W"
+for(y in years){
+  for(iopac in myports){ # updated to iopac 03-10-21, was p
+    cat(iopac, "\n")
+    
+    ### pull fish ticket data for given year, port group ###
+    
+    dat <- fishtix %>%
+      #filter(crab_year == 2008 & IOPAC == "Bodega Bay") # this line is just for running through for loop manually
+      filter(crab_year == y & IOPAC == iopac) 
+    
+    ##### Create igraph object ####
+    
+    ## using participation_network function *if write_out = true, set pcid_choose/year_choose to p/y for file naming!
+    tmp_g <- participation_network_crabyear(
+      dat, 
+      filter = TRUE, filter_subgraph = FALSE,
+      edge_type="vessels", pcid_choose=iopac, state_choose = NA, year_choose=y, min_vessels = vessel_cutoff, min_contribution = contr_cutoff, min_rev = total_rev_cutoff, min_rev_indiv = 500,
+      write_out=TRUE, out_dir=outdir_ports_agg)
+    
+    if(any(is.na(tmp_g))){
+      message("\n\n WARNING: No fishing at ", iopac, " in crab year ", y, "!\n\n") # updated to iopac 03-10-21, was No fishing at ", p, "
+    } else if(vcount(tmp_g) > 0){
+      ## add in the full metier names as vertex attribute
+      filtered_metier_info <- as.data.frame(x = V(tmp_g)$name)
+      colnames(filtered_metier_info) <- "SPGRPN2" #"metier.abbrev"
+      filtered_metier_info <- left_join(filtered_metier_info, node_names, by = "SPGRPN2")
+      V(tmp_g)$common_name <- as.character(filtered_metier_info$species_group_2_label2)
+      ## save vertex colors as attribute
+      vertex_cols <- vertex_color(g = tmp_g)
+      V(tmp_g)$colors <- vertex_cols
+      ## save objects
+      rds_name <- ifelse(rm_crab,  paste0("igraph_", iopac, "_", y, "_totalrev", total_rev_cutoff,"_indivrev", indiv_rev_cutoff,"_", edgetype,"_rmCrab_bulk_",contr_cutoff*100,".rds"),  paste0("igraph_", iopac, "_", y, "_", total_rev_cutoff,"_", indiv_rev_cutoff,"_", edgetype,"_bulk_",contr_cutoff*100,".rds")) # updated to iopac 03-10-21, was "igraph_", p
+      saveRDS(tmp_g, file = here::here(outdir_ports_agg, rds_name))
+      
+    # Calculate network-level statistics
+    ## using the `net_stats` function
+    g_stats <- net_stats(tmp_g, y = y, stats="network")
+    #g_stats <- net_stats(tmp_g, y = 2008, stats="network")
+    ## add on period (closure/open) and port group info
+    g_stats <- g_stats %>%
+      #mutate(period = rep("early", times=dim(g_stats)[1])) %>%
+      mutate(pcgroup = rep(iopac, times=dim(g_stats)[1])) # updated to iopac 03-10-21, was rep(p
+    } #end 'else' close-g has > 0 vertex
+    
+    #### SAVE NETWORK STATS OUTPUT ####
+    ## merge network stats from closure / open period
+    # if(length(V(tmp_g)$name) == 0){
+    #   tmp_stats <- g_stats
+    # } else{
+    #   tmp_stats <- rbind(g_stats, late_stats)
+    # }
+    ## append to network stats output data frame
+    if(exists('mystats')){
+      mystats <- rbind(mystats, g_stats)
+    } else{
+      mystats <- g_stats
+    }
+    
+  } #end (p in myports)
+  cat("\nfinished with all port groups in crab year ", y, "\n-----\n")
+} #end (y in years)
+```
+<br>
+
+Write stats out to file. 2008_2015_CA_CrabPorts_NoSubgraph_01contribution.csv
+```{r eval=TRUE}
+filename <- paste0("NetworkStats_", min(years), "_", max(years), "_", length(myports), "pcgroups_", "totalrev", total_rev_cutoff,"_indivrev", indiv_rev_cutoff,"_", edgetype, "_", ifelse(rm_crab, 'rmCrab_','_'), contr_cutoff*100, "pContribution_bulk.csv")
+
+write.csv(mystats,here::here(statdir, filename), row.names=FALSE)
+```
+<br>
+
+*** JFS STOPPED HERE 08202021. NEXT STEP IS TO UPDATE THE participation_network_crabyear_bulk() FUNCTION (PICK UP AT LINE 54). ONCE THAT IS FIXED COPY CHUNKS ABOVE BUT FOR edge_type = "vessels". THEN CAN MOVE ONTO #4 BELOW.
+
+### 4) Aggregate networks summarized by state
+
+*** Will require updated generate_participation_networks_bulk.R
+
+Notes JFS has not yet started to code this. 08-20-2021
+
+# Summarize networks for SSC-ES presentation
+
+Notes JFS has not yet started to code this. 08-20-2021
+
+*** I will need to update plot_annual_networks_bulk.Rmd and plot_annual_networks.Rmd, which will require updating dependencies like plot_network_bulk.R. It may be better to take this whole section and make it a separate Rmd
+
+*** I will want to add multipanel figures that show the network graphs from 2004-2020 for 4 example ports using plot_network_comparable.R which does not yet exist
+
+
+
+
+
+---
+
+Script Runtime:
+```{r}
+Sys.time() - script_start_time
+```
+

@@ -1,16 +1,20 @@
 #' Generate Participation Network
 #'
-#' Create a fisheries participation network. Based on original function by 
-#' Emma Fuller; edits specified in comments.
+#' Create an aggregate fisheries participation network. Based on original 
+#' function by Emma Fuller; edits specified in comments.
 #'
 #' @param tickets fish tickets data frame
+#' @param edge_type type of edge weighting to use - the connectivity statistic ("connectivity"), or just number of vessels ("vessels")
 #' @param pcid_choose specify an IOPAC port group
+#' @param state_choose specify a US West Coast State@param state_choose specify a US West Coast State
 #' @param year_choose Specify a crab year
 #' @param filter use the `min_vessels` and `min_contribution` objects to filter the data
 #' @param filter_subgraph a filtering option from the original function that was turned off for Fisher et al.
 #' @param min_vessels the minimum number of vessels participating in a fishery for that fishery to be retained in the network
-#' @param min_contribution the minimum contribution (as a proportion) to total exvessel revenue for a fishery to be retained for a given vessel
-#' @param write_out specificy whether to write out the adjacency matrix A that is used to build the graph. not yet coded in below, will make it easier if you want to manually adjust the igraph vertex / edge attributes later. 
+#' @param min_contribution the minimum contribution (as a proportion) to total exvessel revenue at a port group or in a state for a fishery to be retained for a given vessel
+#' @param min_rev the minimum revenue (in dollars) generated from all fisheries for a given port or state in a given year
+#' @param min_rev_indiv the minimum revenue (in dollars) generated from any one fishery for a given port or state in a given year
+#' @param write_out specify whether to write out the adjacency matrix A that is used to build the graph. not yet coded in below, will make it easier if you want to manually adjust the igraph vertex / edge attributes later. 
 #' @return non-confidential fisheries partition network as an igraph object
 #' @examples
 #' close_g <- participation_network_crabyear(close_dat, filter = TRUE, filter_subgraph = FALSE)
@@ -19,10 +23,15 @@
 #the line below is here to allow us to interact with the script without running the function
 #tickets <- dat; pcid_choose <- iopac; year_choose <- y; min_vessels <- 3; min_contribution <- 0.10
 
-participation_network_crabyear_bulk <- function(tickets, pcid_choose=NA, year_choose=NA, filter, filter_subgraph, min_vessels = 3, min_contribution = 0.10, write_out, out_dir){
+participation_network_crabyear_bulk <- function(tickets, pcid_choose=NA, state_choose = NA, year_choose=NA, filter, filter_subgraph, min_vessels = 3, min_contribution = 0.10, min_rev = 1, min_rev_indiv = 1, write_out, out_dir){
+  if(!is.na(state_choose)){
+    tickets = dplyr::filter(tickets, agid %in% state_choose) # updated 08-20-21
+  }
+  
   if(!is.na(pcid_choose)){
     tickets = dplyr::filter(tickets, IOPAC %in% pcid_choose) # updated 03-01-21, was pcgroup %in% pcid_choose
   }
+  
   if(any(!is.na(year_choose))){
     tickets = dplyr::filter(tickets, crab_year %in% year_choose)
   }
