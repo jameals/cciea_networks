@@ -1146,7 +1146,7 @@ write.csv(mystats,here::here(statdir, filename), row.names=FALSE)
 ```
 <br>
 
-*** JFS STOPPED HERE 08202021. NEXT STEP IS TO UPDATE THE participation_network_crabyear_bulk() FUNCTION (PICK UP AT LINE 54). ONCE THAT IS FIXED COPY CHUNKS ABOVE BUT FOR edge_type = "vessels". THEN CAN MOVE ONTO #4 BELOW.
+*** JFS STOPPED HERE 08242021. AFTER UPDATING THE participation_network_crabyear_bulk() FUNCTION. NEXT STEP IS TO COPY CHUNKS ABOVE BUT FOR edge_type = "vessels". THEN CAN MOVE ONTO #4 BELOW.
 
 ### 4) Aggregate networks summarized by state
 
