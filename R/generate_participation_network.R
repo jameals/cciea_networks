@@ -177,17 +177,17 @@ participation_network_crabyear <- function(tickets, edge_type="connectivity", pc
     
   } else{stop("ERROR: unrecognized edge type; cannot generate input matrix.")}
   
-  if(write_out){
-    write.csv(A, here::here(out_dir,paste0("A_",state_choose, "_", year_choose,".csv")), row.names=FALSE)
-  }
+  # if(write_out){
+    # write.csv(A, here::here(out_dir,paste0("A_",state_choose, "_", year_choose,".csv")), row.names=FALSE)
+  # }
   
   if(write_out & !is.na(pcid_choose)){ # added "& !is.na(pcid_choose)" 08202021
     if(edge_type=="connectivity"){
-      write.csv(A, here::here(out_dir,paste0("A_",pcid_choose, "_", year_choose,".csv")), row.names=FALSE)
+      write.csv(A, here::here(out_dir,paste0("A_",pcid_choose, "_", year_choose,"_connectivity.csv")), row.names=FALSE)
     } else if(edge_type=="vessels"){
       # write out both confidential and non-confidential versions of the A matrix.
-      write.csv(A, here::here(out_dir,paste0("A_",pcid_choose, "_", year_choose,".csv")), row.names=TRUE)
-      write.csv(A_confidential, here::here(out_dir,paste0("A_",pcid_choose, "_", year_choose,"_confidential.csv")), row.names=TRUE)
+      write.csv(A, here::here(out_dir,paste0("A_",pcid_choose, "_", year_choose,"_vessels.csv")), row.names=TRUE)
+      write.csv(A_confidential, here::here(out_dir,paste0("A_",pcid_choose, "_", year_choose,"_confidential_vessels.csv")), row.names=TRUE)
     }
   }
 
