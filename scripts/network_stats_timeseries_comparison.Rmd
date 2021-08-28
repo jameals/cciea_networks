@@ -1,5 +1,5 @@
 ---
-title: "Compare Network Stats Timeseries"
+title: "Compare Timeseries of Network Stats"
 author: "M. Fisher"
 date: "Written Aug 17, 2021. Last Run `r Sys.Date()`"
 output:
@@ -13,26 +13,29 @@ output:
     toc: yes
     toc_depth: '3'
 geometry: margin=1in
-subtitle: For SSC-ES 
+subtitle: Preparation for network analysis in CCIEA ESR
 fontsize: 11pt
 ---
 
 # Description
 
-Graph network metrics over time, and compare between different network forms.
+This document graphs network metrics over time for the US West Coast, and compares metrics across different forms of fisheries participation networks.
 
 
 The three core network metrics are: 
 
-1. Mean Degree (alt: Edge Density)
+1. Edge Density (alt: Mean Degree)
 
 2. Weighted Network Centralization (alt: unweighted)
 
 3. Weighted Modularity (alt:unweighted)
 
 
-**Note that many network metrics are sensitive to network size, which will vary over the time series.** Use the timeseries graphs for visual comparison of different network forms, but not for drawing major conclusions around network change / sensitivity. 
+**Note that many network metrics are sensitive to network size, which will vary over the time series.** Network size has been incorporated into each graph as ___. Use the timeseries graphs for visual comparison of different network forms, but not for drawing major conclusions around network change / sensitivity. 
 
+
+
+# Setup
 
 <br>
 ```{r "setup", include=FALSE}
@@ -53,14 +56,13 @@ if(!require("foreign")) {install.packages("foreign")}
 if(!require("lubridate")) {install.packages("lubridate")}
 if(!require("facetscales")) {devtools::install_github("zeehio/facetscales"); library(facetscales)}
 if(!require("ggplot2")) {install.packages("ggplot2")}
-if(!require("ggord")) {devtools::install_github("fawda123/ggord"); library(facetscales)}
+if(!require("grid")) {install.packages("grid")}
 if(!require("gridExtra")) {install.packages("gridExtra")}
+if(!require("ggpubr")) {install.packages("ggpubr")}
 if(!require("cowplot")) {install.packages("cowplot")}
 if(!require("PNWColors")) {devtools::install_github("jakelawler/PNWColors"); library(PNWColors)}
 ```
 <br>
-
-# User Inputs
 
 Select your directories.
 ```{r}
@@ -88,19 +90,19 @@ dataset_names <- c("5pContribution",
 
 Specify which network metrics to retain from the full data set.
 ```{r}
-metrics <- c("mean_deg","nc_weighted","m_weighted")
+metrics <- c("ed","nc_weighted","m_weighted")
 ```
 <br>
 
 Specify which port groups to retain from the full data set.
 ```{r}
-myports <- c("Newport","Crescent City", "San Francisco")
+myports <- c("North WA Coast", "Astoria", "Fort Bragg", "Morro Bay")
 ```
 <br>
 
 
 
-# 1: Data
+# Read in Data
 
 
 Network metrics from different datasets. 
@@ -125,10 +127,6 @@ with(dat,table(dataset,pcgroup))
 ```
 <br>
 
-
-
-# 2. Graph Timeseries
-
 Pivot longer to graph multiple metrics at once.
 ```{r}
 dat_long <- dat %>%
@@ -150,56 +148,423 @@ dat_long$metric <- factor(dat_long$metric, levels=c("Size", "Edge Density","Mean
 ```
 <br>
 
-With default 'y' axis limits
-```{r echo=FALSE}
-pal=pnw_palette("Sailboat",length(unique(dat$dataset)), type = "discrete") # or choose a different PNWColors palette
-ggplot(dat_long, aes(x=y, y=value, color=dataset)) + 
+
+
+# 2. Graph Timeseries
+
+## Figure 5.Time series of centralization 
+
+... at four example ports (North WA Coast, Astoria, Fort Bragg, Morro Bay) from 2004-2020. Centralization was derived from vessel-level networks summarized at the port level, using edge definitions that follow equation 1 versus equation 2. Nodes (fisheries) are included in each network with a minimum total fisheries revenue cutoff for vessels of `$5,000` and a minimum revenue cutoff for individual fisheries of `$500`.
+
+```{r}
+plot_metric="Central."
+metric_label="Centralization"
+```
+<br>
+
+```{r echo=FALSE, fig.width=10}
+# filter and re-arrange data for plotting
+plotdat <- dat_long %>% filter(metric==plot_metric)
+plotdat$pcgroup <- factor(plotdat$pcgroup,levels=myports)
+plotdat.s <- dat_long %>% dplyr::select(pcgroup,y,N) %>% unique()
+plotdat.s$pcgroup <- factor(plotdat.s$pcgroup,levels=myports)
+
+# color palette
+pal=pnw_palette("Sailboat",length(unique(plotdat$dataset)), type = "discrete") # or choose a different PNWColors palette
+
+# main metric plot
+fig5 <- ggplot(plotdat, aes(x=y, y=value, color=dataset)) + 
   geom_point() + geom_line() +
-  facet_grid(rows=vars(metric), cols=vars(pcgroup), scales="free_y") +
+  facet_grid(cols=vars(pcgroup), scales="free_y") +
   scale_color_manual(values=pal) +
+  scale_x_continuous(breaks=seq(min(plotdat$y), max(plotdat$y), by=2), labels=seq(min(plotdat$y), max(plotdat$y), by=2)) +
+  ylim(c(0,1)) +
+  ylab(metric_label) + xlab("Year") +
   theme_bw() + theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5),
                      axis.title.x=element_text(size=13),
-                     axis.title.y=element_blank(),
+                     axis.title.y=element_text(size=13),
                      strip.text=element_text(size=13),
                      legend.title=element_text(size=13),legend.text=element_text(size=13),
                      panel.grid.major=element_blank(),
                      panel.grid.minor=element_blank())
+fig5
 ```
 <br>
 
-Set y axis limits and breaks
+```{r echo=FALSE, fig.width=10}
+# main metric plot
+fig5a <- ggplot(plotdat, aes(x=y, y=value, color=dataset)) + 
+  geom_point() + geom_line() +
+  facet_grid(cols=vars(pcgroup), scales="free_y") +
+  scale_color_manual(values=pal) +
+  scale_x_continuous(breaks=seq(min(plotdat$y), max(plotdat$y), by=2), labels=seq(min(plotdat$y), max(plotdat$y), by=2)) +
+  ylim(c(0,1)) +
+  ylab(metric_label) + xlab("Year") +
+  theme_bw() + theme(axis.text.x=element_blank(),
+                     axis.text.y=element_text(size=12),
+                     axis.title.x=element_blank(),
+                     axis.title.y=element_text(size=13),
+                     strip.text=element_text(size=13),
+                     legend.title=element_text(size=13),legend.text=element_text(size=13),
+                     panel.grid.major=element_blank(),
+                     panel.grid.minor=element_blank(),
+                     plot.margin = margin(t=0, r=0, b=0, l=0, unit="cm"))
+# network size plot 
+fig5b <- ggplot(plotdat.s, (aes(x=y,y=N))) + 
+  geom_point(color="grey52") + geom_line(color="grey52") +
+  facet_grid(cols=vars(pcgroup)) +
+  scale_x_continuous(breaks=seq(min(plotdat$y), max(plotdat$y), by=2), labels=seq(min(plotdat$y), max(plotdat$y), by=2)) +
+  ylab("Size") + xlab("Year") +
+  theme_bw() + theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5, size=12),
+                     axis.text.y=element_text(color="grey52"),
+                     axis.title.x=element_text(size=13),
+                     axis.title.y=element_text(size=11, color="grey52"),
+                     strip.text=element_blank(),
+                     legend.title=element_blank(),
+                     panel.grid.major=element_blank(),
+                     panel.grid.minor=element_blank(),
+                     panel.border=element_rect(color="grey52"),
+                     plot.margin = margin(t = 0, r = 4.8, b = 0, l = 0.63, unit = "cm"))
+
+# gridded layout
+#   if the left side of the plots don't line up, adjust plot.margin "l" argument in fig5b. 
+#   if the right sides of the plots don't line up, adjust plot.margin "r" argument in fig5b.
+lay <- rbind(c(1), c(2))
+fig5ab <- grid.arrange(grobs=list(fig5a,fig5b), layout_matrix=lay, heights=c(1,0.6))
+
+```
+<br>
+<br>
+<br>
+
+Both plots save as a png, with filename: `r paste0("Central_",min(plotdat$y), "_", max(plotdat$y), "_",length(myports),"pcgroups_", paste(dataset_names,collapse="-"))`
 ```{r echo=FALSE}
+png(here::here(pngdir, paste0("Central_",min(plotdat$y), "_", max(plotdat$y), "_",
+                                       length(myports),"pcgroups_", paste(dataset_names,collapse="-"), ".png")),
+    res=200,height=800,width=1700)
+fig5
+dev.off()
+```
+```{r echo=FALSE}
+png(here::here(pngdir, paste0("Central_",min(plotdat$y), "_", max(plotdat$y), "_",
+                                       length(myports),"pcgroups_", paste(dataset_names,collapse="-"), "_wSize.png")),
+    res=200,height=1000,width=1700)
+grid.arrange(grobs=list(fig5a,fig5b), layout_matrix=lay, heights=c(1,0.6))
+dev.off()
+```
+<br>
+
+## Figure 6.Time series of edge density
+
+...  at four example ports (North WA Coast, Astoria, Fort Bragg, Morro Bay) from 2004-2020. Edge density was derived from vessel-level networks summarized at the port level, using edge definitions that follow equation 1 versus equation 2. Nodes (fisheries) are included in each network with a minimum total fisheries revenue cutoff for vessels of `$5,000` and a minimum revenue cutoff for individual fisheries of `$500`.
+
+```{r}
+plot_metric="Edge Density"
+metric_label="Edge Density"
+```
+<br>
+
+```{r echo=FALSE, fig.width=10}
+# filter and re-arrange data for plotting
+plotdat <- dat_long %>% filter(metric==plot_metric)
+plotdat$pcgroup <- factor(plotdat$pcgroup,levels=myports)
+plotdat.s <- dat_long %>% dplyr::select(pcgroup,y,N) %>% unique()
+plotdat.s$pcgroup <- factor(plotdat.s$pcgroup,levels=myports)
+
+# color palette
+pal=pnw_palette("Sailboat",length(unique(plotdat$dataset)), type = "discrete") # or choose a different PNWColors palette
+
+# main metric plot
+fig6 <- ggplot(plotdat, aes(x=y, y=value, color=dataset)) + 
+  geom_point() + geom_line() +
+  facet_grid(cols=vars(pcgroup), scales="free_y") +
+  scale_color_manual(values=pal) +
+  scale_x_continuous(breaks=seq(min(plotdat$y), max(plotdat$y), by=2), labels=seq(min(plotdat$y), max(plotdat$y), by=2)) +
+  ylim(c(0,1)) +
+  ylab(metric_label) + xlab("Year") +
+  theme_bw() + theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5),
+                     axis.title.x=element_text(size=13),
+                     axis.title.y=element_text(size=13),
+                     strip.text=element_text(size=13),
+                     legend.title=element_text(size=13),legend.text=element_text(size=13),
+                     panel.grid.major=element_blank(),
+                     panel.grid.minor=element_blank())
+fig6
+```
+<br>
+
+```{r echo=FALSE, fig.width=10}
+# main metric plot
+fig6a <- ggplot(plotdat, aes(x=y, y=value, color=dataset)) + 
+  geom_point() + geom_line() +
+  facet_grid(cols=vars(pcgroup), scales="free_y") +
+  scale_color_manual(values=pal) +
+  scale_x_continuous(breaks=seq(min(plotdat$y), max(plotdat$y), by=2), labels=seq(min(plotdat$y), max(plotdat$y), by=2)) +
+  ylim(c(0,1)) +
+  ylab(metric_label) + xlab("Year") +
+  theme_bw() + theme(axis.text.x=element_blank(),
+                     axis.text.y=element_text(size=12),
+                     axis.title.x=element_blank(),
+                     axis.title.y=element_text(size=13),
+                     strip.text=element_text(size=13),
+                     legend.title=element_text(size=13),legend.text=element_text(size=13),
+                     panel.grid.major=element_blank(),
+                     panel.grid.minor=element_blank(),
+                     plot.margin = margin(t=0, r=0, b=0, l=0, unit="cm"))
+# network size plot 
+fig6b <- ggplot(plotdat.s, (aes(x=y,y=N))) + 
+  geom_point(color="grey52") + geom_line(color="grey52") +
+  facet_grid(cols=vars(pcgroup)) +
+  scale_x_continuous(breaks=seq(min(plotdat$y), max(plotdat$y), by=2), labels=seq(min(plotdat$y), max(plotdat$y), by=2)) +
+  ylab("Size") + xlab("Year") +
+  theme_bw() + theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5, size=12),
+                     axis.text.y=element_text(color="grey52"),
+                     axis.title.x=element_text(size=13),
+                     axis.title.y=element_text(size=11, color="grey52"),
+                     strip.text=element_blank(),
+                     legend.title=element_blank(),
+                     panel.grid.major=element_blank(),
+                     panel.grid.minor=element_blank(),
+                     panel.border=element_rect(color="grey52"),
+                     plot.margin = margin(t = 0, r = 4.8, b = 0, l = 0.63, unit = "cm"))
+
+# gridded layout
+#   if the left side of the plots don't line up, adjust plot.margin "l" argument in fig5b. 
+#   if the right sides of the plots don't line up, adjust plot.margin "r" argument in fig5b.
+lay <- rbind(c(1), c(2))
+fig6ab <- grid.arrange(grobs=list(fig6a,fig6b), layout_matrix=lay, heights=c(1,0.6))
+
+```
+<br>
+<br>
+<br>
+
+Both plots save as a png, with filename: `r paste0("ED_",min(plotdat$y), "_", max(plotdat$y), "_",length(myports),"pcgroups_", paste(dataset_names,collapse="-"))`
+```{r echo=FALSE}
+png(here::here(pngdir, paste0("ED_",min(plotdat$y), "_", max(plotdat$y), "_",
+                                       length(myports),"pcgroups_", paste(dataset_names,collapse="-"), ".png")),
+    res=200,height=800,width=1700)
+fig6
+dev.off()
+```
+```{r echo=FALSE}
+png(here::here(pngdir, paste0("ED_",min(plotdat$y), "_", max(plotdat$y), "_",
+                                       length(myports),"pcgroups_", paste(dataset_names,collapse="-"), "_wSize.png")),
+    res=200,height=1000,width=1700)
+grid.arrange(grobs=list(fig6a,fig6b), layout_matrix=lay, heights=c(1,0.6))
+dev.off()
+```
+<br>
+
+
+
+## Figure 7.Time series of modularity
+
+...  at four example ports (North WA Coast, Astoria, Fort Bragg, Morro Bay) from 2004-2020. Modularity was derived from vessel-level networks summarized at the port level, using edge definitions that follow equation 1 versus equation 2. Nodes (fisheries) are included in each network with a minimum total fisheries revenue cutoff for vessels of `$5,000` and a minimum revenue cutoff for individual fisheries of `$500`.
+
+
+```{r}
+plot_metric="Mod."
+metric_label="Modularity"
+```
+<br>
+
+```{r echo=FALSE, fig.width=10}
+# filter and re-arrange data for plotting
+plotdat <- dat_long %>% filter(metric==plot_metric)
+plotdat$pcgroup <- factor(plotdat$pcgroup,levels=myports)
+plotdat.s <- dat_long %>% dplyr::select(pcgroup,y,N) %>% unique()
+plotdat.s$pcgroup <- factor(plotdat.s$pcgroup,levels=myports)
+
+# color palette
+pal=pnw_palette("Sailboat",length(unique(plotdat$dataset)), type = "discrete") # or choose a different PNWColors palette
+
+# main metric plot
+fig7 <- ggplot(plotdat, aes(x=y, y=value, color=dataset)) + 
+  geom_point() + geom_line() +
+  facet_grid(cols=vars(pcgroup), scales="free_y") +
+  scale_color_manual(values=pal) +
+  scale_x_continuous(breaks=seq(min(plotdat$y), max(plotdat$y), by=2), labels=seq(min(plotdat$y), max(plotdat$y), by=2)) +
+  ylim(c(-0.5,0.5)) +
+  ylab(metric_label) + xlab("Year") +
+  theme_bw() + theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5),
+                     axis.title.x=element_text(size=13),
+                     axis.title.y=element_text(size=13),
+                     strip.text=element_text(size=13),
+                     legend.title=element_text(size=13),legend.text=element_text(size=13),
+                     panel.grid.major=element_blank(),
+                     panel.grid.minor=element_blank())
+fig7
+```
+<br>
+
+```{r echo=FALSE, fig.width=10}
+# main metric plot
+fig7a <- ggplot(plotdat, aes(x=y, y=value, color=dataset)) + 
+  geom_point() + geom_line() +
+  facet_grid(cols=vars(pcgroup), scales="free_y") +
+  scale_color_manual(values=pal) +
+  scale_x_continuous(breaks=seq(min(plotdat$y), max(plotdat$y), by=2), labels=seq(min(plotdat$y), max(plotdat$y), by=2)) +
+  ylim(c(-0.5, 0.5)) +
+  ylab(metric_label) + xlab("Year") +
+  theme_bw() + theme(axis.text.x=element_blank(),
+                     axis.text.y=element_text(size=12),
+                     axis.title.x=element_blank(),
+                     axis.title.y=element_text(size=13),
+                     strip.text=element_text(size=13),
+                     legend.title=element_text(size=13),legend.text=element_text(size=13),
+                     panel.grid.major=element_blank(),
+                     panel.grid.minor=element_blank(),
+                     plot.margin = margin(t=0, r=0, b=0, l=0, unit="cm"))
+# network size plot 
+fig7b <- ggplot(plotdat.s, (aes(x=y,y=N))) + 
+  geom_point(color="grey52") + geom_line(color="grey52") +
+  facet_grid(cols=vars(pcgroup)) +
+  scale_x_continuous(breaks=seq(min(plotdat$y), max(plotdat$y), by=2), labels=seq(min(plotdat$y), max(plotdat$y), by=2)) +
+  ylab("Size") + xlab("Year") +
+  theme_bw() + theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5, size=12),
+                     axis.text.y=element_text(color="grey52"),
+                     axis.title.x=element_text(size=13),
+                     axis.title.y=element_text(size=11, color="grey52"),
+                     strip.text=element_blank(),
+                     legend.title=element_blank(),
+                     panel.grid.major=element_blank(),
+                     panel.grid.minor=element_blank(),
+                     panel.border=element_rect(color="grey52"),
+                     plot.margin = margin(t = 0, r = 4.8, b = 0, l = 0.84, unit = "cm"))
+
+# gridded layout
+#   if the left side of the plots don't line up, adjust plot.margin "l" argument in fig5b. 
+#   if the right sides of the plots don't line up, adjust plot.margin "r" argument in fig5b.
+lay <- rbind(c(1), c(2))
+fig7ab <- grid.arrange(grobs=list(fig7a,fig7b), layout_matrix=lay, heights=c(1,0.6))
+
+```
+<br>
+<br>
+<br>
+
+Both plots save as a png, with filename: `r paste0("Modularity_",min(plotdat$y), "_", max(plotdat$y), "_",length(myports),"pcgroups_", paste(dataset_names,collapse="-"))`
+```{r echo=FALSE}
+png(here::here(pngdir, paste0("Modularity_",min(plotdat$y), "_", max(plotdat$y), "_",
+                                       length(myports),"pcgroups_", paste(dataset_names,collapse="-"), ".png")),
+    res=200,height=800,width=1700)
+fig7
+dev.off()
+```
+```{r echo=FALSE}
+png(here::here(pngdir, paste0("Modularity_",min(plotdat$y), "_", max(plotdat$y), "_",
+                                       length(myports),"pcgroups_", paste(dataset_names,collapse="-"), "_wSize.png")),
+    res=200,height=1000,width=1700)
+grid.arrange(grobs=list(fig7a,fig7b), layout_matrix=lay, heights=c(1,0.6))
+dev.off()
+```
+<br>
+
+
+
+## Extra Code: Multiple Metrics
+
+Graph all metrics in a single plot area. 
+
+```{r echo=FALSE}
+# Set y axis limits and breaks by variable
 scales_y <- list(
   `Edge Density` = scale_y_continuous(limits = c(0,1)),
-  `Mean Degree` = scale_y_continuous(limits = c(0,max(dat$mean_deg) + 0.5)),
+  # `Mean Degree` = scale_y_continuous(limits = c(0,max(dat$mean_deg) + 0.5)),
   `Central.` = scale_y_continuous(limits = c(0,1)),
   `Central. (UnW)` = scale_y_continuous(limits=c(0,1)),
-  `Mod.` = scale_y_continuous(limits=c(-1,1)),
-  `Mod. (UnW)` = scale_y_continuous(limits=c(-1,1))
+  `Mod.` = scale_y_continuous(limits=c(-0.5,0.5)),
+  `Mod. (UnW)` = scale_y_continuous(limits=c(-0.5,0.5))
 )
+
+# edit data set for plotting
+dat_long$pcgroup <- factor(dat_long$pcgroup, levels=myports)
+
+datN <- dplyr::select(dat_long, c(pcgroup,y,N)) %>% unique()
+datN$pcgroup <- factor(datN$pcgroup, levels=myports)
 ```
 
 
-```{r echo=FALSE}
-pal=pnw_palette("Sailboat",length(unique(dat$dataset)), type = "discrete") # or choose a different PNWColors palette
-ggplot(dat_long, aes(x=y, y=value, color=dataset)) + 
+```{r echo=FALSE, fig.width=9}
+figS <- ggplot(dat_long, aes(x=y, y=value, color=dataset)) + 
   geom_point() + geom_line() +
   facet_grid_sc(rows = vars(metric), cols = vars(pcgroup), scales = list(y = scales_y),as.table=FALSE) +
   scale_color_manual(values=pal) +
-  xlab("Fishing Year") + ylab("") +
-  theme_bw() + theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5),
+  scale_x_continuous(breaks=seq(min(plotdat$y), max(plotdat$y), by=2), labels=seq(min(plotdat$y), max(plotdat$y), by=2)) +
+  xlab("Year") + ylab("") +
+  theme_bw() + theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5, size=12),
                      axis.title.x=element_text(size=13),
                      axis.title.y=element_blank(),
                      strip.text=element_text(size=13),
                      legend.title=element_text(size=13),legend.text=element_text(size=13),
                      panel.grid.major=element_blank(),
                      panel.grid.minor=element_blank())
+
+figS
+```
+<br>
+
+```{r echo=FALSE, fig.width=10}
+plot.all <- ggplot(dat_long, aes(x=y, y=value, color=dataset)) + 
+  geom_point() + geom_line() +
+  facet_grid_sc(rows = vars(metric), cols = vars(pcgroup), scales = list(y = scales_y),as.table=FALSE) +
+  scale_color_manual(values=pal) +
+  scale_x_continuous(breaks=seq(min(plotdat$y), max(plotdat$y), by=2), labels=seq(min(plotdat$y), max(plotdat$y), by=2)) +
+  xlab("Year") + ylab("") +
+  theme_bw() + theme(axis.text.x=element_blank(),
+                     axis.text.y=element_text(size=12),
+                     axis.title.x=element_blank(),
+                     axis.title.y=element_text(size=13),
+                     strip.text=element_text(size=13),
+                     legend.title=element_text(size=13),legend.text=element_text(size=13),
+                     panel.grid.major=element_blank(),
+                     panel.grid.minor=element_blank(),
+                     plot.margin = margin(t=0, r=0, b=0, l=0, unit="cm"))
+  
+  
+plot.N <- ggplot(datN, (aes(x=y,y=N))) + 
+  geom_point(color="grey52") + geom_line(color="grey52") +
+  facet_grid(cols=vars(pcgroup)) +
+  scale_x_continuous(breaks=seq(min(plotdat$y), max(plotdat$y), by=2), labels=seq(min(plotdat$y), max(plotdat$y), by=2)) +
+  ylab("Size") + xlab("Year") +
+  theme_bw() + theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5, size=12),
+                     axis.text.y=element_text(color="grey52"),
+                     axis.title.x=element_text(size=13),
+                     axis.title.y=element_text(size=11, color="grey52"),
+                     strip.text=element_blank(),
+                     legend.title=element_blank(),
+                     panel.grid.major.y=element_blank(),
+                     panel.grid.major.=element_line(color="grey82", linetype=2),
+                     panel.grid.minor=element_blank(),
+                     panel.border=element_rect(color="grey52"),
+                     plot.margin = margin(t = 0, r = 5.5, b = 0, l = 0.83, unit = "cm"))
+
+# gridded layout
+#   if the left side of the plots don't line up, adjust plot.margin "l" argument in fig5b. 
+#   if the right sides of the plots don't line up, adjust plot.margin "r" argument in fig5b.
+lay <- rbind(c(1), c(2))
+grid.arrange(grobs=list(plot.all,plot.N), layout_matrix=lay, heights=c(1,0.4))
 ```
 <br>
 
 
-
-
+Both plots save as a png, with filename: `r paste0("Central-ED-Mod_",min(plotdat$y), "_", max(plotdat$y), "_",length(myports),"pcgroups_", paste(dataset_names,collapse="-"))`
+```{r echo=FALSE}
+png(here::here(pngdir, paste0("Central-ED-Mod_",min(plotdat$y), "_", max(plotdat$y), "_",
+                                       length(myports),"pcgroups_", paste(dataset_names,collapse="-"), ".png")),
+    res=200,height=800,width=1700)
+figS
+dev.off()
+```
+```{r echo=FALSE}
+png(here::here(pngdir, paste0("Central-ED-Mod_",min(plotdat$y), "_", max(plotdat$y), "_",
+                                       length(myports),"pcgroups_", paste(dataset_names,collapse="-"), "_wSize.png")),
+    res=200,height=1200,width=1700)
+grid.arrange(grobs=list(plot.all,plot.N), layout_matrix=lay, heights=c(1,0.4))
+dev.off()
+```
+<br>
 
 
 
