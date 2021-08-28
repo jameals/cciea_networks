@@ -157,3 +157,25 @@ plot_comparable_networks(glist, outdir=pngdir)
 
 
 
+
+# 3: Grid Comparable Network Plots
+
+The previous section saves each plotted network into its own file - in some cases, it may be useful to have 2-6 network plots saved as a single image. 
+
+```{r}
+glist <- graphs_list[1:4]
+```
+<br>
+
+
+The multi-network .png will be written out to a file in this function. Note that the file suffix should be more distinguishable / verbose; the function only adds "MultiNetwork_" in front of it, with no port group / year details like in the individual graphs. 
+```{r}
+plot_comparable_networks(glist, outdir=pngdir, individual=FALSE, grid=TRUE,
+                         file_suffix=paste0("PugetSound_2004-07_cciea_bulk_",contr_cutoff*100),
+                         grid_layout=c(2,2))
+```
+<br>
+
+
+
+

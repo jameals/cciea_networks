@@ -1,0 +1,341 @@
+---
+title: 'Model Network: The "Connectivity" Measure'
+author: "M. Fisher"
+date: "Written Aug 25, 2021. Last Run `r Sys.Date()`"
+output:
+  html_document:
+    df_print: paged
+    toc: yes
+    toc_depth: '3'
+  pdf_document:
+    highlight: haddock
+    number_sections: yes
+    toc: yes
+    toc_depth: '3'
+geometry: margin=1in
+subtitle: Preparation for network analysis in CCIEA ESR
+fontsize: 11pt
+---
+
+# Description
+
+Fisheries participation networks use a custom measure of "connectivity" for weighting the network edges, which combines both the number of vessels participating in two fisheries *and* the evenness of revenue generation by the two fisheries. 
+
+However, edges could also be based on the number of vessels that participate in each pair of fisheries, relative to all vessels in the port-level network. 
+
+This script uses a small, model fisheries participation network to explore these two methods of weighting network edges, and the potential implications for whether / how network structures capture fishery dynamics. 
+
+
+# Setup
+
+<br>
+```{r "setup", include=FALSE}
+if(!require("here")) {install.packages("here")}
+library(here)
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_knit$set(root.dir = here::here())
+
+## start time for full script
+script_start_time <- Sys.time()
+```
+<br>
+
+This script requires the following packages. 
+```{r packages, message=FALSE, warning=FALSE, echo=TRUE}
+if(!require("tidyverse")) {install.packages("tidyverse")}
+if(!require("igraph")) {install.packages("igraph")}
+if(!require("facetscales")) {devtools::install_github("zeehio/facetscales"); library(facetscales)}
+if(!require("cowplot")) {install.packages("cowplot")}
+if(!require("PNWColors")) {devtools::install_github("jakelawler/PNWColors"); library(PNWColors)}
+```
+<br>
+
+
+# Model Networks
+
+## S-E Network (Bipartite)
+
+This is the data that will be used to build the model networks. Matrix values represent proportion of total revenue. Each column represents a fishery, and each row an individual fishing vessel. 
+```{r}
+inmat <- read.csv(here::here('data','input','example_network_matrix.csv'), row.names=1)
+colnames(inmat)[4] <- "DTS.Ground"
+inmat <- inmat/100   # rows should total $100 
+inmat
+```
+<br>
+
+The basic bipartite network, in which vessels (node type 1) are connected to fisheries (node type 2), looks like this:
+```{r fig.height=8, fig.width=15}
+# create bipartite network object out of incidence matrix
+tmpA <- inmat %>% replace_na(list(Crab=0,Salmon=0,Tuna=0,DTS.Ground=0))
+g.bi <- graph_from_incidence_matrix(as.matrix(tmpA), weighted=TRUE)
+
+
+# color vertices
+V(g.bi)$color<-rep("#FF9C0B", length(V(g.bi))) #coloring all the nodes orange
+#Selecting everyone that is "TRUE" in $type to change it to green (take a look at the help of the grep function in case you don't know it).
+V(g.bi)$color[grep(pattern = TRUE, V(g.bi)$type)]<-"#1C912C"
+
+# size vertices
+V(g.bi)$size <- c(rep(0,4),igraph::degree(g.bi)[5:8])
+
+# plot
+plot(g.bi, vertex.size=V(g.bi)$size*5, 
+     vertex.label.color="grey34",
+     vertex.label.cex=2,
+     vertex.color=V(g.bi)$color,
+     vertex.frame.color="white",
+     vertex.label.dist=c(rep(1,4),rep(-2.5,4)),
+     edge.width=1,
+     layout=layout_as_bipartite)
+```
+
+Edges in the basic network are not weighted. Fishery node sizes represent node *degree*, the number of adjacent edges. So with 2 vessels each, salmon and groundfish have equal degrees, and with 4 vessels, crab has the highest degree.
+<br>
+
+
+
+If we include edge weights, calculated using our connectivity metric, our bipartite network instead looks like this:
+```{r fig.height=8, fig.width=15}
+# size vertices
+V(g.bi)$size <- c(rep(0,4),igraph::strength(g.bi)[5:8])
+
+plot(g.bi, vertex.size=V(g.bi)$size*10, vertex.color=V(g.bi)$color,
+     vertex.label.color="grey34",
+     vertex.label.cex=2,
+     vertex.frame.color="white",
+     vertex.label.dist=c(rep(1,4),rep(-2,4)),
+     edge.width=E(g.bi)$weight*10,
+     layout=layout_as_bipartite)
+```
+To reflect the additional information we now have in the graph, fishery node sizes represent node *strength*, the sum of the edge weights of the adjacent edges. Crab is now much larger than all other fisheries, and salmon and groundfish are no longer the same size.
+<br>
+
+
+## Fisheries Participation Networks
+
+The network with edges based on **connectivity** is built of the adjacency matrix `A.c`:
+```{r}
+fisheries <- colnames(inmat)
+
+# build adjacency matrix
+A.c <- matrix(ncol = length(fisheries), nrow = length(fisheries), data = 0)
+colnames(A.c) <- fisheries
+rownames(A.c) <- fisheries
+
+#  matrix where elements are frac rev fishery i * frac rev fishery j * total dollars (sum)
+for(k in 1:nrow(inmat)){
+  
+  for(i in 1:nrow(A.c)){
+    frac_rev_i = inmat[k,fisheries[i]]
+    if(is.na(frac_rev_i)){next} # if don't fish this, then can skip all other combos
+    
+    for(j in i:ncol(A.c)){
+      frac_rev_j = inmat[k,fisheries[j]]
+      if(is.na(frac_rev_j)){next}
+
+      A.c[i,j] = A.c[i,j] + frac_rev_i * frac_rev_j * 100  # all vessels make a total of $100
+    }
+  }
+  #if(k %% 1000 == 0){cat(paste(' iteration', k))}
+} #end "connectivity"
+
+A.c
+```
+<br>
+
+
+The network with edges based on **proportion of vessels** is built of the adjacency matrix `A.v`:
+```{r}
+fisheries <- colnames(inmat)
+
+# build adjacency matrix
+A.v <- matrix(ncol = length(fisheries), nrow = length(fisheries), data = 0)
+colnames(A.v) <- fisheries
+rownames(A.v) <- fisheries
+
+for(k in 1:nrow(inmat)){
+      for(i in 1:nrow(A.v)){
+        for(j in i:ncol(A.v)){
+          if(!is.na(inmat[k,fisheries[i]]) & !is.na(inmat[k,fisheries[j]])){
+            A.v[i,j] = A.v[i,j] + 1
+          }
+        }
+      }
+      #if(k %% 1000 == 0){cat(paste(' iteration', k))}
+    } 
+A.v <- A.v / 4
+A.v
+```
+<br>
+
+
+
+Plotting them side-by-side (title of each gives edge weight calculation; all node sizes represent node *strength*):
+```{r fig.height=10, fig.width=15}
+## connectivity
+g.c <- graph_from_adjacency_matrix(A.c, mode="undirected",weighted=TRUE, diag=FALSE)
+# size vertices
+V(g.c)$size <- igraph::strength(g.c)
+# layout
+l.c <- layout_in_circle(g.c)
+
+## vessels
+g.v <- graph_from_adjacency_matrix(A.v, mode="undirected",weighted=TRUE, diag=FALSE)
+# size vertices
+V(g.v)$size <- igraph::strength(g.v)
+# layout
+l <- layout_in_circle(g.v)
+
+
+
+par(mfrow=c(1,2))#To plot two plots 
+
+plot(g.c, layout=l.c,
+     vertex.size=V(g.c)$size,
+     vertex.label.color="black",
+     vertex.label.cex=2,
+     vertex.color="#1C912C",
+     vertex.frame.color="white",
+     edge.width=E(g.c)$weight,
+     main="Connectivity")
+
+plot(g.v, layout=l,
+     vertex.size=V(g.v)$size*30,
+     vertex.label.color="black",
+     vertex.label.cex=2,
+     vertex.frame.color="white",
+     vertex.color="#1C912C",
+     edge.width=E(g.v)$weight*50,
+     main="Prop of Vessels")
+```
+<br>
+
+A few differences worth noting:
+
+- Compared to the graph with edge weights according to the proportion of vessels, connectivity edge weights over-emphasizes the crab-groundfish connection and under-emphasize the crab-salmon connection. Two vessels participate in both fishery pairs (proportion: 0.5), but the split of revenue is more even between crab and groundfish (50-50, 40-30) than crab and salmon (90-10, 40-5).
+
+- The edges adjacent to the tuna node, which are all equivalent when edge weight is calculated as proportion of vessels (0.25, or n=1) become more differentiated edge weights are calculated using connectivity. Again, this is because of the evenness of revenue generation (20-30 with groundfish, 20-40 with crab, and 20-5 with salmon).
+
+These differences in edge weights affect node strength, with greater disparities between the crab/groundfish node sizes and the tuna/salmon node sizes for the network with edge weights based on connectivity. How do other metrics at the node- and network-levels vary when edge weights are calculated differently?
+
+
+
+# Node & Network Metrics
+
+## Node: Betweenness Centrality
+
+*Betweenness centrality* is considered a measure of the importance of an individual node - it is defined as the extent to which a node lies on the paths to other nodes. A node which lies on a large number of paths has high betweenness centrality. This is a measure of importance because it reflects control over information, goods and services passing through the network; and/or the degree to which the node's removal will disrupt the network. 
+
+```{r}
+# note that in the betweenness function, edge weights are costs, not strengths
+btwn.df <- data.frame(fishery = rep(V(g.v)$name,2), 
+                      edge_type = c(rep("connectivity",length(V(g.v)$name)),rep("prop. vessels", length(V(g.v)$name))),
+                      betweenness = c(betweenness(g.c, directed = FALSE, weights = (1/E(g.c)$weight), normalized = TRUE),
+                                      betweenness(g.v, directed = FALSE, weights = (1/E(g.v)$weight), normalized = TRUE)))
+
+pal <- pnw_palette("Starfish",2, type = "discrete") # or choose a different PNWColors palette
+
+
+ggplot(btwn.df, aes(x=fishery,y=betweenness,fill=edge_type)) +
+  geom_col(position="dodge") +
+  scale_fill_manual(values=pal, name="Edge Type") +
+  xlab("Fishery") + ylab("Betweenness") +
+  theme_bw() + theme(axis.text=element_text(size=12),
+                     axis.title.x=element_text(size=13),
+                     axis.title.y=element_text(size=13),
+                     legend.title=element_text(size=13),legend.text=element_text(size=13),
+                     panel.grid.major.x=element_blank(),
+                     panel.grid.minor=element_blank())
+```
+<br>
+
+Let's consider this using a slightly more complex network than above: ...
+
+## Network
+
+*Centralization* measures the degree to which the network is concentrated around a central node, or set of nodes. Networks with high centralization display little sensitivity to a perturbation unless the perturbation impacts the central node.
+
+Centralization can be calculated with and without edge weights; since we're interested in a comparison of types of edges, we'll calculate it using edge weights. 
+
+```{r}
+net_centr_weighted = function(g){
+  deg=strength(g)
+  max_deg=max(deg)
+  pos_deg = deg[which(deg >0)]
+  denom = ((vcount(g)-2)*(vcount(g)-1)) * mean(pos_deg)
+  numer=0
+  for(d in deg){
+    numer = numer + (max_deg - d)
+  }
+  return(numer/denom)
+}
+```
+<br>
+
+*Modularity* measures the degree to which the network is divided into subgroups. Networks with high modularity limit perturbations to subgroup in which they occur. Modularity can also be calculated using edge weights.
+
+*Beta Efficiency* ...
+```{r}
+beta_eff = function(g){
+  if(is.null(E(g)$weight)){
+    beta_eff = NA
+  }else{
+    beta_eff = mean(E(g)$weight) + var(E(g)$weight)/mean(E(g)$weight)
+  }
+  return(beta_eff)
+}
+```
+<br>
+
+```{r}
+# calculate network stats
+netstat.df <- data.frame(edge_type = c("connectivity","prop. vessels"),
+                      centralization = c(net_centr_weighted(g.c),
+                                      net_centr_weighted(g.v)),
+                      modularity = c(modularity(g.c, membership(cluster_walktrap(g.c, weights = E(g.c)$weight)),weights=E(g.c)$weight),
+                                     modularity(g.v, membership(cluster_walktrap(g.v, weights = E(g.v)$weight)),weights=E(g.v)$weight)),
+                      beta_efficiency = c(beta_eff(g.c),
+                                          beta_eff(g.v))) %>%
+  pivot_longer(cols=c(centralization, modularity, beta_efficiency), names_to="Metric",values_to="values")
+
+# plotting aesthetics
+pal <- pnw_palette("Starfish",2, type = "discrete") # or choose a different PNWColors palette
+scales_y <- list(
+  `centralization` = scale_y_continuous(limits = c(0,1)),
+  `modularity` = scale_y_continuous(limits=c(-0.5,0.5)),
+  `beta_efficiency` = scale_y_continuous(limits=c(min(filter(netstat.df,Metric=="beta_efficiency")$values)-2,
+                                                      max(filter(netstat.df,Metric=="beta_efficiency")$values)+2))
+)
+
+
+plot.be <- ggplot(filter(netstat.df, Metric=="beta_efficiency"), aes(x=Metric,y=values, fill=edge_type)) +
+  geom_col(position="dodge") +
+  scale_fill_manual(values=pal) +
+  xlab("") + ylab("") +
+  theme_bw() + theme(axis.text.x=element_text(size=12),
+                     axis.title.x=element_text(size=13),
+                     axis.title.y=element_text(size=13),
+                     legend.position="none",
+                     panel.grid.major.x=element_blank(),
+                     panel.grid.minor=element_blank())
+plot.cm <- ggplot(filter(netstat.df, Metric!="beta_efficiency"), aes(x=Metric,y=values, fill=edge_type)) +
+  geom_col(position="dodge") +
+  geom_hline(aes(yintercept=0), col="black") +
+  scale_fill_manual(values=pal,name="Edge Type") +
+  xlab("") + ylab("") +
+  theme_bw() + theme(axis.text.x=element_text(size=12),
+                     axis.title.x=element_text(size=13),
+                     axis.title.y=element_text(size=13),
+                     legend.title=element_text(size=13),legend.text=element_text(size=13),
+                     panel.grid.major.x=element_blank(),
+                     panel.grid.minor=element_blank())
+
+plot_grid(plotlist=list(plot.be,plot.cm), rel_widths=c(0.4,1))
+```
+
+
+
+
+
+
