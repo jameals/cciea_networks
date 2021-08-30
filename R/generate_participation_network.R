@@ -56,11 +56,21 @@ participation_network_crabyear <- function(tickets, edge_type="connectivity", pc
   boats$drvid <- NULL
   boats$crab_year <- NULL
   
+  # JS added 08302021 to avoid issue of filters leading to no boats that meet rev cutoffs
+  if(is.null(nrow(boats))==TRUE){
+    return(NA)
+  }
+  
   # remove the one boat that didn't sell catch (i.e. rev = 0). removed 08132021
   # if(any(rowSums(boats,na.rm=T)==0)){boats <- boats[-which(rowSums(boats, na.rm=T)==0),]}
   
   # remove boats that don't generate at least min_rev in revenue annually. added 08112021
   if(any(rowSums(boats,na.rm=T)<min_rev)){boats <- boats[-which(rowSums(boats, na.rm=T)<min_rev),]}
+  
+  # JS added 08302021 to avoid issue of filters leading to no boats that meet rev cutoffs
+  if(is.null(nrow(boats))==TRUE){
+    return(NA)
+  }
   
   ##### calculate percent contributions, then remove fisheries with below min_rev_indiv #####
   # make a new df with annual % revenue from each metier for each boat
