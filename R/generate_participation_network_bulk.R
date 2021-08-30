@@ -23,7 +23,7 @@
 #the line below is here to allow us to interact with the script without running the function
 #tickets <- dat; pcid_choose <- iopac; year_choose <- y; min_vessels <- 3; min_contribution <- 0.10
 
-participation_network_crabyear_bulk <- function(tickets, pcid_choose=NA, state_choose = NA, year_choose=NA, filter, filter_subgraph, min_vessels = 3, min_contribution = 0.10, min_rev = 1, min_rev_indiv = 1, write_out, out_dir){
+participation_network_crabyear_bulk <- function(tickets, edge_type="connectivity", pcid_choose=NA, state_choose = NA, year_choose=NA, filter, filter_subgraph, min_vessels = 3, min_contribution = 0.10, min_rev = 1, min_rev_indiv = 1, write_out, out_dir){
   if(!is.na(state_choose)){
     tickets = dplyr::filter(tickets, agid %in% state_choose) # updated 08-20-21
   }
@@ -63,11 +63,16 @@ participation_network_crabyear_bulk <- function(tickets, pcid_choose=NA, state_c
   fisheries <- as.data.frame(fisheries)
   rownames(fisheries) <- fisheries$crab_year
   fisheries$crab_year <- NULL
+  
+  # JS added 08302021 to avoid issue of filters leading to no fisheries that meet rev cutoffs
+  if(is.null(nrow(fisheries))==TRUE){
+    return(NA)
+  }
 
   
   ##### calculate percent contributions, then remove fisheries with below min_rev_indiv ##### added 08232021
   # make a new df with annual % revenue from each metier for each fishery
-  percent_fisheries <- fisheries[,-1]/rowSums(fisheries, na.rm = T) # USE fisheries[,-1] to exclude the crab year
+  percent_fisheries <- fisheries/rowSums(fisheries, na.rm = T) 
   percent_fisheries_mat <- as.matrix(percent_fisheries)
   # for each fishery, set percent_fisheries table value as "NA" for fisheries that don't generate at least min_rev_indiv in revenue annually. added 08192021
   percent_fisheries_mat[which(fisheries<min_rev_indiv)] <- NA
@@ -77,6 +82,11 @@ participation_network_crabyear_bulk <- function(tickets, pcid_choose=NA, state_c
   fisheries_mat <- as.matrix(fisheries)
   fisheries_mat[which(fisheries_mat<min_rev_indiv)] <- NA
   filtered_fisheries <- as.data.frame(fisheries_mat, row.names=rownames(fisheries_mat), col.names=colnames(fisheries_mat))
+  
+  # JS added 08302021 to avoid issue of filters leading to no fisheries that meet rev cutoffs
+  if(is.null(nrow(fisheries))==TRUE){
+    return(NA)
+  }
 
   # so percent_fisheries is now a df with a single row (corresponding to year), each column has a name corresponding to a metier (sp group), and the values represent the % revenue contributed from each metier (sp group) to total fisheries rev in that year. metiers (sp groups) that contribute less than min_rev_indiv are represented with NA
   # filtered_fisheries is now a df with a single row (corresponding to year), each column has a name corresponding to a metier (sp group), and the values represent the absolute revenue in $ contributed from each metier (sp group). metiers (sp groups) that contribute less than min_rev_indiv are represented with NA
@@ -132,7 +142,7 @@ participation_network_crabyear_bulk <- function(tickets, pcid_choose=NA, state_c
   # Otherwise, if there is more than 1 row in fisheries, the A matrix will reflect fishery participation combined over multiple years. 
   if(edge_type=="connectivity"){
     #  matrix where elements are frac rev fishery i * frac rev fishery j * total dollars (sum)
-    for(k in 1:nrow(fisheries2)){
+    for(k in 1:nrow(fisheries)){
       
       for(i in 1:nrow(A)){
         frac_rev_i = percent_fisheries[k,fisheries2[i]]
