@@ -6,7 +6,7 @@ output:
   html_document:
     df_print: paged
     toc: yes
-    toc_depth: '3'
+    toc_depth: '5'
   pdf_document:
     highlight: haddock
     number_sections: yes
@@ -19,7 +19,7 @@ fontsize: 11pt
 
 # Summarize networks for SSC-ES presentation
 
-Notes JFS has not yet started to code this. 08-20-2021
+Notes JFS has not yet started to code this. 08-30-2021
 
 *** I will need to update plot_annual_networks_bulk.Rmd and plot_annual_networks.Rmd, which will require updating dependencies like plot_network_bulk.R. It may be better to take this whole section and make it a separate Rmd
 
@@ -31,10 +31,9 @@ This document generates fisheries participation networks for the US West Coast u
 
 It visually summarizes a subset of networks for presentation to the SSC-ES in September 2021.
 
+Plot a batch of annual fisheries participation networks (from a list of igraph objects) by port group or state, and year. This script uses a circular layout, with network nodes colored according to the gear group used in each fishery. **The nodes are consistently located across plots,** so that plots can be more easily compared through time or across port groups.
+
 It depends on the code "06_create_networks_4ways.Rmd", which makes network graphs and calculates network statistics.
-
-Plot a batch of annual fisheries participation networks (from a list of igraph objects) by port group and year. This script uses a circular layout, with network nodes colored according to the gear group used in each fishery. **The nodes are consistently located across plots,** so that plots can be more easily compared through time or across port groups.
-
  
 
 <br>
