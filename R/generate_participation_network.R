@@ -14,7 +14,7 @@
 #' @param min_contribution the minimum contribution (as a proportion) to total exvessel revenue across all vessels for a fishery to be retained in the network
 #' @param min_rev the minimum revenue (in dollars) generated from all fisheries for a given vessel in a given year
 #' @param min_rev_indiv the minimum revenue (in dollars) generated from any one fishery for a given vessel in a given year
-#' @param write_out specificy whether to write out the adjacency matrix A that is used to build the graph. not yet coded in below, will make it easier if you want to manually adjust the igraph vertex / edge attributes later. 
+#' @param write_out specify whether to write out the adjacency matrix A that is used to build the graph. not yet coded in below, will make it easier if you want to manually adjust the igraph vertex / edge attributes later. 
 #' @return non-confidential fisheries partition network as an igraph object
 #' @examples
 #' close_g <- participation_network_crabyear(close_dat, filter = TRUE, filter_subgraph = FALSE)
@@ -173,7 +173,13 @@ participation_network_crabyear <- function(tickets, edge_type="connectivity", pc
       for(i in 1:nrow(A)){
         for(j in i:ncol(A)){
           if(!is.na(percent_boats[k,fisheries[i]]) & !is.na(percent_boats[k,fisheries[j]])){
-            A[i,j] = A[i,j] + 1
+            A[i,j] = A[i,j] + as.numeric(
+              tickets %>% 
+                filter (SPGRPN2 == fisheries[i] | SPGRPN2 == fisheries[j]) %>% 
+                group_by(crab_year) %>% 
+                summarise(n_boats = length(unique(drvid))) %>% 
+                summarise(max_boats = max(n_boats)) 
+            )
           }
         }
       }

@@ -994,7 +994,7 @@ for(y in years){
       dat, 
       filter = TRUE, filter_subgraph = FALSE,
       edge_type="connectivity", pcid_choose=iopac, state_choose = NA, year_choose=y, min_vessels = vessel_cutoff, min_contribution = contr_cutoff, min_rev = total_rev_cutoff, min_rev_indiv = indiv_rev_cutoff,
-      write_out=TRUE, out_dir=outdir_ports)
+      write_out=TRUE, out_dir=outdir_ports_agg)
     
     if(any(is.na(tmp_g))){
       message("\n\n WARNING: No fishing at ", iopac, " in crab year ", y, "!\n\n") # updated to iopac 03-10-21, was No fishing at ", p, "
@@ -1009,7 +1009,7 @@ for(y in years){
       V(tmp_g)$colors <- vertex_cols
       ## save objects
       rds_name <- ifelse(rm_crab,  paste0("igraph_", iopac, "_", y, "_totalrev", total_rev_cutoff,"_indivrev", indiv_rev_cutoff,"_", edgetype,"_rmCrab.rds"),  paste0("igraph_", iopac, "_", y, "_", total_rev_cutoff,"_", indiv_rev_cutoff,"_", edgetype,".rds")) # updated to iopac 03-10-21, was "igraph_", p
-      saveRDS(tmp_g, file = here::here(outdir_ports, rds_name))
+      saveRDS(tmp_g, file = here::here(outdir_ports_agg, rds_name))
       
     # Calculate network-level statistics
     ## using the `net_stats` function
