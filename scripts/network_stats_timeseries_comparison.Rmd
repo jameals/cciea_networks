@@ -76,15 +76,15 @@ pngdir <- 'results/figures'
 
 What are the names of the `.csv` files with the network statistics that you want to compare? Would not suggest listing more than 4. Files should all be in the input directory (`indir`) specified above.
 ```{r}
-filenames <- c("NetworkStats_2004_2019_21pcgroups_rmCrab_5pContribution_bulk.csv", 
-               "NetworkStats_2004_2019_21pcgroups_rmCrab_10pContribution_bulk.csv")
+filenames <- c("NetworkStats_2004_2019_21pcgroups_totalrev5000_indivrev500_connectivity_rmCrab_10pContribution.csv", "NetworkStats_2004_2019_21pcgroups_totalrev5000_indivrev500_vessels_rmCrab_10pContribution.csv")
+#c("NetworkStats_2004_2019_21pcgroups_rmCrab_5pContribution_bulk.csv",              "NetworkStats_2004_2019_21pcgroups_rmCrab_10pContribution_bulk.csv")
 ```
 <br>
 
 Provide descriptive names to differentiate the datasets drawn from the files listed above. 
 ```{r}
-dataset_names <- c("5pContribution",
-                   "10pContribution")
+dataset_names <- c("Edges: Connectivity",
+                   "Edges: Number of Vessels")
 ```
 <br>
 

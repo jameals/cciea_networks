@@ -5,7 +5,7 @@
 #'
 #' @param g network as an igraph object
 #' @param outdir directory where image files will be saved
-#' @param file_suffix string to be added to the suffix of the image file name. script will automatically name the files by port group and year.
+#' @param file_suffix string to be added to the suffix of the image file name. script will automatically name the files by 'port_group' and year. 'port_group' can be defined as desired based on unique(V(g)$p)
 #' @param individual save each network plot to its own png file (TRUE/FALSE)
 #' @param grid plot networks in a single png file, using a grid (facets). Not recommended for more than four networks. (TRUE/FALSE)
 #' @param grid_layout layout for the multi-plot png, if grid=TRUE. Should be in format: c(nrows,ncolumns) 
@@ -13,7 +13,7 @@
 #' @examples
 #' plot_comparable_networks(graphs_list, outdir="data/networks/participation/plots/comparable")
 #' @export
-plot_comparable_networks <- function(glist, outdir, file_suffix=paste0("_cciea_bulk_",contr_cutoff*100, "_compare"), individual=TRUE, grid=FALSE, grid_layout=c(2,2)){
+plot_comparable_networks <- function(glist, outdir, file_suffix=paste0("_compare"), individual=TRUE, grid=FALSE, grid_layout=c(2,2)){
   
   ######## set up - functions ########
   # get the vertex IDs for a graph
