@@ -102,6 +102,10 @@ years <- seq(2004,2019)
 ## IOPAC port groups
 myports <- c("Puget Sound","North WA Coast","WA Coast","Other Coastal Washington","Astoria","Tillamook","Columbia River","Newport","Coos Bay","Brookings","Crescent City","Eureka","Morro Bay","Fort Bragg","Bodega Bay","San Francisco","San Diego","Monterey","Santa Barbara","Los Angeles","Unknown Ports" )
 
+# wa_ports <- myports[1:4]
+# or_ports <- myports[5:10]
+# ca_ports <- myports[11:20]
+
 ## west coast states
 mystates <- c("C", "O","W")
 
