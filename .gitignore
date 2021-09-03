@@ -3,3 +3,6 @@
 .RData
 .Ruserdata
 .DS_Store
+
+compare_vessel_aggregate_summary_data.Rmd
+compare_vessel_aggregate_summary_data.html
