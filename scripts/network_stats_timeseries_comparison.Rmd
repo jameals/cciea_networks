@@ -83,8 +83,8 @@ filenames <- c("NetworkStats_2004_2019_21pcgroups_totalrev5000_indivrev500_conne
 
 Provide descriptive names to differentiate the datasets drawn from the files listed above. 
 ```{r}
-dataset_names <- c("Edges: Connectivity",
-                   "Edges: Number of Vessels")
+dataset_names <- c("Edges_Connectivity",
+                   "Edges_Number of Vessels")
 ```
 <br>
 
