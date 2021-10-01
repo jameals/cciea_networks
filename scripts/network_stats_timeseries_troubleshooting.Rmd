@@ -373,6 +373,62 @@ ggplot(data=filter(test_stats, pcgroup %in% c("North WA Coast", "Astoria","Fort 
 
 
 
+<br>
+
+# Network Centralization
+
+Connectivity network edges, total and individual revenue filtering. (file name :`NetworkStats_2004_2019_21pcgroups_totalrev5000_indivrev500_connectivity_rmCrab_10pContribution.csv`)
+```{r echo=FALSE}
+ggplot(data=filter(stats1, pcgroup %in% c("North WA Coast", "Astoria","Fort Bragg","Morro Bay")), aes(x=y, y=nc_weighted)) + 
+  geom_point() + geom_line() +
+  facet_grid(cols=vars(pcgroup), scales="free_y") +
+  scale_x_continuous(breaks=seq(min(stats1$y), max(stats1$y), by=2), labels=seq(min(stats1$y), max(stats1$y), by=2)) +
+  ylim(c(0,1)) +
+  ylab("Centralization") + xlab("Year") +
+  theme_bw() + theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5),
+                     axis.title.x=element_text(size=13),
+                     axis.title.y=element_text(size=13),
+                     strip.text=element_text(size=13),
+                     legend.title=element_text(size=13),legend.text=element_text(size=13),
+                     panel.grid.major=element_blank(),
+                     panel.grid.minor=element_blank())
+```
+
+Centralization by network size (# of nodes):
+```{r echo=FALSE, fig.height=3, fig.width=6}
+ggplot(data=filter(stats1, pcgroup %in% c("North WA Coast", "Astoria","Fort Bragg","Morro Bay")), aes(x=N, y=nc_weighted, col=pcgroup)) + 
+  geom_point() +
+  ylim(c(0,1)) +
+  ylab("Centralization") + xlab("Network Size") +
+  theme_bw() + theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5),
+                     axis.title.x=element_text(size=13),
+                     axis.title.y=element_text(size=13),
+                     strip.text=element_text(size=13),
+                     legend.title=element_text(size=13),legend.text=element_text(size=13),
+                     panel.grid.major=element_blank(),
+                     panel.grid.minor=element_blank())
+```
+<br>
 
 
 
+With the newly generated stats data-frame from the **Edge Density** section:
+```{r echo=FALSE}
+ggplot(data=filter(test_stats, pcgroup %in% c("North WA Coast", "Astoria","Fort Bragg","Morro Bay")), aes(x=y, y=nc_weighted)) + 
+  geom_point() + geom_line() +
+  facet_grid(cols=vars(pcgroup), scales="free_y") +
+  scale_x_continuous(breaks=seq(min(test_stats$y), max(test_stats$y), by=2), labels=seq(min(test_stats$y), max(test_stats$y), by=2)) +
+  ylim(c(0,1)) +
+  ylab("Centralization") + xlab("Year") +
+  theme_bw() + theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5),
+                     axis.title.x=element_text(size=13),
+                     axis.title.y=element_text(size=13),
+                     strip.text=element_text(size=13),
+                     legend.title=element_text(size=13),legend.text=element_text(size=13),
+                     panel.grid.major=element_blank(),
+                     panel.grid.minor=element_blank())
+```
+<br>
+
+
+Same as in **Edge Density** section, I'm unable to replicate the issue...
