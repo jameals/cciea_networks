@@ -1,0 +1,416 @@
+---
+title: "Check Network Metrics"
+author: "M. Fisher"
+date: "Written Oct 1, 2021. Last Run `r Sys.Date()`"
+output:
+  html_document:
+    df_print: paged
+    toc: yes
+    toc_depth: '3'
+  pdf_document:
+    highlight: haddock
+    number_sections: yes
+    toc: yes
+    toc_depth: '3'
+geometry: margin=1in
+subtitle: Preparation for network analysis in CCIEA ESR
+fontsize: 11pt
+---
+
+# Description
+
+I can't seem to replicate the problems with the network metrics calculated from vessel-level networks with filters; so I reran all of "script_06_create_networks_4ways" and I'm going to compare the resulting statistics files against the originals here. 
+
+```{r setup, include=FALSE}
+if(!require("here")) {install.packages("here")}
+library(here)
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = here::here())
+
+## start time for full script
+script_start_time <- Sys.time()
+```
+<br>
+
+This script requires the following packages:
+```{r message=FALSE, warning=FALSE}
+library(tidyverse)
+library(ggplot2)
+library(igraph)
+```
+<br>
+
+
+# Read in data
+
+Start with the vessel-level connectivity networks **B)(ii)** and **C)(i)** A minimum annual total fisheries revenue cutoff for each vessel of 5,000, and a minimum annual individual fisheries revenue cutoff for each vessel of 500.
+
+```{r}
+## IOPAC port groups
+myports <- c("Puget Sound","North WA Coast","WA Coast","Other Coastal Washington","Astoria","Tillamook","Columbia River","Newport","Coos Bay","Brookings","Crescent City","Eureka","Morro Bay","Fort Bragg","Bodega Bay","San Francisco","San Diego","Monterey","Santa Barbara","Los Angeles","Unknown Ports" )
+
+# wa_ports <- myports[1:4]
+# or_ports <- myports[5:10]
+# ca_ports <- myports[11:20]
+
+## west coast states
+mystates <- c("C", "O","W")
+
+## years of analysis
+years <- seq(2004,2019)
+
+rm_crab = TRUE
+
+vessel_cutoff <- 3
+contr_cutoff <- 0.10
+```
+<br>
+
+```{r}
+
+total_rev_cutoff <- 5000
+indiv_rev_cutoff <- 500
+edgetype <- "connectivity"
+
+```
+<br>
+
+```{r}
+# by port group
+file1_name <- paste0("NetworkStats_", min(years), "_", max(years), "_", length(myports), "pcgroups_", "totalrev", total_rev_cutoff,"_indivrev", indiv_rev_cutoff,"_", edgetype, "_", ifelse(rm_crab, 'rmCrab_','_'), contr_cutoff*100, "pContribution.csv")
+
+file2_name <- paste0("RERUN_NetworkStats_", min(years), "_", max(years), "_", length(myports), "pcgroups_", "totalrev", total_rev_cutoff,"_indivrev", indiv_rev_cutoff,"_", edgetype, "_", ifelse(rm_crab, 'rmCrab_','_'), contr_cutoff*100, "pContribution.csv")
+
+# by state
+file3_name <- paste0("NetworkStats_", min(years), "_", max(years), "_", length(mystates), "states_", "totalrev", total_rev_cutoff,"_indivrev", indiv_rev_cutoff,"_", edgetype, "_", ifelse(rm_crab, 'rmCrab_','_'), contr_cutoff*100, "pContribution.csv")
+
+file4_name <- paste0("RERUN_NetworkStats_", min(years), "_", max(years), "_", length(mystates), "states_", "totalrev", total_rev_cutoff,"_indivrev", indiv_rev_cutoff,"_", edgetype, "_", ifelse(rm_crab, 'rmCrab_','_'), contr_cutoff*100, "pContribution.csv")
+```
+<br>
+
+by port group
+```{r}
+orig  <- read.csv(here::here('results','statistics',file1_name))
+rerun <- read.csv(here::here('results','statistics',file2_name))
+```
+<br>
+
+by state
+```{r}
+orig_state  <- read.csv(here::here('results','statistics',file3_name))
+rerun_state <- read.csv(here::here('results','statistics',file4_name))
+```
+<br>
+
+# Edge Density
+
+### by Port Group
+
+```{r echo=FALSE}
+ggplot(data=filter(orig, pcgroup %in% c("North WA Coast", "Astoria","Fort Bragg","Morro Bay")), aes(x=y, y=ed)) + 
+  geom_point() + geom_line() +
+  facet_grid(cols=vars(pcgroup), scales="free_y") +
+  scale_x_continuous(breaks=seq(min(orig$y), max(orig$y), by=2), labels=seq(min(orig$y), max(orig$y), by=2)) +
+  ylim(c(0,1)) +
+  ylab("Edge Density") + xlab("Year") +
+  theme_bw() + theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5),
+                     axis.title.x=element_text(size=13),
+                     axis.title.y=element_text(size=13),
+                     strip.text=element_text(size=13),
+                     legend.title=element_text(size=13),legend.text=element_text(size=13),
+                     panel.grid.major=element_blank(),
+                     panel.grid.minor=element_blank())
+```
+
+
+```{r echo=FALSE}
+ggplot(data=filter(rerun, pcgroup %in% c("North WA Coast", "Astoria","Fort Bragg","Morro Bay")), aes(x=y, y=ed)) + 
+  geom_point() + geom_line() +
+  facet_grid(cols=vars(pcgroup), scales="free_y") +
+  scale_x_continuous(breaks=seq(min(rerun$y), max(rerun$y), by=2), labels=seq(min(rerun$y), max(rerun$y), by=2)) +
+  ylim(c(0,1)) +
+  ylab("Edge Density") + xlab("Year") +
+  theme_bw() + theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5),
+                     axis.title.x=element_text(size=13),
+                     axis.title.y=element_text(size=13),
+                     strip.text=element_text(size=13),
+                     legend.title=element_text(size=13),legend.text=element_text(size=13),
+                     panel.grid.major=element_blank(),
+                     panel.grid.minor=element_blank())
+```
+<br>
+
+### by State
+
+
+```{r echo=FALSE}
+ggplot(data=orig_state, aes(x=y, y=ed)) + 
+  geom_point() + geom_line() +
+  facet_grid(cols=vars(state), scales="free_y") +
+  scale_x_continuous(breaks=seq(min(orig_state$y), max(orig_state$y), by=2), labels=seq(min(orig_state$y), max(orig_state$y), by=2)) +
+  ylim(c(0,1)) +
+  ylab("Edge Density") + xlab("Year") +
+  theme_bw() + theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5),
+                     axis.title.x=element_text(size=13),
+                     axis.title.y=element_text(size=13),
+                     strip.text=element_text(size=13),
+                     legend.title=element_text(size=13),legend.text=element_text(size=13),
+                     panel.grid.major=element_blank(),
+                     panel.grid.minor=element_blank())
+```
+
+
+```{r echo=FALSE}
+ggplot(data=rerun_state, aes(x=y, y=ed)) + 
+  geom_point() + geom_line() +
+  facet_grid(cols=vars(state), scales="free_y") +
+  scale_x_continuous(breaks=seq(min(rerun_state$y), max(rerun_state$y), by=2), labels=seq(min(rerun_state$y), max(rerun_state$y), by=2)) +
+  ylim(c(0,1)) +
+  ylab("Edge Density") + xlab("Year") +
+  theme_bw() + theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5),
+                     axis.title.x=element_text(size=13),
+                     axis.title.y=element_text(size=13),
+                     strip.text=element_text(size=13),
+                     legend.title=element_text(size=13),legend.text=element_text(size=13),
+                     panel.grid.major=element_blank(),
+                     panel.grid.minor=element_blank())
+```
+<br>
+
+# Centralization
+
+### by Port Group
+
+```{r echo=FALSE}
+ggplot(data=filter(orig, pcgroup %in% c("North WA Coast", "Astoria","Fort Bragg","Morro Bay")), aes(x=y, y=nc_weighted)) + 
+  geom_point() + geom_line() +
+  facet_grid(cols=vars(pcgroup), scales="free_y") +
+  scale_x_continuous(breaks=seq(min(orig$y), max(orig$y), by=2), labels=seq(min(orig$y), max(orig$y), by=2)) +
+  ylim(c(0,1)) +
+  ylab("Centralization") + xlab("Year") + ggtitle("original") +
+  theme_bw() + theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5),
+                     axis.title.x=element_text(size=13),
+                     axis.title.y=element_text(size=13),
+                     strip.text=element_text(size=13),
+                     legend.title=element_text(size=13),legend.text=element_text(size=13),
+                     panel.grid.major=element_blank(),
+                     panel.grid.minor=element_blank())
+```
+<br>
+
+
+
+```{r echo=FALSE}
+ggplot(data=filter(rerun, pcgroup %in% c("North WA Coast", "Astoria","Fort Bragg","Morro Bay")), aes(x=y, y=nc_weighted)) + 
+  geom_point() + geom_line() +
+  facet_grid(cols=vars(pcgroup), scales="free_y") +
+  scale_x_continuous(breaks=seq(min(rerun$y), max(rerun$y), by=2), labels=seq(min(rerun$y), max(rerun$y), by=2)) +
+  ylim(c(0,1)) +
+  ylab("Centralization") + xlab("Year") + ggtitle("Rerun") +
+  theme_bw() + theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5),
+                     axis.title.x=element_text(size=13),
+                     axis.title.y=element_text(size=13),
+                     strip.text=element_text(size=13),
+                     legend.title=element_text(size=13),legend.text=element_text(size=13),
+                     panel.grid.major=element_blank(),
+                     panel.grid.minor=element_blank())
+```
+<br>
+
+
+### by State
+
+```{r echo=FALSE}
+ggplot(data=orig_state, aes(x=y, y=nc_weighted)) + 
+  geom_point() + geom_line() +
+  facet_grid(cols=vars(state), scales="free_y") +
+  scale_x_continuous(breaks=seq(min(orig_state$y), max(orig_state$y), by=2), labels=seq(min(orig_state$y), max(orig_state$y), by=2)) +
+  ylim(c(0,1)) +
+  ylab("Centralization") + xlab("Year") + ggtitle("original") +
+  theme_bw() + theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5),
+                     axis.title.x=element_text(size=13),
+                     axis.title.y=element_text(size=13),
+                     strip.text=element_text(size=13),
+                     legend.title=element_text(size=13),legend.text=element_text(size=13),
+                     panel.grid.major=element_blank(),
+                     panel.grid.minor=element_blank())
+```
+<br>
+
+
+
+```{r echo=FALSE}
+ggplot(data=rerun_state, aes(x=y, y=nc_weighted)) + 
+  geom_point() + geom_line() +
+  facet_grid(cols=vars(state), scales="free_y") +
+  scale_x_continuous(breaks=seq(min(rerun_state$y), max(rerun_state$y), by=2), labels=seq(min(rerun_state$y), max(rerun_state$y), by=2)) +
+  ylim(c(0,1)) +
+  ylab("Centralization") + xlab("Year") + ggtitle("Rerun") +
+  theme_bw() + theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5),
+                     axis.title.x=element_text(size=13),
+                     axis.title.y=element_text(size=13),
+                     strip.text=element_text(size=13),
+                     legend.title=element_text(size=13),legend.text=element_text(size=13),
+                     panel.grid.major=element_blank(),
+                     panel.grid.minor=element_blank())
+```
+<br>
+
+
+
+
+# Aggregate networks
+
+## File Naming
+As I was going through the entire script 06, I noticed that the stat filenames for the vessel-level networks and the aggregate networks ***are the same***.
+
+### by Port
+From **1) Vessel-level networks summarized by port group -- B)(ii) and C)(i) A minimum annual total fisheries revenue cutoff for each vessel of $5,000, and a minimum annual individual fisheries revenue cutoff for each vessel of $500.**
+```{r}
+# line 415
+total_rev_cutoff <- 5000
+indiv_rev_cutoff <- 500
+edgetype <- "connectivity"
+
+# line 495
+filename <- paste0("NetworkStats_", min(years), "_", max(years), "_", length(myports), "pcgroups_", "totalrev", total_rev_cutoff,"_indivrev", indiv_rev_cutoff,"_", edgetype, "_", ifelse(rm_crab, 'rmCrab_','_'), contr_cutoff*100, "pContribution.csv")
+
+filename
+```
+
+
+From **3) Aggregate networks summarized by port -- B)(ii) and C)(i) Edges defined based on connectivity.**
+```{r}
+# line 969
+total_rev_cutoff <- 5000
+indiv_rev_cutoff <- 500
+edgetype <- "connectivity"
+
+# line 1050
+filename <- paste0("NetworkStats_", min(years), "_", max(years), "_", length(myports), "pcgroups_", "totalrev", total_rev_cutoff,"_indivrev", indiv_rev_cutoff,"_", edgetype, "_", ifelse(rm_crab, 'rmCrab_','_'), contr_cutoff*100, "pContribution.csv")
+filename
+```
+
+
+### by State
+
+From **2) Vessel-level networks summarized by state -- B)(ii) and C)(i) A minimum annual total fisheries revenue cutoff for each vessel of $5,000, and a minimum annual individual fisheries revenue cutoff for each vessel of $500.**
+```{r}
+# line 784
+total_rev_cutoff <- 5000
+indiv_rev_cutoff <- 500
+edgetype <- "connectivity"
+
+# line 863
+filename <- paste0("NetworkStats_", min(years), "_", max(years), "_", length(mystates), "states_", "totalrev", total_rev_cutoff,"_indivrev", indiv_rev_cutoff,"_", edgetype, "_", ifelse(rm_crab, 'rmCrab_','_'), contr_cutoff*100, "pContribution.csv")
+filename
+```
+
+
+From **4) Aggregate networks summarized by state -- B)(ii) and C)(i) Edges defined based on connectivity.**
+```{r}
+# line 1156
+total_rev_cutoff <- 5000
+indiv_rev_cutoff <- 500
+edgetype <- "connectivity"
+
+# line 1239
+filename <- paste0("NetworkStats_", min(years), "_", max(years), "_", length(mystates), "states_", "totalrev", total_rev_cutoff,"_indivrev", indiv_rev_cutoff,"_", edgetype, "_", ifelse(rm_crab, 'rmCrab_','_'), contr_cutoff*100, "pContribution.csv")
+
+filename
+```
+<br>
+
+
+## Investigate re-runs
+
+```{r}
+# by port group
+file5_name <- paste0("AggNetworkStats_", min(years), "_", max(years), "_", length(myports), "pcgroups_", "totalrev", total_rev_cutoff,"_indivrev", indiv_rev_cutoff,"_", edgetype, "_", ifelse(rm_crab, 'rmCrab_','_'), contr_cutoff*100, "pContribution.csv")
+
+# by state
+file6_name <- paste0("AggNetworkStats_", min(years), "_", max(years), "_", length(mystates), "states_", "totalrev", total_rev_cutoff,"_indivrev", indiv_rev_cutoff,"_", edgetype, "_", ifelse(rm_crab, 'rmCrab_','_'), contr_cutoff*100, "pContribution.csv")
+```
+<br>
+
+by port group
+```{r}
+rerun_port_agg <- read.csv(here::here('results','statistics',file5_name))
+rerun_state_agg <- read.csv(here::here('results','statistics',file6_name))
+```
+<br>
+
+### Edge Density
+
+
+```{r echo=FALSE}
+ggplot(data=filter(rerun_port_agg, pcgroup %in% c("North WA Coast", "Astoria","Fort Bragg","Morro Bay")), aes(x=y, y=ed)) + 
+  geom_point() + geom_line() +
+  facet_grid(cols=vars(pcgroup), scales="free_y") +
+  scale_x_continuous(breaks=seq(min(rerun_port_agg$y), max(rerun_port_agg$y), by=2), labels=seq(min(rerun_port_agg$y), max(rerun_port_agg$y), by=2)) +
+  ylim(c(0,1)) +
+  ylab("Edge Density") + xlab("Year") + ggtitle("Rerun-Port") +
+  theme_bw() + theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5),
+                     axis.title.x=element_text(size=13),
+                     axis.title.y=element_text(size=13),
+                     strip.text=element_text(size=13),
+                     legend.title=element_text(size=13),legend.text=element_text(size=13),
+                     panel.grid.major=element_blank(),
+                     panel.grid.minor=element_blank())
+```
+<br>
+
+```{r echo=FALSE}
+ggplot(data=rerun_state_agg, aes(x=y, y=ed)) + 
+  geom_point() + geom_line() +
+  facet_grid(cols=vars(state), scales="free_y") +
+  scale_x_continuous(breaks=seq(min(rerun_state_agg$y), max(rerun_state_agg$y), by=2), labels=seq(min(rerun_state_agg$y), max(rerun_state_agg$y), by=2)) +
+  ylim(c(0,1)) +
+  ylab("Edge Density") + xlab("Year") + ggtitle("Rerun-State") +
+  theme_bw() + theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5),
+                     axis.title.x=element_text(size=13),
+                     axis.title.y=element_text(size=13),
+                     strip.text=element_text(size=13),
+                     legend.title=element_text(size=13),legend.text=element_text(size=13),
+                     panel.grid.major=element_blank(),
+                     panel.grid.minor=element_blank())
+```
+
+
+### Network Centralization
+```{r echo=FALSE}
+ggplot(data=filter(rerun_port_agg, pcgroup %in% c("North WA Coast", "Astoria","Fort Bragg","Morro Bay")), aes(x=y, y=nc_weighted)) + 
+  geom_point() + geom_line() +
+  facet_grid(cols=vars(pcgroup), scales="free_y") +
+  scale_x_continuous(breaks=seq(min(rerun_port_agg$y), max(rerun_port_agg$y), by=2), labels=seq(min(rerun_port_agg$y), max(rerun_port_agg$y), by=2)) +
+  ylim(c(0,1)) +
+  ylab("Centralization") + xlab("Year") + ggtitle("Rerun - Port") +
+  theme_bw() + theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5),
+                     axis.title.x=element_text(size=13),
+                     axis.title.y=element_text(size=13),
+                     strip.text=element_text(size=13),
+                     legend.title=element_text(size=13),legend.text=element_text(size=13),
+                     panel.grid.major=element_blank(),
+                     panel.grid.minor=element_blank())
+```
+<br>
+
+```{r echo=FALSE}
+ggplot(data=rerun_state_agg, aes(x=y, y=nc_weighted)) + 
+  geom_point() + geom_line() +
+  facet_grid(cols=vars(state), scales="free_y") +
+  scale_x_continuous(breaks=seq(min(rerun_state_agg$y), max(rerun_state_agg$y), by=2), labels=seq(min(rerun_state_agg$y), max(rerun_state_agg$y), by=2)) +
+  ylim(c(0,1)) +
+  ylab("Centralization") + xlab("Year") + ggtitle("Rerun - State") +
+  theme_bw() + theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5),
+                     axis.title.x=element_text(size=13),
+                     axis.title.y=element_text(size=13),
+                     strip.text=element_text(size=13),
+                     legend.title=element_text(size=13),legend.text=element_text(size=13),
+                     panel.grid.major=element_blank(),
+                     panel.grid.minor=element_blank())
+```
+
+
+
+
