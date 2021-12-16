@@ -6,3 +6,8 @@
 
 compare_vessel_aggregate_summary_data.Rmd
 compare_vessel_aggregate_summary_data.html
+
+data/networks/participation_agg_ports/*_confidential*
+data/networks/participation_agg_states/*_confidential*
+data/networks/participation_vessel_ports/*_confidential*
+data/networks/participation_vessel_states/*_confidential*
