@@ -148,18 +148,18 @@ Glue fish ticket data together into single data frame, write out .rds.
 NOTE: you can skip reading in the individual raw data files if "pacfin_compiled_2004thru2021.rds" already exists.
 ```{r glue}
 
-# grab 2004-2021 csv
-
-rawdat2 <- read.csv(paste0(indir2,myfile1)) %>%
-  filter(LANDING_YEAR %in% years)
-print("2004-2021 fish ticket data column names")
-colnames(rawdat2)
-
-# LANDING_YEAR in more recent data pulls has a time associated with it. convert rawdat2$LANDING_DATE to date formats that exclude time. added 12-29-2021
-rawdat2$LANDING_DATE <- as.Date(rawdat2$LANDING_DATE, "%m/%d/%Y")
-
-write_rds(rawdat2, paste0(out_conf_dir,"pacfin_compiled_2004thru2021.rds"))
-rm(rawdat2)
+# # grab 2004-2021 csv, WARNING: takes a long time to read in this 8GB file
+# 
+# rawdat2 <- read.csv(paste0(indir2,myfile2)) %>%
+#   filter(LANDING_YEAR %in% years)
+# print("2004-2021 fish ticket data column names")
+# colnames(rawdat2)
+# 
+# # LANDING_YEAR in more recent data pulls has a time associated with it. convert rawdat2$LANDING_DATE to date formats that exclude time. added 12-29-2021
+# rawdat2$LANDING_DATE <- as.Date(rawdat2$LANDING_DATE, "%m/%d/%Y")
+# 
+# write_rds(rawdat2, paste0(out_conf_dir,"pacfin_compiled_2004thru2021.rds"))
+# rm(rawdat2)
 
 # join fish ticket data for 2019-21, make new RDS
 

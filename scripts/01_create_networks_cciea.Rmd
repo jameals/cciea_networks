@@ -266,8 +266,8 @@ for(y in years){
       
     # Calculate network-level statistics
     ## using the `net_stats` function
-    # g_stats <- net_stats(tmp_g, y = y, stats="network") # ran first with this argument 12-29-2021
-      g_stats <- net_stats(tmp_g, y = y, stats="node") # added 12-29-2021. ran second with this argument 12-29-2021
+    g_stats <- net_stats(tmp_g, y = y, stats="network") # ran first with this argument 12-29-2021
+      # g_stats <- net_stats(tmp_g, y = y, stats="node") # added 12-29-2021. ran second with this argument 12-29-2021
     #g_stats <- net_stats(tmp_g, y = 2008, stats="network")
     ## add on period (closure/open) and port group info
     g_stats <- g_stats %>%
@@ -298,14 +298,14 @@ for(y in years){
 Write stats out to file. 2008_2015_CA_CrabPorts_NoSubgraph_01contribution.csv
 ```{r eval=TRUE}
 # ran first for network level stats 12-29-2021
-# filename <- paste0("VesselLevelNetworkStats_", min(years), "_", max(years), "_", length(myports), "pcgroups_", "totalrev", total_rev_cutoff,"_indivrev", indiv_rev_cutoff,"_", edgetype, "_", ifelse(rm_crab, 'rmCrab_','_'), contr_cutoff*100, "pContribution.csv")
-# 
-# write.csv(mystats3,here::here(statdir, filename), row.names=FALSE)
-
-# ran second for node level stats 12-29-2021
-filename <- paste0("VesselLevelNodeStats_", min(years), "_", max(years), "_", length(myports), "pcgroups_", "totalrev", total_rev_cutoff,"_indivrev", indiv_rev_cutoff,"_", edgetype, "_", ifelse(rm_crab, 'rmCrab_','_'), contr_cutoff*100, "pContribution.csv")
+filename <- paste0("VesselLevelNetworkStats_", min(years), "_", max(years), "_", length(myports), "pcgroups_", "totalrev", total_rev_cutoff,"_indivrev", indiv_rev_cutoff,"_", edgetype, "_", ifelse(rm_crab, 'rmCrab_','_'), contr_cutoff*100, "pContribution.csv")
 
 write.csv(mystats3,here::here(statdir, filename), row.names=FALSE)
+
+# ran second for node level stats 12-29-2021
+# filename <- paste0("VesselLevelNodeStats_", min(years), "_", max(years), "_", length(myports), "pcgroups_", "totalrev", total_rev_cutoff,"_indivrev", indiv_rev_cutoff,"_", edgetype, "_", ifelse(rm_crab, 'rmCrab_','_'), contr_cutoff*100, "pContribution.csv")
+# 
+# write.csv(mystats3,here::here(statdir, filename), row.names=FALSE)
 ```
 <br>
 
