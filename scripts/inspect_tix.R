@@ -30,6 +30,21 @@ tix_2019 %>%
 
 tix_2019[which(tix_2019$trip_id == 605944705),]$revenue
 
+### added Dec 2021. check for Fort Bragg mega albacore tuna ticket. it is fixed!
+rawdat.sub %>%
+  filter(
+    year == 2020
+  ) %>%
+  filter(
+    pcid == "BRG"
+  ) %>%
+  filter(
+    drvid == "CF8911TA"
+  ) %>%
+  filter(
+    spid == "ALBC"
+  )
+
 # check out Astoria, based on email from Dan Holland on 2/9/21. DTS groundfish
 tix_2019 %>%
   filter(

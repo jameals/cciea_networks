@@ -78,7 +78,7 @@ And calls the following functions.
 Select your directories. 
 ```{r get_dir}
 ## raw PacFIN fish ticket data file location
-indir1 <- "/Users/jameal.samhouri/Documents/Koehn et al. cc vulnerability/Data/"
+#indir1 <- "/Users/jameal.samhouri/Documents/Koehn et al. cc vulnerability/Data/"
 indir2 <- "/Users/jameal.samhouri/Documents/CCIEA Networks/raw/"
 
 ## output directory for confidential data
@@ -93,8 +93,9 @@ Specify file name of the raw fish ticket data file and supporting files with spe
 ```{r get_filenames}
 # will need to glue 2004-2018 data to 2019-2020 data
 
-myfile1 <- "pacfin_compiled_2004thru2018.rds"
-myfile2 <- "fish tickets 2019-2020.csv" # latest pull from PacFIN: 03-01-21. previous pulls 01-27-21 and 12-07-20
+# myfile1 <- "pacfin_compiled_2004thru2018.rds"
+# myfile2 <- "fish tickets 2019-2021 121321.csv" # latest pull from PacFIN: 12-13-21. previous pulls 03-01-21, 01-27-21, and 12-07-20
+myfile2 <- "fish tickets 2004-2021 122921.csv" # latest pull from PacFIN: 12-29-21.
 
 myfile3 <- "iopac_conversion_table.csv"
 myfile4 <- "species_groupings_spgrpn2_iea.csv" # originally from first tab of species_groupings IEA.xlsx from Dan Holland. see email of 121520
@@ -112,10 +113,10 @@ Set a few more user inputs to process the fish tickets
 crab_year = TRUE
 
 ## if crab_year = TRUE, which crab years of fish tickets are you processing? [numeric vector]
-crab_years <- seq(2004,2019)
+crab_years <- seq(2004,2020)
 
 ## which years of fish tickets are you processing? [numeric vector]
-years <- seq(2004,2020)
+years <- seq(2004,2021)
 
 ## do you want to write out the average price per pounds calculated from the data? [TRUE/FALSE]
 write_ppp = FALSE
@@ -131,22 +132,10 @@ dcrb_only <- FALSE
 
 ## 1.1. Read, Glue, Subset data
 
-NOTE: you can skip reading in the individual raw data files if "pacfin_compiled_2004thru2020.rds" already exists.
-
 This should be a `.rds` or a `.csv` file containing raw PacFIN data.
 ```{r rawdata}
-rawdat <- read_rds(paste0(out_conf_dir,"pacfin_compiled_2004thru2020.rds"))
+rawdat <- read_rds(paste0(out_conf_dir,"pacfin_compiled_2004thru2021.rds"))
 colnames(rawdat)
-
-# rawdat1 <- read_rds(paste0(indir1,myfile1)) %>%
-#   filter(LANDING_YEAR %in%  years)
-# print("2004-2018 fish ticket data column names")
-# colnames(rawdat1)
-# 
-# rawdat2 <- read.csv(paste0(indir2,myfile2)) %>%
-#   filter(LANDING_YEAR %in%  years)
-# print("2019-2020 fish ticket data column names")
-# colnames(rawdat2)
 
 port_grps <- read_csv(here::here(processdir,myfile3))
 sp_grps <- read_csv(here::here(processdir,myfile4))
@@ -155,15 +144,44 @@ sp_grps <- read_csv(here::here(processdir,myfile4))
 <br>
 
 Glue fish ticket data together into single data frame, write out .rds.
+
+NOTE: you can skip reading in the individual raw data files if "pacfin_compiled_2004thru2021.rds" already exists.
 ```{r glue}
 
-# join fish ticket data for 2019-20, make new RDS
+# grab 2004-2021 csv
 
-# which(names(rawdat1) != names(rawdat2)) # last 22 columns of 2019-20 data do not match
-# pacfin2019_2020.df <- rawdat2[,1:101]
-# pacfin.df <- bind_rows(rawdat1,pacfin2019_2020.df)
-# write_rds(pacfin.df, paste0(out_conf_dir,"pacfin_compiled_2004thru2020.rds"))
-# rm(pacfin.df, rawdat1, rawdat2, pacfin2019_2020.df)
+rawdat2 <- read.csv(paste0(indir2,myfile1)) %>%
+  filter(LANDING_YEAR %in% years)
+print("2004-2021 fish ticket data column names")
+colnames(rawdat2)
+
+# LANDING_YEAR in more recent data pulls has a time associated with it. convert rawdat2$LANDING_DATE to date formats that exclude time. added 12-29-2021
+rawdat2$LANDING_DATE <- as.Date(rawdat2$LANDING_DATE, "%m/%d/%Y")
+
+write_rds(rawdat2, paste0(out_conf_dir,"pacfin_compiled_2004thru2021.rds"))
+rm(rawdat2)
+
+# join fish ticket data for 2019-21, make new RDS
+
+# rawdat1 <- read_rds(paste0(indir1,myfile1)) %>%
+#   filter(LANDING_YEAR %in%  years)
+# print("2004-2018 fish ticket data column names")
+# colnames(rawdat1)
+# 
+# rawdat2 <- read.csv(paste0(indir2,myfile2)) %>%
+#   filter(LANDING_YEAR %in%  years)
+# print("2019-2021 fish ticket data column names")
+# colnames(rawdat2)
+# 
+# # LANDING_YEAR in more recent data (2019-2021) has a time associated with it. convert rawdat1$LANDING_DATE and rawdat2$LANDING_DATE to date formats that exclude time. added 12-29-2021
+# rawdat1$LANDING_DATE <- as.Date(rawdat1$LANDING_DATE, "%d-%b-%y")
+# rawdat2$LANDING_DATE <- as.Date(rawdat2$LANDING_DATE, "%m/%d/%Y")
+
+# which(names(rawdat1) != names(rawdat2)) # last 22 columns of 2019-21 data do not match
+# pacfin2019_2021.df <- rawdat2[,1:101]
+# pacfin.df <- bind_rows(rawdat1,pacfin2019_2021.df) # this step puts LANDING_DATE in %Y-%b-%d format
+# write_rds(pacfin.df, paste0(out_conf_dir,"pacfin_compiled_2004thru2021.rds"))
+# rm(pacfin.df, rawdat1, rawdat2, pacfin2019_2021.df)
 
 ```
 <br>
@@ -190,12 +208,15 @@ rm(rawdat)
 ```
 <br>
 
-Remove fish tickets with an unknown (`UNKNOWN`) OR MISSING (`""` / `MISSING`) vessel identifier.
+Remove fish tickets with an unknown (`UNKNOWN`) OR MISSING (`""` / `MISSING`) vessel identifier. As of December 2021, this results in dropping almost 2M records.
 ```{r filter}
+nrows_pre <- dim(rawdat.sub)
 rawdat.sub <- rawdat.sub %>%
   filter(drvid != "UNKNOWN") %>%
   filter(drvid != "") %>%
   filter(drvid != "MISSING")
+nrows_post <- dim(rawdat.sub)
+nrows_pre - nrows_post
 ```
 <br>
 
@@ -204,25 +225,32 @@ rawdat.sub <- rawdat.sub %>%
 
 First, edit and add columns which describe the fish ticket date. 
 ```{r edit_columns}
-rawdat.sub <- rawdat.sub %>%
+rawdat.sub1 <- rawdat.sub %>%
   ## create combined vessel ID / year variable
   mutate(drvid_year = paste0(drvid,"_", year)) %>%
   ## create 'date' object for ticket landing date
-  mutate(tdate = as.Date(as.character(tdate), "%d-%b-%y")) %>%
+  #mutate(tdate = as.Date(as.character(tdate), "%Y-%b-%d")) %>% # no longer needed because of joins in 'glue' chunk above. 12-29-2021 
   mutate(tdate = ymd(tdate)) %>%
   ## create 'calendar week of landing' variable
   mutate(tweek=week(tdate))
 
-## QC: check first and last date of landing for each year, and total tickets per year.
-rawdat.sub %>% group_by(year) %>%
+## QC: check first and last date of landing for each year, and total tickets per year. 
+rawdat.sub1 %>% group_by(year) %>%
   summarise(first_ticket = min(tdate), last_ticket = max(tdate), total_tickets = length(unique(trip_id)))
+# note: on 12-29-2021, jameal noticed that 2016 fish tickets from 9/20/2016 thru 12/31/2016 are excluded. that likely affected previous network graphs, but not the results presented in the 2021 ESR. Only time series considered in the presentation to the SSC-ES in Sep 2021 would be affected. To avoid issues, Jameal downloaded all fish tickets from 2004 through 12-29-2021 on 12-29-2021 into a single file.
+```
+<br>
+
+```{r include=FALSE}
+## clean up space
+rm(rawdat.sub)
 ```
 <br>
 
 Next edit and add columns which describe the landings recorded on the first ticket. First, replace nominal species IDs (*nominal species id that were not shared: rougheye + blackspot (RBR1)*).
 ```{r nom_ID}
-rawdat.sub <- rawdat.sub %>%
-  mutate(spid_recode = recode(as.character(rawdat.sub$spid), BMO1 = "BMOL", DVR1 = "DOVR", EGL1 = "EGLS", PTR1 = "PTRL", CSL1 = "CSOL",
+rawdat.sub2 <- rawdat.sub1 %>%
+  mutate(spid_recode = recode(as.character(rawdat.sub1$spid), BMO1 = "BMOL", DVR1 = "DOVR", EGL1 = "EGLS", PTR1 = "PTRL", CSL1 = "CSOL",
                                      REX1 = "REX", RSL1 = "RSOL", SFL1 = "STRY", SSO1= "SSOL", LDB1 = "LDAB", PDB1 = "PDAB", SDB1 = "SSDB", 
                                      ART1 = "ARTH", BSK1 = "BSKT", BLK1 = "BLCK", CNR1 = "CNRY", DBR1 = "DBRK", BLU1 = "BLUR",
                                      BRW1 = "BRWN", CHN1 = "CHNA", CLC1 = "CLCO", COP1 = "COPP", OLV1 = "OLVE", QLB1 = "QLBK", TRE1 = "TREE",
@@ -236,9 +264,15 @@ rawdat.sub <- rawdat.sub %>%
 ```
 <br>
 
+```{r include=FALSE}
+## clean up space
+rm(rawdat.sub1)
+```
+<br>
+
 Next add columns which describe the port group for landings, based on IOPAC port codes, and species group, based on Holland CCIEA ESR species groupings.
 ```{r nom_ID_2}
-rawdat.sub <- rawdat.sub %>%
+rawdat.sub3 <- rawdat.sub2 %>%
   left_join(
     port_grps, by = c("pcid" = "PACFIN_PORT_CODE")
   ) %>%
@@ -248,24 +282,46 @@ rawdat.sub <- rawdat.sub %>%
 ```
 <br>
 
+```{r include=FALSE}
+## clean up space
+rm(rawdat.sub2)
+```
+<br>
+
 Next, add in an estimated exvessel revenue for commercial fish tickets which have no revenue recorded. To do so, we calculate an average price per pound for each species, for every year / week / port group. Then we create an adjusted `ppp` column for trips without revenue, and calculate the `adj_revenue` by multiplying `adj_ppp * pounds`. 
 
 NOTE FROM JS 010421: NOT SURE THIS PPP CHUNK WORKS PROPERLY
 
 ```{r adjust_revenue}
 ## get the average ppp for each species/year/week/port group, write out 
-ppp_key <- rawdat.sub %>%
+ppp_key <- rawdat.sub3 %>%
   filter(ppp > 0) %>%
   group_by(year, tweek, spid_recode, pcgroup) %>%
-  summarise(avg_ppp = mean(ppp, na.rm=TRUE))
+  summarise(
+    avg_ppp = mean(ppp, na.rm=TRUE),
+    .groups = "drop")
 if(write_ppp){write.csv(ppp_key, paste0(processdir, "Price_per_Pound_Key_",paste0(years,collapse="-"), ".csv"), row.names=FALSE)}
 
 ## recalculate revenue for each ticket
-rawdat.sub <- rawdat.sub %>%
-  mutate(adj_ppp = ifelse(removal_type_code %in% c("C","D"),ifelse(ppp != 0, ppp, as.numeric(filter(ppp_key, year == year & tweek == tweek & spid_recode == spid_recode & pcgroup == pcgroup)$avg_ppp)),ppp)) %>%
-  mutate(adj_revenue = ifelse(revenue != 0, revenue, adj_ppp*pounds))
+rawdat.sub4 <- rawdat.sub3 %>%
+  mutate(
+    adj_ppp = ifelse(removal_type_code %in% c("C","D"),
+                     ifelse(ppp != 0, ppp, 
+                            as.numeric(filter(ppp_key, year == year & tweek == tweek & spid_recode == spid_recode & pcgroup == pcgroup)$avg_ppp)),ppp)
+    ) %>%
+  mutate(
+    adj_revenue = ifelse(revenue != 0, revenue, adj_ppp*pounds)
+    )
 
-cat("Added in ", sum(!is.na(rawdat.sub$ppp)) - sum(rawdat.sub$ppp != 0), " adjusted ppp.")
+cat("Added in ", sum(!is.na(rawdat.sub4$adj_ppp)) - sum(!is.na(rawdat.sub4$ppp)), " adjusted ppp.") # this is the modified check Jameal put in
+# cat("Added in ", sum(!is.na(rawdat.sub$ppp)) - sum(rawdat.sub$ppp != 0), " adjusted ppp.") # this is the original check Mary wrote
+    
+```
+<br>
+
+```{r include=FALSE}
+## clean up space
+rm(rawdat.sub3)
 ```
 <br>
 
@@ -275,7 +331,7 @@ cat("Added in ", sum(!is.na(rawdat.sub$ppp)) - sum(rawdat.sub$ppp != 0), " adjus
 ```{r write, eval=TRUE}
 for(y in years){
   ## grab data for given year, reorder columns
-  tmp_out <- rawdat.sub %>%
+  tmp_out <- rawdat.sub4 %>%
     filter(year == y) %>%
     dplyr::select(c(trip_id, year, tdate,agid, 
                        pcgroup, pcid, IOPAC,
@@ -293,12 +349,12 @@ A crab year is defined as week 46 of year 1 through week 45 of year 2; for examp
 ```{r write_crab, eval=TRUE}
 if(crab_year){
   ## create "crab_year" column
-  rawdat.sub <- rawdat.sub %>%
+  rawdat.sub5 <- rawdat.sub4 %>%
     mutate(crab_year = ifelse(tweek > 45, year, year - 1))
   ## for each crab year...
   for(y in crab_years){
     ## subset the data frame
-    tmp_out <- rawdat.sub %>%
+    tmp_out <- rawdat.sub5 %>%
       filter(crab_year == y) %>%
       dplyr::select(c(trip_id, year, crab_year, tdate,agid, 
                        pcgroup, pcid, IOPAC,
@@ -312,7 +368,7 @@ if(crab_year){
 ```
 <br>
 
-### SKIP THIS SECTION FOR CCIEA ANALYSIS DEC 2020 
+### SKIP THIS SECTION FOR CCIEA ANALYSIS DEC 2020 , 2021
 
 # 3: Append Vessel Lengths
 
