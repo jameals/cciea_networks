@@ -1,0 +1,219 @@
+---
+title: "Compare Network Stats Across Ports"
+author: "M. Fisher, J. Samhouri"
+date: "Written Dec 30, 2021. Last Run `r Sys.Date()`"
+output:
+  html_document:
+    df_print: paged
+    toc: yes
+    toc_depth: '3'
+  pdf_document:
+    highlight: haddock
+    number_sections: yes
+    toc: yes
+    toc_depth: '3'
+geometry: margin=1in
+subtitle: Preparation for network analysis in CCIEA ESR
+fontsize: 11pt
+---
+
+# Description
+
+This document graphs network metrics by port group for the US West Coast.
+
+
+The two core network metrics are: 
+
+1. Node Strength
+
+2. Eigen Vector Centrality.
+
+
+**Note that many network metrics are sensitive to network size, which will vary over the time series.** Network size has been incorporated into each graph as ___. Use the graphs for visual comparison of different network forms, but not for drawing major conclusions around network change / sensitivity. 
+
+
+
+# Setup
+
+<br>
+```{r "setup", include=FALSE}
+if(!require("here")) {install.packages("here")}
+library(here)
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = here::here())
+
+## start time for full script
+script_start_time <- Sys.time()
+```
+<br>
+
+This script requires the following packages. 
+```{r packages, message=FALSE, warning=FALSE}
+if(!require("tidyverse")) {install.packages("tidyverse")}
+if(!require("foreign")) {install.packages("foreign")}
+if(!require("lubridate")) {install.packages("lubridate")}
+if(!require("facetscales")) {devtools::install_github("zeehio/facetscales"); library(facetscales)}
+if(!require("ggplot2")) {install.packages("ggplot2")}
+if(!require("grid")) {install.packages("grid")}
+if(!require("gridExtra")) {install.packages("gridExtra")}
+if(!require("ggpubr")) {install.packages("ggpubr")}
+if(!require("cowplot")) {install.packages("cowplot")}
+if(!require("PNWColors")) {devtools::install_github("jakelawler/PNWColors"); library(PNWColors)}
+```
+<br>
+
+Select your directories.
+```{r}
+## directory with network statistics 
+indir <- 'results/statistics'
+
+## directory to save figures
+pngdir <- 'results/figures'
+```
+<br>
+
+What are the names of the `.csv` files with the network statistics that you want to compare? Would not suggest listing more than 4. Files should all be in the input directory (`indir`) specified above.
+```{r}
+filenames <- c("VesselLevelNodeStats_2004_2020_21pcgroups_totalrev5000_indivrev500_connectivity_rmCrab_10pContribution.csv") 
+
+#"VesselLevelNetworkStats_2004_2020_21pcgroups_totalrev5000_indivrev500_connectivity_rmCrab_10pContribution.csv")
+
+```
+<br>
+
+Provide descriptive names to differentiate the datasets drawn from the files listed above. 
+```{r}
+dataset_names <- c("NodeStats")
+
+#"NetworkStats")
+```
+<br>
+
+Specify which network metrics to retain from the full data set.
+```{r}
+node_metrics <- c('node_strength','eigen')
+```
+<br>
+
+Specify which fisheries to retain from the full data set.
+```{r}
+myfisheries <- c('Non-DTS groundfish')
+```
+<br>
+
+Specify which port groups to retain from the full data set.
+```{r}
+myports <- c("Morro Bay", "San Francisco", "Bodega Bay", "Fort Bragg")
+```
+<br>
+
+
+
+# Read in Data
+
+
+Network metrics from different datasets. 
+```{r}
+for(i in seq(1,length(filenames))){
+  tmpdat <- read.csv(here::here(indir, filenames[i])) %>%
+    dplyr::select(pcgroup, year, metier.cm, all_of(node_metrics)) %>%
+    filter(pcgroup %in% myports) %>%
+    filter(metier.cm %in% myfisheries) %>%
+    mutate(dataset=dataset_names[i])
+  if(i==1){
+    dat <- tmpdat
+  } else{ dat <- bind_rows(dat,tmpdat)}
+}
+
+head(dat)
+```
+<br>
+
+Check to make sure that all of the datasets were read in. 
+```{r echo=FALSE}
+with(dat,table(dataset,pcgroup))
+```
+<br>
+
+Pivot longer to graph multiple metrics at once.
+```{r}
+dat_long <- dat %>%
+  pivot_longer(cols=c(all_of(node_metrics)), names_to = "metric", values_to = "value")
+```
+<br>
+
+Clean up metric names.
+```{r}
+dat_long$metric <- recode(dat_long$metric, 
+                          node_strength = "Node Strength",
+                          eigen = "Importance")
+#dat_long$metric <- factor(dat_long$metric, levels=c("Size", "Edge Density","Mean Degree", "Central.", "Central. (UnW)", "Mod.", "Mod. (UnW)"))
+
+dat_long$pcgroup <- factor(dat_long$pcgroup, levels=myports)
+
+```
+<br>
+
+
+
+# 2. Graph Box Plots
+
+## Figure x. Box plots of Node Strength and Importance
+
+... at four California ports (North WA Coast, Astoria, Fort Bragg, Morro Bay) from 2016-2020. Network metrics were derived from vessel-level networks summarized at the port level. Nodes (fisheries) are included in each network with a minimum total fisheries revenue cutoff for vessels of `$5,000` and a minimum revenue cutoff for individual fisheries of `$500`.
+
+```{r echo=FALSE, fig.width=10}
+# filter and re-arrange data for plotting
+years <- seq(2016,2020,1)
+plotdat <- dat_long %>% filter(year %in% years)
+
+# color palette
+pal=pnw_palette("Sunset",length(unique(plotdat$pcgroup)), type = "discrete") # or choose a different PNWColors palette
+
+# main metric plot
+fig <- ggplot(plotdat, aes(x=pcgroup, y=value, fill=pcgroup)) + 
+  geom_boxplot(outlier.shape = NA) +
+  geom_point(size = 2, alpha = 0.3,  position = position_jitter(seed = 1, width = .2)) +
+  facet_grid(rows=vars(metric), scales="free_y") +
+  scale_fill_manual(values=pal) +
+  #ylim(c(0,1)) +
+  labs(title='Importance and Node Strength of Non-DTS Groundfish in Fisheries Participation Networks',
+       subtitle = '2017-2021',
+       x = "Port Group",
+       y = "Value",
+       fill = 'Port Group'
+       ) +
+  coord_flip() +
+  theme_bw() +
+  theme(legend.position = 'none')
+  #+ theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5),
+  #                    axis.title.x=element_text(size=13),
+  #                    axis.title.y=element_text(size=13),
+  #                    strip.text=element_text(size=13),
+  #                    legend.title=element_text(size=13),legend.text=element_text(size=13),
+  #                    panel.grid.major=element_blank(),
+  #                    panel.grid.minor=element_blank())
+fig
+```
+<br>
+<br>
+<br>
+
+Save plot as a png, with filename: Importance and Node Strength of Non-DTS Groundfish in Fisheries Participation Networks 2017-2021.png
+```{r echo=FALSE}
+png(here::here(pngdir, paste0("Importance and Node Strength of Non-DTS Groundfish in Fisheries Participation Networks 2017-2021.png")),
+    res=200,height=800,width=1700)
+fig
+dev.off()
+```
+<br>
+
+
+
+
+
+
+
+
+
+
