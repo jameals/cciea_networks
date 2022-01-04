@@ -1,0 +1,199 @@
+---
+title: "Connectivity of Individual Fisheries (Nodes)"
+author: "M. Fisher, J.F. Samhouri"
+date: "Written Jan. 3, 2022. Last Run `r Sys.Date()`"
+output:
+  html_document:
+    df_print: paged
+    toc: yes
+    toc_depth: '3'
+  pdf_document:
+    highlight: haddock
+    number_sections: yes
+    toc: yes
+    toc_depth: '3'
+geometry: margin=1in
+subtitle: Preparation for network analysis in CCIEA ESR
+fontsize: 11pt
+---
+
+
+# Description
+
+The following conclusions can be drawn from observing the network graphs: 
+
+> "Notably, many PFMC-managed fisheries connect to fisheries under state jurisdictions. The prime example from Washington (Figure 1) south to Morro Bay (Figure 4) is the crab fishery, which accounts for a large proportion of vessels’ fishing revenue in each port group (large node size) and is highly connected (thick edge width) to other fisheries that generate less revenue in each port group. The crab, salmon, and groundfish nodes involve consistently heavy levels of cross-fishery participation across port groups (Figures 1-4). In the three southernmost port groups (Santa Barbara, Los Angeles, and San Diego; Figure 4), echinoderms and shellfish generate the majority of revenue, but, compared to crab in the northern ports, there is less connectivity between these fisheries and others in the same port groups."
+
+Is this evident from node-level statistics that represent the connectedness of the node in the network - namely, node strength and eigenvector centrality.
+
+# Set up
+
+<br>
+```{r "setup", include=FALSE}
+if(!require("here")) {install.packages("here")}
+library(here)
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = here::here())
+
+## start time for full script
+script_start_time <- Sys.time()
+```
+<br>
+
+This script requires the following packages. 
+```{r packages, message=FALSE, warning=FALSE}
+if(!require("tidyverse")) {install.packages("tidyverse")}
+if(!require("ggplot2")) {install.packages("ggplot2")}
+if(!require("igraph")) {install.packages("igraph")}
+if(!require("RColorBrewer")) {install.packages("RColorBrewer")}
+if(!require("PNWColors")) {install.packages("PNWColors")}
+if(!require("stringr")) {install.packages("stringr")}
+```
+<br>
+
+
+Select your directories.
+```{r}
+## directory with network statistics 
+indir <- 'results/statistics'
+
+## directory to save figures
+pngdir <- 'results/figures'
+```
+<br>
+
+What are the names of the `.csv` files with the network statistics that you want to compare? Would not suggest listing more than 4. Files should all be in the input directory (`indir`) specified above.
+```{r}
+filenames <- c("VesselLevelNodeStats_2004_2020_21pcgroups_totalrev5000_indivrev500_connectivity_rmCrab_10pContribution.csv") 
+
+#"VesselLevelNetworkStats_2004_2020_21pcgroups_totalrev5000_indivrev500_connectivity_rmCrab_10pContribution.csv")
+
+```
+<br>
+
+Provide descriptive names to differentiate the datasets drawn from the files listed above. 
+```{r}
+dataset_names <- c("NodeStats")
+
+#"NetworkStats")
+```
+<br>
+
+Specify which network metrics to retain from the full data set.
+
+
+**Node Strength**: Calculating *node strength* involves summing up the edge weights of the adjacent edges for each vertex, and then dividing by the maximum node strength in the network. This is the weighted version of a node's *degree*. 
+ 
+**Eigenvector Centrality**: 
+```{r}
+node_metrics <- c('node_strength','eigen','deg_norm')
+```
+<br>
+
+Specify which fisheries to retain from the full data set.
+```{r}
+myfisheries <- c('Crab', 'Shellfish', 'Echinoderms')
+```
+<br>
+
+Specify which port groups to retain from the full data set.
+```{r}
+myports <- c("Crescent City","Fort Bragg", "Bodega Bay",  "San Francisco", "Monterey",
+             "Santa Barbara", "Los Angeles", "San Diego")
+```
+<br>
+
+
+# Read in Data
+
+Network metrics from different datasets. 
+```{r}
+for(i in seq(1,length(filenames))){
+  tmpdat <- read.csv(here::here(indir, filenames[i])) %>%
+    dplyr::select(pcgroup, year, metier.cm, all_of(node_metrics)) %>%
+    filter(pcgroup %in% myports) %>%
+    filter(metier.cm %in% myfisheries) %>%
+    mutate(dataset=dataset_names[i])
+  if(i==1){
+    dat <- tmpdat
+  } else{ dat <- bind_rows(dat,tmpdat)}
+}
+
+head(dat)
+```
+<br>
+
+Check to make sure that all of the datasets were read in. 
+```{r echo=FALSE}
+with(dat,table(dataset,pcgroup))
+```
+<br>
+
+Pivot longer to graph multiple metrics at once.
+```{r}
+dat_long <- dat %>%
+  pivot_longer(cols=c(all_of(node_metrics)), names_to = "metric", values_to = "value")
+```
+<br>
+
+Clean up metric names.
+```{r}
+dat_long$metric <- recode(dat_long$metric, 
+                          node_strength = "Node Strength",
+                          eigen = "Eigen. Centrality",
+                          deg_norm = "Degree")
+#dat_long$metric <- factor(dat_long$metric, levels=c("Size", "Edge Density","Mean Degree", "Central.", "Central. (UnW)", "Mod.", "Mod. (UnW)"))
+
+dat_long$pcgroup <- factor(dat_long$pcgroup, levels=myports)
+
+```
+<br>
+
+
+# Bar graphs
+```{r echo=FALSE, fig.width=10}
+# filter and re-arrange data for plotting
+years <- c(2020)
+plotdat <- dat_long %>% filter(year %in% years)
+plotdat$pcgroup <- factor(plotdat$pcgroup, levels=myports)
+
+
+# main metric plot
+fig <- ggplot(plotdat, aes(x=pcgroup, y=value)) + 
+  geom_col(size = 2, alpha = 0.3) +
+  facet_grid(cols=vars(metric), rows=vars(metier.cm)) +
+  ylim(c(0,1)) +
+  labs(title='Connectivity of Individual Fisheries',
+       subtitle = '2021',
+       x = "Port Group",
+       y = "Value",
+       fill = 'Port Group'
+       ) +
+  coord_flip() +
+  theme_bw() +
+  theme(legend.position = 'none')
+fig
+```
+<br>
+<br>
+<br>
+
+
+Save plot as a png, with filename: Importance and Node Strength of Non-DTS Groundfish in Fisheries Participation Networks 2017-2021.png
+```{r echo=FALSE}
+png(here::here(pngdir, "Importance and Node Strength of Echinoderms-Shellfish 2020-21.png"),
+    res=200,height=800,width=1400)
+fig
+dev.off()
+```
+<br>
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,264 @@
+---
+title: "Explore Node Statistics"
+author: "M. Fisher"
+date: "Written Jan 3, 2022. Last Run `r Sys.Date()`"
+output:
+  html_document:
+    df_print: paged
+    toc: yes
+    toc_depth: '3'
+  pdf_document:
+    highlight: haddock
+    number_sections: yes
+    toc: yes
+    toc_depth: '3'
+geometry: margin=1in
+subtitle: Preparation for network analysis in CCIEA ESR
+fontsize: 11pt
+---
+
+
+# Description
+
+Check for a correlation between network size (node count) and node statistics. The three core network metrics are: 
+
+1. Degree (normalized)
+
+2. Node strength
+
+3. Eigenvector centrality
+
+4. Node size (importance)
+
+
+*based on "Explore Network Stats" script written Oct. 25, 2019 for Fisher et al.*
+
+
+# Set up
+
+<br>
+```{r "setup", include=FALSE}
+if(!require("here")) {install.packages("here")}
+library(here)
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = here::here())
+
+## start time for full script
+script_start_time <- Sys.time()
+```
+<br>
+
+
+
+This script requires the following packages. 
+```{r packages, message=FALSE, warning=FALSE}
+if(!require("tidyverse")) {install.packages("tidyverse")}
+if(!require("ggplot2")) {install.packages("ggplot2")}
+if(!require("gridExtra")) {install.packages("gridExtra")}
+if(!require("cowplot")) {install.packages("cowplot")}
+if(!require("PNWColors")) {devtools::install_github("jakelawler/PNWColors"); library(PNWColors)}
+```
+<br>
+
+
+Select your directories.
+```{r}
+## directory with network statistics 
+indir <- 'results/statistics'
+
+## directory to save figures
+pngdir <- 'results/figures'
+```
+<br>
+
+What are the names of the `.csv` files with the network statistics that you want to compare? Would not suggest listing more than 4. Files should all be in the input directory (`indir`) specified above.
+```{r}
+filenames <- c("VesselLevelNodeStats_2004_2020_21pcgroups_totalrev5000_indivrev500_connectivity_rmCrab_10pContribution.csv") 
+
+#"VesselLevelNetworkStats_2004_2020_21pcgroups_totalrev5000_indivrev500_connectivity_rmCrab_10pContribution.csv")
+
+```
+<br>
+
+Specify which network metrics to retain from the full data set.
+
+```{r}
+node_metrics <- c('node_strength','eigen','deg_norm')
+```
+<br>
+
+Specify which fisheries to retain from the full data set.
+```{r}
+myfisheries <- c('Shellfish', 'Echinoderms', 'Tuna', 'Non-DTS groundfish')
+```
+<br>
+
+Specify which port groups to retain from the full data set.
+```{r}
+myports <- c("Fort Bragg", "Bodega Bay",  "San Francisco", "Morro Bay",
+             "North WA Coast", "Puget Sound", "WA Coast","Astoria","Tillamook","Newport","Coos Bay")
+```
+<br>
+
+
+# Data
+
+Network metrics from different datasets. 
+```{r}
+for(i in seq(1,length(filenames))){
+  tmpdat <- read.csv(here::here(indir, filenames[i])) %>%
+    dplyr::select(pcgroup, year, metier.cm, all_of(node_metrics)) %>%
+    filter(pcgroup %in% myports)
+  if(i==1){
+    dat <- tmpdat
+  } else{ dat <- bind_rows(dat,tmpdat)}
+}
+
+head(dat)
+```
+<br>
+
+Get node counts (network size) for each port group / year
+```{r}
+network_sizes <- dat %>%
+  dplyr::select(pcgroup,year,metier.cm) %>%
+  distinct() %>%
+  group_by(pcgroup,year) %>%
+  summarize(N=n())
+```
+<br>
+
+Select only port groups / metiers of interest, them add on network size
+```{r}
+ dat <- dat %>%
+    filter(metier.cm %in% myfisheries) %>%
+  left_join(network_sizes, by=c("pcgroup","year"))
+```
+<br>
+
+Check out the distributions of the metrics.
+```{r echo=FALSE}
+dat_long <- dat %>%
+  pivot_longer(cols=c(all_of(node_metrics)), names_to = "metric", values_to = "value")
+
+ggplot(dat_long,aes(x=value)) +
+  geom_histogram() +
+  facet_wrap(~metric, scales="free_y") +
+  labs(x="value",y="") +
+  theme_bw()
+```
+<br>
+
+
+# Spearman Rank Correlation Test
+
+This function runs the correlation test on the data for each metric, by port group / fishery. It takes a data frame with 4 columns: period, region, network size (N) and the statistics of interest.
+
+```{r}
+size_spearman <- function(mydata, metric){
+  output <- data.frame(statistic = as.character(),
+                       fishery = as.character(),
+                       sp.rho = as.numeric(),
+                       p.value = as.numeric())
+    for(m in myfisheries){
+      tmpdat <- filter(mydata, metier.cm==m)
+      my.cor <- cor.test(tmpdat[,2], tmpdat[,3], method=("spearman"))
+      output <- rbind(output,
+                      data.frame(statistic=metric,fishery=m,sp.rho=my.cor$estimate,p.value=my.cor$p.value))
+    }
+  return(output)
+}
+```
+<br>
+
+### By fishery
+
+Save an empty data frame
+```{r}
+spearman_dat <- data.frame(statistic = as.character(),
+                           fishery = as.character(),
+                           sp.rho = as.numeric(),
+                           p.value = as.numeric())
+```
+<br>
+
+Run Spearman Rank for each metric and append the output to the empty data frame.
+```{r}
+for(metric in node_metrics){
+  tmpstats <- dat %>%
+    dplyr::select(metier.cm, N, all_of(metric))
+  tmp_out <- size_spearman(mydata=tmpstats,metric=metric)
+  spearman_dat <- rbind(spearman_dat,
+                        tmp_out)
+}
+
+```
+<br>
+
+Apply bonferroni correction (3 tests per metric) -- which are significant ($\alpha$=0.05)
+```{r}
+spearman_dat <- spearman_dat %>%
+  mutate(p.value.bonferroni=p.value*4) %>%
+  pivot_longer(cols=c("p.value","p.value.bonferroni"), names_to="test_type",values_to="pval")
+spearman_dat[which(spearman_dat$pval<0.05),]
+```
+<br>
+
+Results:
+```{r echo=FALSE}
+ggplot(data=spearman_dat, aes(x=statistic,y=pval, fill=fishery)) +
+  geom_col(position="dodge") + 
+  geom_hline(aes(yintercept=0.05)) +
+  facet_grid(cols=vars(test_type)) +
+  labs(x="Node Metric",y="Spearman p-value") +
+  theme_bw()
+```
+<br>
+
+### Across fisheries
+
+
+Save an empty data frame
+```{r}
+spearman_dat_all <- data.frame(statistic = as.character(),
+                           fishery = as.character(),
+                           sp.rho = as.numeric(),
+                           p.value = as.numeric())
+```
+<br>
+
+Run Spearman Rank for each metric and apply a Bonferroni correction-- which are significant ($\alpha$=0.05)
+```{r}
+for(metric in node_metrics){
+  tmpstats <- dat %>%
+    dplyr::select(metier.cm, N, all_of(metric))
+  my.cor <- cor.test(tmpstats[,2], tmpstats[,3], method=("spearman"))
+  tmp_out <- data.frame(statistic=metric,sp.rho=my.cor$estimate,p.value=my.cor$p.value)
+  spearman_dat_all <- rbind(spearman_dat_all,
+                            tmp_out)
+}
+
+# apply correction
+spearman_dat_all <- spearman_dat_all %>%
+  mutate(p.value.bonferroni=p.value*3) %>%
+  pivot_longer(cols=c("p.value","p.value.bonferroni"), names_to="test_type",values_to="pval")
+spearman_dat_all[which(spearman_dat_all$pval<0.05),]
+
+```
+<br>
+
+Results:
+```{r echo=FALSE}
+ggplot(data=spearman_dat_all, aes(x=statistic,y=pval)) +
+  geom_col(position="dodge") + 
+  geom_hline(aes(yintercept=0.05)) +
+  facet_grid(cols=vars(test_type)) +
+  labs(x="Node Metric",y="Spearman p-value") +
+  theme_bw()
+```
+
+
+
+
+
+
