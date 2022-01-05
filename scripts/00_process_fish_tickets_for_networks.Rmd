@@ -135,6 +135,7 @@ dcrb_only <- FALSE
 This should be a `.rds` or a `.csv` file containing raw PacFIN data.
 ```{r rawdata}
 rawdat <- read_rds(paste0(out_conf_dir,"pacfin_compiled_2004thru2021.rds"))
+glimpse(rawdat)
 colnames(rawdat)
 
 port_grps <- read_csv(here::here(processdir,myfile3))
@@ -290,7 +291,7 @@ rm(rawdat.sub2)
 
 Next, add in an estimated exvessel revenue for commercial fish tickets which have no revenue recorded. To do so, we calculate an average price per pound for each species, for every year / week / port group. Then we create an adjusted `ppp` column for trips without revenue, and calculate the `adj_revenue` by multiplying `adj_ppp * pounds`. 
 
-NOTE FROM JS 010421: NOT SURE THIS PPP CHUNK WORKS PROPERLY
+NOTE FROM JS 010522: MF CHECKED AND THIS PPP CHUNK WORKS PROPERLY
 
 ```{r adjust_revenue}
 ## get the average ppp for each species/year/week/port group, write out 
