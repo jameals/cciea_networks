@@ -67,6 +67,9 @@ Select your directories.
 ## directory with network statistics 
 indir <- 'results/statistics'
 
+## directory with port group lookup key
+indir2 <- 'data/input'
+
 ## directory to save figures
 pngdir <- 'results/figures'
 ```
@@ -75,6 +78,8 @@ pngdir <- 'results/figures'
 What are the names of the `.csv` files with the network statistics that you want to compare? Would not suggest listing more than 4. Files should all be in the input directory (`indir`) specified above.
 ```{r}
 filenames <- c("VesselLevelNodeStats_2004_2020_21pcgroups_totalrev5000_indivrev500_connectivity_rmCrab_10pContribution.csv") 
+
+port_filename <- 'iopac_conversion_table.csv'
 
 #"VesselLevelNetworkStats_2004_2020_21pcgroups_totalrev5000_indivrev500_connectivity_rmCrab_10pContribution.csv")
 
@@ -101,8 +106,13 @@ myfisheries <- c('Non-DTS groundfish')
 ```
 <br>
 
-Specify which port groups to retain from the full data set.
+Specify which port groups to retain from the full data set. Focus on all CA and OR port groups
 ```{r}
+
+iopac_lookup <- read_csv(here::here(indir2, port_filename))
+
+# stopped here 01-05-22. need to choose CA and OR ports
+
 myports <- c("Morro Bay", "San Francisco", "Bodega Bay", "Fort Bragg")
 ```
 <br>

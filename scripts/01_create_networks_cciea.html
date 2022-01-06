@@ -168,7 +168,7 @@ pre code {
 
 <h1 class="title toc-ignore">Create fisheries participation networks for CCIEA Ecosystem Status Report to the Pacific Fisheries Management Council</h1>
 <h4 class="author">Jameal Samhouri, Mary Fisher</h4>
-<h4 class="date">Written 12/29/2021. Last Run 2021-12-29</h4>
+<h4 class="date">Written 12/29/2021. Last Run 2022-01-05</h4>
 
 </div>
 
@@ -355,7 +355,7 @@ for(y in years){
       dat, 
       filter = TRUE, filter_subgraph = FALSE,
       edge_type=&quot;connectivity&quot;, pcid_choose=iopac, state_choose = NA, year_choose=y, min_vessels = vessel_cutoff, min_contribution = contr_cutoff, min_rev = total_rev_cutoff, min_rev_indiv = indiv_rev_cutoff,
-      write_out=TRUE, out_dir=outdir_ports)
+      write_out=FALSE)
     
     if(any(is.na(tmp_g))){
       message(&quot;\n\n WARNING: No fishing at &quot;, iopac, &quot; in crab year &quot;, y, &quot;!\n\n&quot;) # updated to iopac 03-10-21, was No fishing at &quot;, p, &quot;
@@ -369,19 +369,25 @@ for(y in years){
       vertex_cols &lt;- vertex_color(g = tmp_g)
       V(tmp_g)$colors &lt;- vertex_cols
       ## save objects
-      rds_name &lt;- ifelse(rm_crab,  paste0(&quot;igraph_&quot;, iopac, &quot;_&quot;, y, &quot;_totalrev&quot;, total_rev_cutoff,&quot;_indivrev&quot;, indiv_rev_cutoff,&quot;_&quot;, edgetype,&quot;_rmCrab.rds&quot;),  paste0(&quot;igraph_&quot;, iopac, &quot;_&quot;, y, &quot;_&quot;, total_rev_cutoff,&quot;_&quot;, indiv_rev_cutoff,&quot;_&quot;, edgetype,&quot;.rds&quot;)) # updated to iopac 03-10-21, was &quot;igraph_&quot;, p
-      saveRDS(tmp_g, file = here::here(outdir_ports, rds_name))
+      # rds_name &lt;- ifelse(rm_crab,  paste0(&quot;igraph_&quot;, iopac, &quot;_&quot;, y, &quot;_totalrev&quot;, total_rev_cutoff,&quot;_indivrev&quot;, indiv_rev_cutoff,&quot;_&quot;, edgetype,&quot;_rmCrab.rds&quot;),  paste0(&quot;igraph_&quot;, iopac, &quot;_&quot;, y, &quot;_&quot;, total_rev_cutoff,&quot;_&quot;, indiv_rev_cutoff,&quot;_&quot;, edgetype,&quot;.rds&quot;)) # updated to iopac 03-10-21, was &quot;igraph_&quot;, p
+      # saveRDS(tmp_g, file = here::here(outdir_ports, rds_name))
       
-    # Calculate network-level statistics
+    # Calculate node &amp; network-level statistics
     ## using the `net_stats` function
-    g_stats &lt;- net_stats(tmp_g, y = y, stats=&quot;network&quot;) # ran first with this argument 12-29-2021
+    g_stats &lt;- net_stats(tmp_g, y = y, stats=&quot;both&quot;) # ran first with this argument 12-29-2021
+    g_netstats &lt;- g_stats[[1]]
+    g_nodestats &lt;- g_stats[[2]]
       # g_stats &lt;- net_stats(tmp_g, y = y, stats=&quot;node&quot;) # added 12-29-2021. ran second with this argument 12-29-2021
     #g_stats &lt;- net_stats(tmp_g, y = 2008, stats=&quot;network&quot;)
     ## add on period (closure/open) and port group info
-    g_stats &lt;- g_stats %&gt;%
+    g_netstats &lt;- g_netstats %&gt;%
       #mutate(period = rep(&quot;early&quot;, times=dim(g_stats)[1])) %&gt;%
-      mutate(pcgroup = rep(iopac, times=dim(g_stats)[1])) # updated to iopac 03-10-21, was rep(p
+      mutate(pcgroup = rep(iopac, times=dim(g_netstats)[1])) # updated to iopac 03-10-21, was rep(p
+    
+    g_nodestats &lt;- g_nodestats %&gt;%
+      mutate(pcgroup = rep(iopac, times=dim(g_nodestats)[1]))
     } #end &#39;else&#39; close-g has &gt; 0 vertex
+    
     
     #### SAVE NETWORK STATS OUTPUT ####
     ## merge network stats from closure / open period
@@ -392,11 +398,15 @@ for(y in years){
     # }
     ## append to network stats output data frame
     if(exists(&#39;mystats3&#39;)){
-      mystats3 &lt;- rbind(mystats3, g_stats)
+      mystats3 &lt;- rbind(mystats3, g_netstats)
     } else{
-      mystats3 &lt;- g_stats
+      mystats3 &lt;- g_netstats
     }
-    
+    if(exists(&#39;mystats4&#39;)){
+      mystats4 &lt;- rbind(mystats4, g_nodestats)
+    } else{
+      mystats4 &lt;- g_nodestats
+    }
   } #end (p in myports)
   cat(&quot;\nfinished with all port groups in crab year &quot;, y, &quot;\n-----\n&quot;)
 } #end (y in years)</code></pre>
@@ -412,9 +422,10 @@ for(y in years){
 <pre><code>## Other Coastal Washington</code></pre>
 <pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
 ## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## WARNING: No edges in this network.</code></pre>
 <pre><code>## Astoria</code></pre>
-<pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
-## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
 <pre><code>## Tillamook</code></pre>
 <pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
 ## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
@@ -463,12 +474,13 @@ for(y in years){
 <pre><code>## Unknown Ports</code></pre>
 <pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
 ## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## WARNING: No edges in this network.</code></pre>
 <pre><code>## 
 ## finished with all port groups in crab year  2004 
 ## -----
 ## Puget Sound</code></pre>
-<pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
-## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
 <pre><code>## North WA Coast</code></pre>
 <pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
 ## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
@@ -478,9 +490,10 @@ for(y in years){
 <pre><code>## Other Coastal Washington</code></pre>
 <pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
 ## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## WARNING: No edges in this network.</code></pre>
 <pre><code>## Astoria</code></pre>
-<pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
-## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
 <pre><code>## Tillamook</code></pre>
 <pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
 ## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
@@ -529,12 +542,13 @@ for(y in years){
 <pre><code>## Unknown Ports</code></pre>
 <pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
 ## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## WARNING: No edges in this network.</code></pre>
 <pre><code>## 
 ## finished with all port groups in crab year  2005 
 ## -----
 ## Puget Sound</code></pre>
-<pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
-## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
 <pre><code>## North WA Coast</code></pre>
 <pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
 ## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
@@ -544,9 +558,10 @@ for(y in years){
 <pre><code>## Other Coastal Washington</code></pre>
 <pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
 ## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## WARNING: No edges in this network.</code></pre>
 <pre><code>## Astoria</code></pre>
-<pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
-## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
 <pre><code>## Tillamook</code></pre>
 <pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
 ## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
@@ -595,12 +610,13 @@ for(y in years){
 <pre><code>## Unknown Ports</code></pre>
 <pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
 ## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## WARNING: No edges in this network.</code></pre>
 <pre><code>## 
 ## finished with all port groups in crab year  2006 
 ## -----
 ## Puget Sound</code></pre>
-<pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
-## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
 <pre><code>## North WA Coast</code></pre>
 <pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
 ## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
@@ -664,12 +680,13 @@ for(y in years){
 <pre><code>## Unknown Ports</code></pre>
 <pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
 ## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## WARNING: No edges in this network.</code></pre>
 <pre><code>## 
 ## finished with all port groups in crab year  2007 
 ## -----
 ## Puget Sound</code></pre>
-<pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
-## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
 <pre><code>## North WA Coast</code></pre>
 <pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
 ## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
@@ -733,12 +750,13 @@ for(y in years){
 <pre><code>## Unknown Ports</code></pre>
 <pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
 ## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## WARNING: No edges in this network.</code></pre>
 <pre><code>## 
 ## finished with all port groups in crab year  2008 
 ## -----
 ## Puget Sound</code></pre>
-<pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
-## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
 <pre><code>## North WA Coast</code></pre>
 <pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
 ## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
@@ -760,9 +778,10 @@ for(y in years){
 <pre><code>## Columbia River</code></pre>
 <pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
 ## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## WARNING: No edges in this network.</code></pre>
 <pre><code>## Newport</code></pre>
-<pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
-## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
 <pre><code>## Coos Bay</code></pre>
 <pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
 ## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
@@ -802,12 +821,13 @@ for(y in years){
 <pre><code>## Unknown Ports</code></pre>
 <pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
 ## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## WARNING: No edges in this network.</code></pre>
 <pre><code>## 
 ## finished with all port groups in crab year  2009 
 ## -----
 ## Puget Sound</code></pre>
-<pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
-## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
 <pre><code>## North WA Coast</code></pre>
 <pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
 ## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
@@ -829,9 +849,10 @@ for(y in years){
 <pre><code>## Columbia River</code></pre>
 <pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
 ## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## WARNING: No edges in this network.</code></pre>
 <pre><code>## Newport</code></pre>
-<pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
-## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
 <pre><code>## Coos Bay</code></pre>
 <pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
 ## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
@@ -871,12 +892,13 @@ for(y in years){
 <pre><code>## Unknown Ports</code></pre>
 <pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
 ## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## WARNING: No edges in this network.</code></pre>
 <pre><code>## 
 ## finished with all port groups in crab year  2010 
 ## -----
 ## Puget Sound</code></pre>
-<pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
-## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
 <pre><code>## North WA Coast</code></pre>
 <pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
 ## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
@@ -898,9 +920,10 @@ for(y in years){
 <pre><code>## Columbia River</code></pre>
 <pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
 ## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## WARNING: No edges in this network.</code></pre>
 <pre><code>## Newport</code></pre>
-<pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
-## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
 <pre><code>## Coos Bay</code></pre>
 <pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
 ## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
@@ -940,12 +963,13 @@ for(y in years){
 <pre><code>## Unknown Ports</code></pre>
 <pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
 ## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## WARNING: No edges in this network.</code></pre>
 <pre><code>## 
 ## finished with all port groups in crab year  2011 
 ## -----
 ## Puget Sound</code></pre>
-<pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
-## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
 <pre><code>## North WA Coast</code></pre>
 <pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
 ## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
@@ -964,9 +988,10 @@ for(y in years){
 <pre><code>## Columbia River</code></pre>
 <pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
 ## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## WARNING: No edges in this network.</code></pre>
 <pre><code>## Newport</code></pre>
-<pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
-## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
 <pre><code>## Coos Bay</code></pre>
 <pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
 ## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
@@ -1006,12 +1031,13 @@ for(y in years){
 <pre><code>## Unknown Ports</code></pre>
 <pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
 ## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## WARNING: No edges in this network.</code></pre>
 <pre><code>## 
 ## finished with all port groups in crab year  2012 
 ## -----
 ## Puget Sound</code></pre>
-<pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
-## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
 <pre><code>## North WA Coast</code></pre>
 <pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
 ## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
@@ -1021,18 +1047,20 @@ for(y in years){
 <pre><code>## Other Coastal Washington</code></pre>
 <pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
 ## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## WARNING: No edges in this network.</code></pre>
 <pre><code>## Astoria</code></pre>
-<pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
-## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
 <pre><code>## Tillamook</code></pre>
 <pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
 ## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
 <pre><code>## Columbia River</code></pre>
 <pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
 ## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## WARNING: No edges in this network.</code></pre>
 <pre><code>## Newport</code></pre>
-<pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
-## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
 <pre><code>## Coos Bay</code></pre>
 <pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
 ## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
@@ -1072,12 +1100,13 @@ for(y in years){
 <pre><code>## Unknown Ports</code></pre>
 <pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
 ## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## WARNING: No edges in this network.</code></pre>
 <pre><code>## 
 ## finished with all port groups in crab year  2013 
 ## -----
 ## Puget Sound</code></pre>
-<pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
-## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
 <pre><code>## North WA Coast</code></pre>
 <pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
 ## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
@@ -1087,18 +1116,20 @@ for(y in years){
 <pre><code>## Other Coastal Washington</code></pre>
 <pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
 ## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## WARNING: No edges in this network.</code></pre>
 <pre><code>## Astoria</code></pre>
-<pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
-## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
 <pre><code>## Tillamook</code></pre>
 <pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
 ## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
 <pre><code>## Columbia River</code></pre>
 <pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
 ## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## WARNING: No edges in this network.</code></pre>
 <pre><code>## Newport</code></pre>
-<pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
-## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
 <pre><code>## Coos Bay</code></pre>
 <pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
 ## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
@@ -1138,12 +1169,13 @@ for(y in years){
 <pre><code>## Unknown Ports</code></pre>
 <pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
 ## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## WARNING: No edges in this network.</code></pre>
 <pre><code>## 
 ## finished with all port groups in crab year  2014 
 ## -----
 ## Puget Sound</code></pre>
-<pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
-## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
 <pre><code>## North WA Coast</code></pre>
 <pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
 ## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
@@ -1153,18 +1185,20 @@ for(y in years){
 <pre><code>## Other Coastal Washington</code></pre>
 <pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
 ## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## WARNING: No edges in this network.</code></pre>
 <pre><code>## Astoria</code></pre>
-<pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
-## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
 <pre><code>## Tillamook</code></pre>
 <pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
 ## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
 <pre><code>## Columbia River</code></pre>
 <pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
 ## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## WARNING: No edges in this network.</code></pre>
 <pre><code>## Newport</code></pre>
-<pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
-## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
 <pre><code>## Coos Bay</code></pre>
 <pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
 ## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
@@ -1219,18 +1253,20 @@ for(y in years){
 <pre><code>## Other Coastal Washington</code></pre>
 <pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
 ## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## WARNING: No edges in this network.</code></pre>
 <pre><code>## Astoria</code></pre>
-<pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
-## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
 <pre><code>## Tillamook</code></pre>
 <pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
 ## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
 <pre><code>## Columbia River</code></pre>
 <pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
 ## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## WARNING: No edges in this network.</code></pre>
 <pre><code>## Newport</code></pre>
-<pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
-## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
 <pre><code>## Coos Bay</code></pre>
 <pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
 ## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
@@ -1270,12 +1306,13 @@ for(y in years){
 <pre><code>## Unknown Ports</code></pre>
 <pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
 ## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## WARNING: No edges in this network.</code></pre>
 <pre><code>## 
 ## finished with all port groups in crab year  2016 
 ## -----
 ## Puget Sound</code></pre>
-<pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
-## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
 <pre><code>## North WA Coast</code></pre>
 <pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
 ## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
@@ -1297,9 +1334,10 @@ for(y in years){
 <pre><code>## Columbia River</code></pre>
 <pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
 ## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## WARNING: No edges in this network.</code></pre>
 <pre><code>## Newport</code></pre>
-<pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
-## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
 <pre><code>## Coos Bay</code></pre>
 <pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
 ## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
@@ -1435,9 +1473,10 @@ for(y in years){
 <pre><code>## Columbia River</code></pre>
 <pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
 ## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## WARNING: No edges in this network.</code></pre>
 <pre><code>## Newport</code></pre>
-<pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
-## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
 <pre><code>## Coos Bay</code></pre>
 <pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
 ## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
@@ -1504,9 +1543,10 @@ for(y in years){
 <pre><code>## Columbia River</code></pre>
 <pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
 ## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## WARNING: No edges in this network.</code></pre>
 <pre><code>## Newport</code></pre>
-<pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
-## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
 <pre><code>## Coos Bay</code></pre>
 <pre><code>## `summarise()` has grouped output by &#39;crab_year&#39;. You can override using the `.groups` argument.
 ## `summarise()` has grouped output by &#39;drvid&#39;, &#39;SPGRPN2&#39;. You can override using the `.groups` argument.</code></pre>
@@ -1557,14 +1597,14 @@ filename &lt;- paste0(&quot;VesselLevelNetworkStats_&quot;, min(years), &quot;_&
 write.csv(mystats3,here::here(statdir, filename), row.names=FALSE)
 
 # ran second for node level stats 12-29-2021
-# filename &lt;- paste0(&quot;VesselLevelNodeStats_&quot;, min(years), &quot;_&quot;, max(years), &quot;_&quot;, length(myports), &quot;pcgroups_&quot;, &quot;totalrev&quot;, total_rev_cutoff,&quot;_indivrev&quot;, indiv_rev_cutoff,&quot;_&quot;, edgetype, &quot;_&quot;, ifelse(rm_crab, &#39;rmCrab_&#39;,&#39;_&#39;), contr_cutoff*100, &quot;pContribution.csv&quot;)
+filename &lt;- paste0(&quot;VesselLevelNodeStats_&quot;, min(years), &quot;_&quot;, max(years), &quot;_&quot;, length(myports), &quot;pcgroups_&quot;, &quot;totalrev&quot;, total_rev_cutoff,&quot;_indivrev&quot;, indiv_rev_cutoff,&quot;_&quot;, edgetype, &quot;_&quot;, ifelse(rm_crab, &#39;rmCrab_&#39;,&#39;_&#39;), contr_cutoff*100, &quot;pContribution.csv&quot;)
 # 
-# write.csv(mystats3,here::here(statdir, filename), row.names=FALSE)</code></pre>
+write.csv(mystats4,here::here(statdir, filename), row.names=FALSE)</code></pre>
 <p><br></p>
 <hr />
 <p>Script Runtime:</p>
 <pre class="r"><code>Sys.time() - script_start_time</code></pre>
-<pre><code>## Time difference of 2.234933 mins</code></pre>
+<pre><code>## Time difference of 2.176379 mins</code></pre>
 </div>
 </div>
 </div>
