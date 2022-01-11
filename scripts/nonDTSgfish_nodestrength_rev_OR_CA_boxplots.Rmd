@@ -303,17 +303,17 @@ or_fig <- ggplot(plotdat_or %>% filter(metric == 'Node Strength' | metric == 'Im
 or_fig
 
 # main landings metric plot
-or_fig2 <- ggplot(plotdat_or %>% filter(metric != 'Node Strength' & metric != 'Importance'), aes(x=pcgroup, y=value, fill=pcgroup)) + 
+or_fig2 <- ggplot(plotdat_or %>% filter(metric != 'Node Strength' & metric != 'Importance'), aes(x=pcgroup, y=value, colour=pcgroup)) + 
   geom_boxplot(outlier.shape = NA) +
   geom_point(size = 2, alpha = 0.3,  position = position_jitter(seed = 1, width = .2)) +
   facet_grid(rows=vars(metric), scales="free_y") +
-  scale_fill_manual(values=pal_or) +
+  scale_colour_manual(values=pal_or) +
   #ylim(c(0,1)) +
   labs(title='Revenue and Landed Weight of Non-DTS Groundfish in Oregon',
        subtitle = '2017-2021',
        x = "Port Group",
        y = "Value",
-       fill = 'Port Group'
+       colour = 'Port Group'
        ) +
   coord_flip() +
   theme_bw() +
@@ -359,17 +359,17 @@ nca_fig <- ggplot(plotdat_nca %>% filter(metric == 'Node Strength' | metric == '
 nca_fig
 
 # main landings metric plot
-nca_fig2 <- ggplot(plotdat_nca %>% filter(metric != 'Node Strength' & metric != 'Importance'), aes(x=pcgroup, y=value, fill=pcgroup)) + 
+nca_fig2 <- ggplot(plotdat_nca %>% filter(metric != 'Node Strength' & metric != 'Importance'), aes(x=pcgroup, y=value, colour=pcgroup)) + 
   geom_boxplot(outlier.shape = NA) +
   geom_point(size = 2, alpha = 0.3,  position = position_jitter(seed = 1, width = .2)) +
   facet_grid(rows=vars(metric), scales="free_y") +
-  scale_fill_manual(values=pal_nca) +
+  scale_colour_manual(values=pal_nca) +
   #ylim(c(0,1)) +
   labs(title='Revenue and Landed Weight of Non-DTS Groundfish in Northern and Central California',
        subtitle = '2017-2021',
        x = "Port Group",
        y = "Value",
-       fill = 'Port Group'
+       colour = 'Port Group'
        ) +
   coord_flip() +
   theme_bw() +
@@ -415,17 +415,17 @@ sca_fig <- ggplot(plotdat_sca %>% filter(metric == 'Node Strength' | metric == '
 sca_fig
 
 # main landings metric plot
-sca_fig2 <- ggplot(plotdat_sca %>% filter(metric != 'Node Strength' & metric != 'Importance'), aes(x=pcgroup, y=value, fill=pcgroup)) + 
+sca_fig2 <- ggplot(plotdat_sca %>% filter(metric != 'Node Strength' & metric != 'Importance'), aes(x=pcgroup, y=value, colour=pcgroup)) + 
   geom_boxplot(outlier.shape = NA) +
   geom_point(size = 2, alpha = 0.3,  position = position_jitter(seed = 1, width = .2)) +
   facet_grid(rows=vars(metric), scales="free_y") +
-  scale_fill_manual(values=pal_sca) +
+  scale_colour_manual(values=pal_sca) +
   #ylim(c(0,1)) +
   labs(title='Revenue and Landed Weight of Non-DTS Groundfish in Southern California',
        subtitle = '2017-2021',
        x = "Port Group",
        y = "Value",
-       fill = 'Port Group'
+       colour = 'Port Group'
        ) +
   coord_flip() +
   theme_bw() +
@@ -489,6 +489,13 @@ Focus on node strength and revenue only, compile into a single figure. Save plot
 
 ```{r echo=FALSE}
 
+# set upper limit for revenue on y axis
+max_rev <- max(
+  plotdat_or %>% filter(metric == "Revenue") %>% summarise(max_rev = max(value)) %>% pull(),
+  plotdat_nca %>% filter(metric == "Revenue") %>% summarise(max_rev = max(value)) %>% pull(),
+  plotdat_sca %>% filter(metric == "Revenue") %>% summarise(max_rev = max(value)) %>% pull()
+)
+
 or_ns_df <- or_fig$data %>% filter(metric == "Node Strength")
 or_ns_fig <- ggplot(or_ns_df, aes(x=pcgroup, y=value, fill=pcgroup)) + 
   geom_boxplot(outlier.shape = NA) +
@@ -515,17 +522,17 @@ or_ns_fig <- ggplot(or_ns_df, aes(x=pcgroup, y=value, fill=pcgroup)) +
 #or_ns_fig
 
 or_rev_df <- or_fig2$data %>% filter(metric == "Revenue")
-or_rev_fig <- ggplot(or_rev_df, aes(x=pcgroup, y=value, fill=pcgroup)) + 
+or_rev_fig <- ggplot(or_rev_df, aes(x=pcgroup, y=value/10^3, colour=pcgroup)) + 
   geom_boxplot(outlier.shape = NA) +
   geom_point(size = 2, alpha = 0.3,  position = position_jitter(seed = 1, width = .2)) +
   #facet_grid(rows=vars(metric), scales="free_y") +
-  scale_fill_manual(values=pal_or) +
-  #ylim(c(0,1)) +
+  scale_colour_manual(values=pal_or) +
+  ylim(c(0,max_rev/10^3)) +
   labs(title='Revenue from Non-DTS Groundfish Fisheries: 2017-2021',
        subtitle = 'Oregon',
        x = "Port Group",
-       y = "Revenue",
-       fill = 'Port Group'
+       y = "Revenue\n (1000s of $)",
+       colour = 'Port Group'
        ) +
   coord_flip() +
   theme_bw() +
@@ -537,7 +544,7 @@ or_rev_fig <- ggplot(or_rev_df, aes(x=pcgroup, y=value, fill=pcgroup)) +
   #                    legend.title=element_text(size=13),legend.text=element_text(size=13),
   #                    panel.grid.major=element_blank(),
   #                    panel.grid.minor=element_blank())
-or_rev_fig
+#or_rev_fig
 
 
 nca_ns_df <- nca_fig$data %>% filter(metric == "Node Strength")
@@ -565,16 +572,16 @@ nca_ns_fig <- ggplot(nca_ns_df, aes(x=pcgroup, y=value, fill=pcgroup)) +
 #nca_ns_fig
 
 nca_rev_df <- nca_fig2$data %>% filter(metric == "Revenue")
-nca_rev_fig <- ggplot(nca_rev_df, aes(x=pcgroup, y=value, fill=pcgroup)) + 
+nca_rev_fig <- ggplot(nca_rev_df, aes(x=pcgroup, y=value/10^3, colour=pcgroup)) + 
   geom_boxplot(outlier.shape = NA) +
   geom_point(size = 2, alpha = 0.3,  position = position_jitter(seed = 1, width = .2)) +
   #facet_grid(rows=vars(metric), scales="free_y") +
-  scale_fill_manual(values=pal_nca) +
-  #ylim(c(0,1)) +
+  scale_colour_manual(values=pal_nca) +
+  ylim(c(0,max_rev/10^3)) +
   labs(subtitle = 'Northern and Central California',
        x = "Port Group",
-       y = "Revenue",
-       fill = 'Port Group'
+       y = "Revenue\n(1000s of $)",
+       colour = 'Port Group'
        ) +
   coord_flip() +
   theme_bw() +
@@ -613,15 +620,15 @@ sca_ns_fig <- ggplot(sca_ns_df, aes(x=pcgroup, y=value, fill=pcgroup)) +
 #sca_ns_fig
 
 sca_rev_df <- sca_fig2$data %>% filter(metric == "Revenue")
-sca_rev_fig <- ggplot(sca_rev_df, aes(x=pcgroup, y=value, fill=pcgroup)) + 
+sca_rev_fig <- ggplot(sca_rev_df, aes(x=pcgroup, y=value/10^3, fill=pcgroup)) + 
   geom_boxplot(outlier.shape = NA) +
   geom_point(size = 2, alpha = 0.3,  position = position_jitter(seed = 1, width = .2)) +
   #facet_grid(rows=vars(metric), scales="free_y") +
   scale_fill_manual(values=pal_sca) +
-  #ylim(c(0,1)) +
+  ylim(c(0,max_rev/10^3)) +
   labs(subtitle = 'Southern California',
        x = "Port Group",
-       y = "Revenue",
+       y = "Revenue\n(1000s of $)",
        fill = 'Port Group'
        ) +
   coord_flip() +
@@ -638,7 +645,7 @@ sca_rev_fig <- ggplot(sca_rev_df, aes(x=pcgroup, y=value, fill=pcgroup)) +
 
 # PICK UP HERE, ADD COMMON REV SCALE ACROSS STATES AND ARANGE INTO SINGLE COWPLOT 01-10-2022
 
-plot_grid(plotlist=list(or_ns_fig, nca_ns_fig, sca_ns_fig), ncol=1, align = "v", axis = "l", labels = "AUTO", rel_heights=c(1,1,1))
+plot_grid(plotlist=list(or_ns_fig, or_rev_fig, nca_ns_fig, nca_rev_fig, sca_ns_fig, sca_rev_fig), ncol=2, align = "v", axis = "l", labels = "AUTO", rel_heights=c(1,1,1,1,1,1))
 
 png(here::here(pngdir, paste0("Non-DTS Groundfish Node Strength in Fisheries Participation Networks and Aggregate Revenue 2017-2021, Oregon and California.png")),
     res=200,height=1200,width=1500)
