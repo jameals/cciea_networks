@@ -1,7 +1,7 @@
 ---
 title: "Compare Network Stats Across Ports"
 author: "M. Fisher, J. Samhouri"
-date: "Written Dec 30, 2021. Last Run `r Sys.Date()`"
+date: "Written Jan 10, 2021. Last Run `r Sys.Date()`"
 output:
   html_document:
     df_print: paged
@@ -19,17 +19,10 @@ fontsize: 11pt
 
 # Description
 
-This document graphs network metrics by port group for the US West Coast.
+This document graphs network metrics alongside revenue by Oregon and California port groups.
 
 
-The two core network metrics are: 
-
-1. Node Strength
-
-2. Eigen Vector Centrality.
-
-
-**Note that many network metrics are sensitive to network size, which will vary over the time series.** Network size has been incorporated into each graph as ___. Use the graphs for visual comparison of different network forms, but not for drawing major conclusions around network change / sensitivity. 
+The main network metric is Node Strength, which is independent of network size (# nodes).
 
 
 
@@ -70,6 +63,9 @@ indir <- 'results/statistics'
 ## directory with port group lookup key
 indir2 <- 'data/input'
 
+## directory with summarized fish ticket information
+indir3 <- '/Users/jameal.samhouri/Documents/CCIEA Networks/processed/'
+
 ## directory to save figures
 pngdir <- 'results/figures'
 ```
@@ -78,10 +74,17 @@ pngdir <- 'results/figures'
 What are the names of the `.csv` files with the network statistics that you want to compare? Would not suggest listing more than 4. Files should all be in the input directory (`indir`) specified above.
 ```{r}
 filenames <- c("VesselLevelNodeStats_2004_2020_21pcgroups_totalrev5000_indivrev500_connectivity_rmCrab_10pContribution.csv") 
+#"VesselLevelNetworkStats_2004_2020_21pcgroups_totalrev5000_indivrev500_connectivity_rmCrab_10pContribution.csv")
 
 port_filename <- 'iopac_conversion_table.csv'
 
-#"VesselLevelNetworkStats_2004_2020_21pcgroups_totalrev5000_indivrev500_connectivity_rmCrab_10pContribution.csv")
+tix_filenames <- c(
+  'fish_tickets_crab2016_processed_for_networks.csv',
+  'fish_tickets_crab2017_processed_for_networks.csv',
+  'fish_tickets_crab2018_processed_for_networks.csv',
+  'fish_tickets_crab2019_processed_for_networks.csv',
+  'fish_tickets_crab2020_processed_for_networks.csv'
+  )
 
 ```
 <br>
@@ -94,15 +97,19 @@ dataset_names <- c("NodeStats")
 ```
 <br>
 
-Specify which network metrics to retain from the full data set.
+Specify which network metrics and fish tix info to retain from the full data set.
 ```{r}
 node_metrics <- c('node_strength','eigen')
+
+landings_metrics <- c('adjrev', 'pounds')
+
 ```
 <br>
 
 Specify which fisheries to retain from the full data set.
 ```{r}
 myfisheries <- c('Non-DTS groundfish')
+my_spgroup <- c(3)
 ```
 <br>
 
@@ -148,16 +155,49 @@ head(dat)
 ```
 <br>
 
-Check to make sure that all of the datasets were read in. 
-```{r echo=FALSE}
-with(dat,table(dataset,pcgroup))
+Revenue from different datasets. 
+```{r}
+for(i in seq(1,length(tix_filenames))){
+  tmpdat2 <- read.csv(paste0(indir3, tix_filenames[i])) %>%
+    #dplyr::select(pcgroup, year, metier.cm, all_of(node_metrics)) %>%
+    filter(IOPAC %in% ca_or_ports) %>%
+    filter(SPGRPN2 %in% my_spgroup) %>%
+    group_by(crab_year, IOPAC, SPGRPN2) %>%
+    summarise(
+      adjrev = sum(adj_revenue),
+      pounds = sum(pounds),
+      num_vessels = length(unique(drvid)),
+      .groups = "drop"
+    ) %>% 
+    mutate(
+      metier.cm = "Non-DTS groundfish"
+    )
+    #mutate(dataset=dataset_names[i])
+  if(i==1){
+    dat2 <- tmpdat2
+  } else{ dat2 <- bind_rows(dat2,tmpdat2)}
+}
+
+glimpse(dat2)
+
 ```
 <br>
 
-Pivot longer to graph multiple metrics at once.
+Check to make sure that all of the datasets were read in. 
+```{r echo=FALSE}
+with(dat,table(dataset,pcgroup))
+with(dat2, table(IOPAC))
+```
+<br>
+
+Pivot longer to graph multiple network metrics or summary stats at once.
 ```{r}
 dat_long <- dat %>%
   pivot_longer(cols=c(all_of(node_metrics)), names_to = "metric", values_to = "value")
+
+dat_long2 <- dat2 %>%
+  pivot_longer(cols=c(all_of(landings_metrics)), names_to = "metric", values_to = "value")
+
 ```
 <br>
 
@@ -172,6 +212,12 @@ nonDTSports_sorted <- dat_long %>% left_join(iopac_lookup %>% select(IOPAC, PACF
 
 dat_long$pcgroup <- factor(dat_long$pcgroup, levels=nonDTSports_sorted)
 
+dat_long2$metric <- recode(dat_long2$metric, 
+                          adjrev = "Revenue",
+                          pounds = "Landed weight")
+
+dat_long2$IOPAC <- factor(dat_long2$IOPAC, levels=nonDTSports_sorted)
+
 ```
 <br>
 
@@ -179,17 +225,46 @@ dat_long$pcgroup <- factor(dat_long$pcgroup, levels=nonDTSports_sorted)
 
 # 2. Graph Box Plots
 
-## Figure x. Box plots of Node Strength and Importance
+## Figure x. Box plots of Node Strength and Revenue
 
-... at Oregon and California ports from 2016-2020. Network metrics were derived from vessel-level networks summarized at the port level. Nodes (fisheries) are included in each network with a minimum total fisheries revenue cutoff for vessels of `$5,000` and a minimum revenue cutoff for individual fisheries of `$500`.
+... at California and Oregon ports from 2016-2020. Network metrics were derived from vessel-level networks summarized at the port level. Nodes (fisheries) are included in each network with a minimum total fisheries revenue cutoff for vessels of `$5,000` and a minimum revenue cutoff for individual fisheries of `$500`.
 
 Make OR, NCA, SCA data frames and color palettes.
 ```{r echo=FALSE, fig.width=10}
 # filter and re-arrange data for plotting
 years <- seq(2016,2020,1)
-plotdat_or <- dat_long %>% filter(year %in% years & pcgroup %in% or_ports)
-plotdat_nca <- dat_long %>% filter(year %in% years & pcgroup %in% nca_ports)
-plotdat_sca <- dat_long %>% filter(year %in% years & pcgroup %in% sca_ports)
+plotdat_or <- dat_long %>% filter(year %in% years & pcgroup %in% or_ports) %>% select(-dataset) %>% 
+  bind_rows(dat_long2 %>% 
+              select (-SPGRPN2) %>%
+              rename(
+                year = crab_year,
+                pcgroup = IOPAC
+              ) %>%
+              filter(year %in% years & pcgroup %in% or_ports) %>%
+              select(pcgroup, year, metier.cm, metric, value)
+            ) 
+
+plotdat_nca <- dat_long %>% filter(year %in% years & pcgroup %in% nca_ports) %>% select(-dataset) %>% 
+  bind_rows(dat_long2 %>% 
+              select (-SPGRPN2) %>%
+              rename(
+                year = crab_year,
+                pcgroup = IOPAC
+              ) %>%
+              filter(year %in% years & pcgroup %in% nca_ports) %>%
+              select(pcgroup, year, metier.cm, metric, value)
+            )
+
+plotdat_sca <- dat_long %>% filter(year %in% years & pcgroup %in% sca_ports) %>% select(-dataset) %>% 
+  bind_rows(dat_long2 %>% 
+              select (-SPGRPN2) %>%
+              rename(
+                year = crab_year,
+                pcgroup = IOPAC
+              ) %>%
+              filter(year %in% years & pcgroup %in% sca_ports) %>%
+              select(pcgroup, year, metier.cm, metric, value)
+            )
 
 # color palette
 # or. 5 ports
@@ -200,10 +275,10 @@ pal_nca=pnw_palette("Starfish",length(unique(plotdat_nca$pcgroup)), type = "disc
 pal_sca=pnw_palette("Sunset",length(unique(plotdat_sca$pcgroup)), type = "discrete") # or choose a different PNWColors palette
 ```
 
-Make OR plot
+Make OR plots
 ```{r echo=FALSE, fig.width=10}
-# main metric plot
-or_fig <- ggplot(plotdat_or, aes(x=pcgroup, y=value, fill=pcgroup)) + 
+# main network metric plot
+or_fig <- ggplot(plotdat_or %>% filter(metric == 'Node Strength' | metric == 'Importance'), aes(x=pcgroup, y=value, fill=pcgroup)) + 
   geom_boxplot(outlier.shape = NA) +
   geom_point(size = 2, alpha = 0.3,  position = position_jitter(seed = 1, width = .2)) +
   facet_grid(rows=vars(metric), scales="free_y") +
@@ -226,6 +301,31 @@ or_fig <- ggplot(plotdat_or, aes(x=pcgroup, y=value, fill=pcgroup)) +
   #                    panel.grid.major=element_blank(),
   #                    panel.grid.minor=element_blank())
 or_fig
+
+# main landings metric plot
+or_fig2 <- ggplot(plotdat_or %>% filter(metric != 'Node Strength' & metric != 'Importance'), aes(x=pcgroup, y=value, fill=pcgroup)) + 
+  geom_boxplot(outlier.shape = NA) +
+  geom_point(size = 2, alpha = 0.3,  position = position_jitter(seed = 1, width = .2)) +
+  facet_grid(rows=vars(metric), scales="free_y") +
+  scale_fill_manual(values=pal_or) +
+  #ylim(c(0,1)) +
+  labs(title='Revenue and Landed Weight of Non-DTS Groundfish in Oregon',
+       subtitle = '2017-2021',
+       x = "Port Group",
+       y = "Value",
+       fill = 'Port Group'
+       ) +
+  coord_flip() +
+  theme_bw() +
+  theme(legend.position = 'none')
+  #+ theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5),
+  #                    axis.title.x=element_text(size=13),
+  #                    axis.title.y=element_text(size=13),
+  #                    strip.text=element_text(size=13),
+  #                    legend.title=element_text(size=13),legend.text=element_text(size=13),
+  #                    panel.grid.major=element_blank(),
+  #                    panel.grid.minor=element_blank())
+or_fig2
 ```
 <br>
 <br>
@@ -233,8 +333,8 @@ or_fig
 
 Make NCA plot
 ```{r echo=FALSE, fig.width=10}
-# main metric plot
-nca_fig <- ggplot(plotdat_nca, aes(x=pcgroup, y=value, fill=pcgroup)) + 
+# main network metric plot
+nca_fig <- ggplot(plotdat_nca %>% filter(metric == 'Node Strength' | metric == 'Importance'), aes(x=pcgroup, y=value, fill=pcgroup)) + 
   geom_boxplot(outlier.shape = NA) +
   geom_point(size = 2, alpha = 0.3,  position = position_jitter(seed = 1, width = .2)) +
   facet_grid(rows=vars(metric), scales="free_y") +
@@ -257,6 +357,31 @@ nca_fig <- ggplot(plotdat_nca, aes(x=pcgroup, y=value, fill=pcgroup)) +
   #                    panel.grid.major=element_blank(),
   #                    panel.grid.minor=element_blank())
 nca_fig
+
+# main landings metric plot
+nca_fig2 <- ggplot(plotdat_nca %>% filter(metric != 'Node Strength' & metric != 'Importance'), aes(x=pcgroup, y=value, fill=pcgroup)) + 
+  geom_boxplot(outlier.shape = NA) +
+  geom_point(size = 2, alpha = 0.3,  position = position_jitter(seed = 1, width = .2)) +
+  facet_grid(rows=vars(metric), scales="free_y") +
+  scale_fill_manual(values=pal_nca) +
+  #ylim(c(0,1)) +
+  labs(title='Revenue and Landed Weight of Non-DTS Groundfish in Northern and Central California',
+       subtitle = '2017-2021',
+       x = "Port Group",
+       y = "Value",
+       fill = 'Port Group'
+       ) +
+  coord_flip() +
+  theme_bw() +
+  theme(legend.position = 'none')
+  #+ theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5),
+  #                    axis.title.x=element_text(size=13),
+  #                    axis.title.y=element_text(size=13),
+  #                    strip.text=element_text(size=13),
+  #                    legend.title=element_text(size=13),legend.text=element_text(size=13),
+  #                    panel.grid.major=element_blank(),
+  #                    panel.grid.minor=element_blank())
+nca_fig2
 ```
 <br>
 <br>
@@ -264,8 +389,8 @@ nca_fig
 
 Make SCA plot
 ```{r echo=FALSE, fig.width=10}
-# main metric plot
-sca_fig <- ggplot(plotdat_sca, aes(x=pcgroup, y=value, fill=pcgroup)) + 
+# main network metric plot
+sca_fig <- ggplot(plotdat_sca %>% filter(metric == 'Node Strength' | metric == 'Importance'), aes(x=pcgroup, y=value, fill=pcgroup)) + 
   geom_boxplot(outlier.shape = NA) +
   geom_point(size = 2, alpha = 0.3,  position = position_jitter(seed = 1, width = .2)) +
   facet_grid(rows=vars(metric), scales="free_y") +
@@ -288,16 +413,53 @@ sca_fig <- ggplot(plotdat_sca, aes(x=pcgroup, y=value, fill=pcgroup)) +
   #                    panel.grid.major=element_blank(),
   #                    panel.grid.minor=element_blank())
 sca_fig
+
+# main landings metric plot
+sca_fig2 <- ggplot(plotdat_sca %>% filter(metric != 'Node Strength' & metric != 'Importance'), aes(x=pcgroup, y=value, fill=pcgroup)) + 
+  geom_boxplot(outlier.shape = NA) +
+  geom_point(size = 2, alpha = 0.3,  position = position_jitter(seed = 1, width = .2)) +
+  facet_grid(rows=vars(metric), scales="free_y") +
+  scale_fill_manual(values=pal_sca) +
+  #ylim(c(0,1)) +
+  labs(title='Revenue and Landed Weight of Non-DTS Groundfish in Southern California',
+       subtitle = '2017-2021',
+       x = "Port Group",
+       y = "Value",
+       fill = 'Port Group'
+       ) +
+  coord_flip() +
+  theme_bw() +
+  theme(legend.position = 'none')
+  #+ theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5),
+  #                    axis.title.x=element_text(size=13),
+  #                    axis.title.y=element_text(size=13),
+  #                    strip.text=element_text(size=13),
+  #                    legend.title=element_text(size=13),legend.text=element_text(size=13),
+  #                    panel.grid.major=element_blank(),
+  #                    panel.grid.minor=element_blank())
+sca_fig2
 ```
 <br>
 <br>
 <br>
 
-Save plots as pngs, with filename: State. Importance and Node Strength of Non-DTS Groundfish in Fisheries Participation Networks 2017-2021.png
+Save plots as pngs, with filenames: 
+
+State. Importance and Node Strength of Non-DTS Groundfish in Fisheries Participation Networks 2017-2021.png
+
+or
+
+Revenue and Landed Weight of Non-DTS Groundfish in State 2017-2021.png
+
 ```{r echo=FALSE}
 png(here::here(pngdir, paste0("Oregon. Importance and Node Strength of Non-DTS Groundfish in Fisheries Participation Networks 2017-2021.png")),
     res=200,height=800,width=1700)
 or_fig
+dev.off()
+
+png(here::here(pngdir, paste0("Revenue and Landed Weight of Non-DTS Groundfish in Oregon 2017-2021.png")),
+    res=200,height=800,width=1700)
+or_fig2
 dev.off()
 
 png(here::here(pngdir, paste0("Northern and Central CA. Importance and Node Strength of Non-DTS Groundfish in Fisheries Participation Networks 2017-2021.png")),
@@ -305,15 +467,25 @@ png(here::here(pngdir, paste0("Northern and Central CA. Importance and Node Stre
 nca_fig
 dev.off()
 
+png(here::here(pngdir, paste0("Revenue and Landed Weight of Non-DTS Groundfish in Northern and Central California 2017-2021.png")),
+    res=200,height=800,width=1700)
+nca_fig2
+dev.off()
+
 png(here::here(pngdir, paste0("Southern CA. Importance and Node Strength of Non-DTS Groundfish in Fisheries Participation Networks 2017-2021.png")),
     res=200,height=800,width=1700)
 sca_fig
+dev.off()
+
+png(here::here(pngdir, paste0("Revenue and Landed Weight of Non-DTS Groundfish in Southern California 2017-2021.png")),
+    res=200,height=800,width=1700)
+sca_fig2
 dev.off()
 ```
 <br>
 
 
-Focus on node strength only, compile into a single figure. Save plot as png, with filename: Node Strength of Non-DTS Groundfish in Fisheries Participation Networks 2017-2021, Oregon and California.png
+Focus on node strength and revenue only, compile into a single figure. Save plot as png, with filename: Non-DTS Groundfish Node Strength in Fisheries Participation Networks and Aggregate Revenue 2017-2021, Oregon and California.png
 
 ```{r echo=FALSE}
 
@@ -342,6 +514,32 @@ or_ns_fig <- ggplot(or_ns_df, aes(x=pcgroup, y=value, fill=pcgroup)) +
   #                    panel.grid.minor=element_blank())
 #or_ns_fig
 
+or_rev_df <- or_fig2$data %>% filter(metric == "Revenue")
+or_rev_fig <- ggplot(or_rev_df, aes(x=pcgroup, y=value, fill=pcgroup)) + 
+  geom_boxplot(outlier.shape = NA) +
+  geom_point(size = 2, alpha = 0.3,  position = position_jitter(seed = 1, width = .2)) +
+  #facet_grid(rows=vars(metric), scales="free_y") +
+  scale_fill_manual(values=pal_or) +
+  #ylim(c(0,1)) +
+  labs(title='Revenue from Non-DTS Groundfish Fisheries: 2017-2021',
+       subtitle = 'Oregon',
+       x = "Port Group",
+       y = "Revenue",
+       fill = 'Port Group'
+       ) +
+  coord_flip() +
+  theme_bw() +
+  theme(legend.position = 'none')
+  #+ theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5),
+  #                    axis.title.x=element_text(size=13),
+  #                    axis.title.y=element_text(size=13),
+  #                    strip.text=element_text(size=13),
+  #                    legend.title=element_text(size=13),legend.text=element_text(size=13),
+  #                    panel.grid.major=element_blank(),
+  #                    panel.grid.minor=element_blank())
+or_rev_fig
+
+
 nca_ns_df <- nca_fig$data %>% filter(metric == "Node Strength")
 nca_ns_fig <- ggplot(nca_ns_df, aes(x=pcgroup, y=value, fill=pcgroup)) + 
   geom_boxplot(outlier.shape = NA) +
@@ -365,6 +563,30 @@ nca_ns_fig <- ggplot(nca_ns_df, aes(x=pcgroup, y=value, fill=pcgroup)) +
   #                    panel.grid.major=element_blank(),
   #                    panel.grid.minor=element_blank())
 #nca_ns_fig
+
+nca_rev_df <- nca_fig2$data %>% filter(metric == "Revenue")
+nca_rev_fig <- ggplot(nca_rev_df, aes(x=pcgroup, y=value, fill=pcgroup)) + 
+  geom_boxplot(outlier.shape = NA) +
+  geom_point(size = 2, alpha = 0.3,  position = position_jitter(seed = 1, width = .2)) +
+  #facet_grid(rows=vars(metric), scales="free_y") +
+  scale_fill_manual(values=pal_nca) +
+  #ylim(c(0,1)) +
+  labs(subtitle = 'Northern and Central California',
+       x = "Port Group",
+       y = "Revenue",
+       fill = 'Port Group'
+       ) +
+  coord_flip() +
+  theme_bw() +
+  theme(legend.position = 'none')
+  #+ theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5),
+  #                    axis.title.x=element_text(size=13),
+  #                    axis.title.y=element_text(size=13),
+  #                    strip.text=element_text(size=13),
+  #                    legend.title=element_text(size=13),legend.text=element_text(size=13),
+  #                    panel.grid.major=element_blank(),
+  #                    panel.grid.minor=element_blank())
+#nca_rev_fig
 
 sca_ns_df <- sca_fig$data %>% filter(metric == "Node Strength")
 sca_ns_fig <- ggplot(sca_ns_df, aes(x=pcgroup, y=value, fill=pcgroup)) + 
@@ -390,9 +612,35 @@ sca_ns_fig <- ggplot(sca_ns_df, aes(x=pcgroup, y=value, fill=pcgroup)) +
   #                    panel.grid.minor=element_blank())
 #sca_ns_fig
 
+sca_rev_df <- sca_fig2$data %>% filter(metric == "Revenue")
+sca_rev_fig <- ggplot(sca_rev_df, aes(x=pcgroup, y=value, fill=pcgroup)) + 
+  geom_boxplot(outlier.shape = NA) +
+  geom_point(size = 2, alpha = 0.3,  position = position_jitter(seed = 1, width = .2)) +
+  #facet_grid(rows=vars(metric), scales="free_y") +
+  scale_fill_manual(values=pal_sca) +
+  #ylim(c(0,1)) +
+  labs(subtitle = 'Southern California',
+       x = "Port Group",
+       y = "Revenue",
+       fill = 'Port Group'
+       ) +
+  coord_flip() +
+  theme_bw() +
+  theme(legend.position = 'none')
+  #+ theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5),
+  #                    axis.title.x=element_text(size=13),
+  #                    axis.title.y=element_text(size=13),
+  #                    strip.text=element_text(size=13),
+  #                    legend.title=element_text(size=13),legend.text=element_text(size=13),
+  #                    panel.grid.major=element_blank(),
+  #                    panel.grid.minor=element_blank())
+#sca_rev_fig
+
+# PICK UP HERE, ADD COMMON REV SCALE ACROSS STATES AND ARANGE INTO SINGLE COWPLOT 01-10-2022
+
 plot_grid(plotlist=list(or_ns_fig, nca_ns_fig, sca_ns_fig), ncol=1, align = "v", axis = "l", labels = "AUTO", rel_heights=c(1,1,1))
 
-png(here::here(pngdir, paste0("Node Strength of Non-DTS Groundfish in Fisheries Participation Networks 2017-2021, Oregon and California.png")),
+png(here::here(pngdir, paste0("Non-DTS Groundfish Node Strength in Fisheries Participation Networks and Aggregate Revenue 2017-2021, Oregon and California.png")),
     res=200,height=1200,width=1500)
 
 plot_grid(plotlist=list(or_ns_fig, nca_ns_fig, sca_ns_fig), ncol=1, align = "v", axis = "l", labels = "AUTO", rel_heights=c(1,1,1))
