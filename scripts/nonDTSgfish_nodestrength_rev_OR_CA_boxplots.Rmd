@@ -522,17 +522,17 @@ or_ns_fig <- ggplot(or_ns_df, aes(x=pcgroup, y=value, fill=pcgroup)) +
 #or_ns_fig
 
 or_rev_df <- or_fig2$data %>% filter(metric == "Revenue")
-or_rev_fig <- ggplot(or_rev_df, aes(x=pcgroup, y=value/10^3, colour=pcgroup)) + 
+or_rev_fig <- ggplot(or_rev_df, aes(x=pcgroup, y=value/10^3, fill=pcgroup)) + 
   geom_boxplot(outlier.shape = NA) +
   geom_point(size = 2, alpha = 0.3,  position = position_jitter(seed = 1, width = .2)) +
   #facet_grid(rows=vars(metric), scales="free_y") +
-  scale_colour_manual(values=pal_or) +
+  scale_fill_manual(values=pal_or) +
   ylim(c(0,max_rev/10^3)) +
-  labs(title='Revenue from Non-DTS Groundfish Fisheries: 2017-2021',
+  labs(title='Revenue from Non-DTS Groundfish\nFisheries: 2017-2021',
        subtitle = 'Oregon',
        x = "Port Group",
-       y = "Revenue\n (1000s of $)",
-       colour = 'Port Group'
+       y = "Revenue (1000s of $)",
+       fill = 'Port Group'
        ) +
   coord_flip() +
   theme_bw() +
@@ -572,16 +572,16 @@ nca_ns_fig <- ggplot(nca_ns_df, aes(x=pcgroup, y=value, fill=pcgroup)) +
 #nca_ns_fig
 
 nca_rev_df <- nca_fig2$data %>% filter(metric == "Revenue")
-nca_rev_fig <- ggplot(nca_rev_df, aes(x=pcgroup, y=value/10^3, colour=pcgroup)) + 
+nca_rev_fig <- ggplot(nca_rev_df, aes(x=pcgroup, y=value/10^3, fill=pcgroup)) + 
   geom_boxplot(outlier.shape = NA) +
   geom_point(size = 2, alpha = 0.3,  position = position_jitter(seed = 1, width = .2)) +
   #facet_grid(rows=vars(metric), scales="free_y") +
-  scale_colour_manual(values=pal_nca) +
+  scale_fill_manual(values=pal_nca) +
   ylim(c(0,max_rev/10^3)) +
   labs(subtitle = 'Northern and Central California',
        x = "Port Group",
-       y = "Revenue\n(1000s of $)",
-       colour = 'Port Group'
+       y = "Revenue (1000s of $)",
+       fill = 'Port Group'
        ) +
   coord_flip() +
   theme_bw() +
@@ -628,7 +628,7 @@ sca_rev_fig <- ggplot(sca_rev_df, aes(x=pcgroup, y=value/10^3, fill=pcgroup)) +
   ylim(c(0,max_rev/10^3)) +
   labs(subtitle = 'Southern California',
        x = "Port Group",
-       y = "Revenue\n(1000s of $)",
+       y = "Revenue (1000s of $)",
        fill = 'Port Group'
        ) +
   coord_flip() +
@@ -650,7 +650,7 @@ plot_grid(plotlist=list(or_ns_fig, or_rev_fig, nca_ns_fig, nca_rev_fig, sca_ns_f
 png(here::here(pngdir, paste0("Non-DTS Groundfish Node Strength in Fisheries Participation Networks and Aggregate Revenue 2017-2021, Oregon and California.png")),
     res=200,height=1200,width=1500)
 
-plot_grid(plotlist=list(or_ns_fig, nca_ns_fig, sca_ns_fig), ncol=1, align = "v", axis = "l", labels = "AUTO", rel_heights=c(1,1,1))
+plot_grid(plotlist=list(or_ns_fig, or_rev_fig, nca_ns_fig, nca_rev_fig, sca_ns_fig, sca_rev_fig), ncol=2, align = "v", axis = "l", labels = "AUTO", rel_heights=c(1,1,1,1,1,1))
 
 dev.off()
 
