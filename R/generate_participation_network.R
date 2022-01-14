@@ -42,14 +42,14 @@ participation_network_crabyear <- function(tickets, edge_type="connectivity", pc
   # create a df with 2 columns: SPGRPN2 (metier.name in Mary's code) and max_boats, the maximum boats that participated in the metier during the specified year(s)
   n_boats <- tickets %>% filter(drvid!='NONE') %>%
     group_by(crab_year, SPGRPN2) %>% #changed year to crab_year (MF 2/26/2019)
-    summarise(n_boats = length(unique(drvid))) %>% #changed summarize to summarise, JS 11092018
+    summarise(n_boats = length(unique(drvid)), .groups = "drop") %>% #changed summarize to summarise, JS 11092018; added , .groups = "drop" 01-13-2022 JS
     group_by(SPGRPN2) %>%
-    summarise(max_boats = max(n_boats)) #changed summarize to summarise, JS
+    summarise(max_boats = max(n_boats), .groups = "drop") #changed summarize to summarise, JS; added , .groups = "drop" 01-13-2022 JS
   
   # create a df where each column is a SPGRPN2, and values represent the total revenue for a boat in a crab year from that SPGRPN2
   boats <- tickets %>% filter(drvid != 'NONE') %>%
     group_by(drvid, SPGRPN2, crab_year) %>% #removed mutate; changed year to crab_year MF 2/26/2019
-    summarise(revenue = sum(adj_revenue)) %>% #changed summarize to summarise, JS 11092018
+    summarise(revenue = sum(adj_revenue), .groups = "drop") %>% #changed summarize to summarise, JS 11092018; added , .groups = "drop" JS 01-13-2022
     pivot_wider(names_from=SPGRPN2, values_from=revenue, values_fill = NA)
   boats <- as.data.frame(boats)
   rownames(boats) <- paste(boats$drvid, boats$crab_year, sep="_")
@@ -177,8 +177,8 @@ participation_network_crabyear <- function(tickets, edge_type="connectivity", pc
               tickets %>% 
                 filter (SPGRPN2 == fisheries[i] | SPGRPN2 == fisheries[j]) %>% 
                 group_by(crab_year) %>% 
-                summarise(n_boats = length(unique(drvid))) %>% 
-                summarise(max_boats = max(n_boats)) 
+                summarise(n_boats = length(unique(drvid)), .groups = "drop") %>% # added , .groups = "drop" JS 01-13-2022
+                summarise(max_boats = max(n_boats), .groups = "drop") # added , .groups = "drop" JS 01-13-2022 
             )
           }
         }

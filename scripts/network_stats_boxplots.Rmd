@@ -24,9 +24,11 @@ This document graphs network metrics by port group for the US West Coast.
 
 The two core network metrics are: 
 
-1. Node Strength
+1. Betweenness
 
 2. Eigen Vector Centrality.
+
+We focus on these to get a sense of which nodes involve consistently heavy levels of cross-fishery participation across port groups.
 
 
 **Note that many network metrics are sensitive to network size, which will vary over the time series.** Network size has been incorporated into each graph as ___. Use the graphs for visual comparison of different network forms, but not for drawing major conclusions around network change / sensitivity. 
@@ -54,6 +56,7 @@ if(!require("foreign")) {install.packages("foreign")}
 if(!require("lubridate")) {install.packages("lubridate")}
 if(!require("facetscales")) {devtools::install_github("zeehio/facetscales"); library(facetscales)}
 if(!require("ggplot2")) {install.packages("ggplot2")}
+if(!require("viridis")) {install.packages("viridis")}
 if(!require("grid")) {install.packages("grid")}
 if(!require("gridExtra")) {install.packages("gridExtra")}
 if(!require("ggpubr")) {install.packages("ggpubr")}
@@ -96,29 +99,33 @@ dataset_names <- c("NodeStats")
 
 Specify which network metrics to retain from the full data set.
 ```{r}
-node_metrics <- c('node_strength','eigen')
+node_metrics <- c('basic_btwn','eigen')
 ```
 <br>
 
-Specify which fisheries to retain from the full data set.
-```{r}
-myfisheries <- c('Non-DTS groundfish')
-```
-<br>
+<!-- Specify which fisheries to retain from the full data set. -->
+<!-- ```{r} -->
+<!-- myfisheries <- c('Non-DTS groundfish') -->
+<!-- ``` -->
+<!-- <br> -->
 
-Specify which port groups to retain from the full data set. Focus on all CA and OR port groups
+Specify which port groups to retain from the full data set. Focus on all port groups
 ```{r}
 
 # 01-06-22: note jameal updated OSD, SD, and SDA ports to have the same lat long as OCN. Amanda P has made the same fix. Also reassigned MCR to the Eureka IOPAC port group,  Amanda P agreed with this change
 iopac_lookup <- read_csv(here::here(indir2, port_filename))
 
-ca_or_ports <- iopac_lookup %>% filter(`Agency Name` != "WDFW") %>% select(IOPAC) %>% distinct() %>% pull() 
+all_iopac <- iopac_lookup %>% select(IOPAC) %>% distinct() %>% pull()
 
-or_ports <- iopac_lookup %>% filter(`Agency Name` == "ODFW") %>% select(IOPAC) %>% distinct() %>% pull() 
+# ca_or_ports <- iopac_lookup %>% filter(`Agency Name` != "WDFW") %>% select(IOPAC) %>% distinct() %>% pull() 
+# 
+wa_ports <- iopac_lookup %>% filter(`Agency Name` == "WDFW") %>% select(IOPAC) %>% distinct() %>% pull()
+
+or_ports <- iopac_lookup %>% filter(`Agency Name` == "ODFW") %>% select(IOPAC) %>% distinct() %>% pull()
 
 morrobaymaxlat <- iopac_lookup %>% filter(IOPAC == "Morro Bay") %>% summarise(maxlat = max(PACFIN_LAT)) %>% pull()
 
-nca_ports <- iopac_lookup %>% filter(`Agency Name` == "CDFW" & PACFIN_LAT > morrobaymaxlat) %>% select(IOPAC) %>% distinct() %>% pull() 
+nca_ports <- iopac_lookup %>% filter(`Agency Name` == "CDFW" & PACFIN_LAT > morrobaymaxlat) %>% select(IOPAC) %>% distinct() %>% pull()
 
 sca_ports <- iopac_lookup %>% filter(`Agency Name` == "CDFW" & PACFIN_LAT <= morrobaymaxlat) %>% select(IOPAC) %>% distinct() %>% pull()
 
@@ -136,8 +143,8 @@ Network metrics from different datasets.
 for(i in seq(1,length(filenames))){
   tmpdat <- read.csv(here::here(indir, filenames[i])) %>%
     dplyr::select(pcgroup, year, metier.cm, all_of(node_metrics)) %>%
-    filter(pcgroup %in% ca_or_ports) %>%
-    filter(metier.cm %in% myfisheries) %>%
+    filter(pcgroup %in% all_iopac) %>%
+    #filter(metier.cm %in% myfisheries) %>%
     mutate(dataset=dataset_names[i])
   if(i==1){
     dat <- tmpdat
@@ -156,21 +163,21 @@ with(dat,table(dataset,pcgroup))
 
 Pivot longer to graph multiple metrics at once.
 ```{r}
-dat_long <- dat %>%
+dat_long2 <- dat %>%
   pivot_longer(cols=c(all_of(node_metrics)), names_to = "metric", values_to = "value")
 ```
 <br>
 
 Clean up metric names.
 ```{r}
-dat_long$metric <- recode(dat_long$metric, 
-                          node_strength = "Node Strength",
+dat_long2$metric <- recode(dat_long2$metric, 
+                          basic_btwn = "Betweenness",
                           eigen = "Importance")
 #dat_long$metric <- factor(dat_long$metric, levels=c("Size", "Edge Density","Mean Degree", "Central.", "Central. (UnW)", "Mod.", "Mod. (UnW)"))
 
-nonDTSports_sorted <- dat_long %>% left_join(iopac_lookup %>% select(IOPAC, PACFIN_LAT), by = c('pcgroup' = 'IOPAC')) %>% select(pcgroup, PACFIN_LAT) %>% group_by(pcgroup) %>% summarise(lat = mean(PACFIN_LAT)) %>% arrange(lat) %>% select(pcgroup) %>% pull() # use arrange(-lat) if coord_flip() is NOT used
+allports_sorted <- dat_long2 %>% left_join(iopac_lookup %>% select(IOPAC, PACFIN_LAT), by = c('pcgroup' = 'IOPAC')) %>% select(pcgroup, PACFIN_LAT) %>% group_by(pcgroup) %>% summarise(lat = mean(PACFIN_LAT)) %>% arrange(-lat) %>% select(pcgroup) %>% pull() # use arrange(-lat) if coord_flip() is NOT used
 
-dat_long$pcgroup <- factor(dat_long$pcgroup, levels=nonDTSports_sorted)
+dat_long2$pcgroup <- factor(dat_long2$pcgroup, levels=allports_sorted)
 
 ```
 <br>
@@ -179,53 +186,88 @@ dat_long$pcgroup <- factor(dat_long$pcgroup, levels=nonDTSports_sorted)
 
 # 2. Graph Box Plots
 
-## Figure x. Box plots of Node Strength and Importance
+## Figure x. Box plots of Betweenness and Importance
 
-... at Oregon and California ports from 2016-2020. Network metrics were derived from vessel-level networks summarized at the port level. Nodes (fisheries) are included in each network with a minimum total fisheries revenue cutoff for vessels of `$5,000` and a minimum revenue cutoff for individual fisheries of `$500`.
+... at all IOPAC ports from 2016-2020. Network metrics were derived from vessel-level networks summarized at the port level. Nodes (fisheries) are included in each network with a minimum total fisheries revenue cutoff for vessels of `$5,000` and a minimum revenue cutoff for individual fisheries of `$500`.
 
-Make OR, NCA, SCA data frames and color palettes.
+Make WA, OR, NCA, SCA data frames and color palettes.
 ```{r echo=FALSE, fig.width=10}
 # filter and re-arrange data for plotting
 years <- seq(2016,2020,1)
-plotdat_or <- dat_long %>% filter(year %in% years & pcgroup %in% or_ports)
-plotdat_nca <- dat_long %>% filter(year %in% years & pcgroup %in% nca_ports)
-plotdat_sca <- dat_long %>% filter(year %in% years & pcgroup %in% sca_ports)
+plotdat_wa <- dat_long2 %>% filter(year %in% years & pcgroup %in% wa_ports)
+plotdat_or <- dat_long2 %>% filter(year %in% years & pcgroup %in% or_ports)
+plotdat_nca <- dat_long2 %>% filter(year %in% years & pcgroup %in% nca_ports)
+plotdat_sca <- dat_long2 %>% filter(year %in% years & pcgroup %in% sca_ports)
 
-# color palette
-# or. 5 ports
-pal_or=pnw_palette("Shuksan2",length(unique(plotdat_or$pcgroup)), type = "discrete") # or choose a different PNWColors palette
-# nca. 6 ports
-pal_nca=pnw_palette("Starfish",length(unique(plotdat_nca$pcgroup)), type = "discrete") # or choose a different PNWColors palette
-# sca. 4 ports
-pal_sca=pnw_palette("Sunset",length(unique(plotdat_sca$pcgroup)), type = "discrete") # or choose a different PNWColors palette
 ```
+
+Make WA plot
+```{r echo=FALSE, fig.width=10}
+# main metric plot
+fig_wa <- ggplot(plotdat_wa, aes(x=metier.cm, y=value, fill=metier.cm)) + 
+  geom_boxplot(outlier.shape = NA) +
+  geom_point(size = 2, alpha = 0.3,  position = position_jitter(seed = 1, width = .2)) +
+  facet_grid(
+    vars(pcgroup), 
+    vars(metric), 
+    #scales="free_y",
+    labeller = label_wrap_gen(15)
+    ) +
+  scale_fill_viridis(discrete = TRUE) +
+  #scale_fill_manual(values=pal_or) +
+  ylim(c(0,1)) +
+  labs(title='Betweenness and Importance of Species Groups\nin Fisheries Participation Networks: Washington',
+       subtitle = '2017-2021',
+       x = "Species Group",
+       y = "Value"#,
+       #fill = 'Port Group'
+       ) +
+  #coord_flip() +
+  theme_bw() +
+  theme(legend.position = 'none') +
+  theme(axis.text.x=element_text(angle=45,vjust=1,hjust=1))#,
+  #                    axis.title.x=element_text(size=13),
+  #                    axis.title.y=element_text(size=13),
+  #                    legend.title=element_text(size=13),legend.text=element_text(size=13),
+  #                    panel.grid.major=element_blank(),
+  #                    panel.grid.minor=element_blank())
+fig_wa
+```
+<br>
+<br>
+<br>
 
 Make OR plot
 ```{r echo=FALSE, fig.width=10}
 # main metric plot
-or_fig <- ggplot(plotdat_or, aes(x=pcgroup, y=value, fill=pcgroup)) + 
+fig_or <- ggplot(plotdat_or, aes(x=metier.cm, y=value, fill=metier.cm)) + 
   geom_boxplot(outlier.shape = NA) +
   geom_point(size = 2, alpha = 0.3,  position = position_jitter(seed = 1, width = .2)) +
-  facet_grid(rows=vars(metric), scales="free_y") +
-  scale_fill_manual(values=pal_or) +
-  #ylim(c(0,1)) +
-  labs(title='Importance and Node Strength of Non-DTS Groundfish in Fisheries Participation Networks: Oregon',
+  facet_grid(
+    vars(pcgroup), 
+    vars(metric), 
+    #scales="free_y",
+    labeller = label_wrap_gen(12)
+    ) +
+  scale_fill_viridis(discrete = TRUE) +
+  #scale_fill_manual(values=pal_or) +
+  ylim(c(0,1)) +
+  labs(title='Betweenness and Importance of Species Groups\nin Fisheries Participation Networks: Oregon',
        subtitle = '2017-2021',
-       x = "Port Group",
-       y = "Value",
-       fill = 'Port Group'
+       x = "Species Group",
+       y = "Value"#,
+       #fill = 'Port Group'
        ) +
-  coord_flip() +
+  #coord_flip() +
   theme_bw() +
-  theme(legend.position = 'none')
-  #+ theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5),
+  theme(legend.position = 'none') +
+  theme(axis.text.x=element_text(angle=45,vjust=1,hjust=1))#,
   #                    axis.title.x=element_text(size=13),
   #                    axis.title.y=element_text(size=13),
-  #                    strip.text=element_text(size=13),
   #                    legend.title=element_text(size=13),legend.text=element_text(size=13),
   #                    panel.grid.major=element_blank(),
   #                    panel.grid.minor=element_blank())
-or_fig
+fig_or
 ```
 <br>
 <br>
@@ -234,178 +276,228 @@ or_fig
 Make NCA plot
 ```{r echo=FALSE, fig.width=10}
 # main metric plot
-nca_fig <- ggplot(plotdat_nca, aes(x=pcgroup, y=value, fill=pcgroup)) + 
+fig_nca <- ggplot(plotdat_nca, aes(x=metier.cm, y=value, fill=metier.cm)) + 
   geom_boxplot(outlier.shape = NA) +
   geom_point(size = 2, alpha = 0.3,  position = position_jitter(seed = 1, width = .2)) +
-  facet_grid(rows=vars(metric), scales="free_y") +
-  scale_fill_manual(values=pal_nca) +
-  #ylim(c(0,1)) +
-  labs(title='Importance and Node Strength of Non-DTS Groundfish in Fisheries Participation Networks: Northern and Central California',
+  facet_grid(
+    vars(pcgroup), 
+    vars(metric), 
+    #scales="free_y",
+    labeller = label_wrap_gen(12)
+    ) +
+  scale_fill_viridis(discrete = TRUE) +
+  #scale_fill_manual(values=pal_or) +
+  ylim(c(0,1)) +
+  labs(title='Betweenness and Importance of Species Groups\nin Fisheries Participation Networks:\nNorthern and Central California',
        subtitle = '2017-2021',
-       x = "Port Group",
-       y = "Value",
-       fill = 'Port Group'
+       x = "Species Group",
+       y = "Value"#,
+       #fill = 'Port Group'
        ) +
-  coord_flip() +
+  #coord_flip() +
   theme_bw() +
-  theme(legend.position = 'none')
-  #+ theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5),
+  theme(legend.position = 'none') +
+  theme(axis.text.x=element_text(angle=45,vjust=1,hjust=1))#,
   #                    axis.title.x=element_text(size=13),
   #                    axis.title.y=element_text(size=13),
-  #                    strip.text=element_text(size=13),
   #                    legend.title=element_text(size=13),legend.text=element_text(size=13),
   #                    panel.grid.major=element_blank(),
   #                    panel.grid.minor=element_blank())
-nca_fig
+fig_nca
 ```
 <br>
 <br>
 <br>
+
 
 Make SCA plot
 ```{r echo=FALSE, fig.width=10}
 # main metric plot
-sca_fig <- ggplot(plotdat_sca, aes(x=pcgroup, y=value, fill=pcgroup)) + 
+fig_sca <- ggplot(plotdat_sca, aes(x=metier.cm, y=value, fill=metier.cm)) + 
   geom_boxplot(outlier.shape = NA) +
   geom_point(size = 2, alpha = 0.3,  position = position_jitter(seed = 1, width = .2)) +
-  facet_grid(rows=vars(metric), scales="free_y") +
-  scale_fill_manual(values=pal_sca) +
-  #ylim(c(0,1)) +
-  labs(title='Importance and Node Strength of Non-DTS Groundfish in Fisheries Participation Networks: Southern California',
+  facet_grid(
+    vars(pcgroup), 
+    vars(metric), 
+    #scales="free_y",
+    labeller = label_wrap_gen(12)
+    ) +
+  scale_fill_viridis(discrete = TRUE) +
+  #scale_fill_manual(values=pal_or) +
+  ylim(c(0,1)) +
+  labs(title='Betweenness and Importance of Species Groups\nin Fisheries Participation Networks:\nSouthern California',
        subtitle = '2017-2021',
-       x = "Port Group",
-       y = "Value",
-       fill = 'Port Group'
+       x = "Species Group",
+       y = "Value"#,
+       #fill = 'Port Group'
        ) +
-  coord_flip() +
+  #coord_flip() +
   theme_bw() +
-  theme(legend.position = 'none')
-  #+ theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5),
+  theme(legend.position = 'none') +
+  theme(axis.text.x=element_text(angle=45,vjust=1,hjust=1))#,
   #                    axis.title.x=element_text(size=13),
   #                    axis.title.y=element_text(size=13),
-  #                    strip.text=element_text(size=13),
   #                    legend.title=element_text(size=13),legend.text=element_text(size=13),
   #                    panel.grid.major=element_blank(),
   #                    panel.grid.minor=element_blank())
-sca_fig
+fig_sca
 ```
 <br>
 <br>
 <br>
 
-Save plots as pngs, with filename: State. Importance and Node Strength of Non-DTS Groundfish in Fisheries Participation Networks 2017-2021.png
+Save plots as pngs, with filename: State. Betweenness and Importance of Species Groups in Fisheries Participation Networks 2017-2021.png
 ```{r echo=FALSE}
-png(here::here(pngdir, paste0("Oregon. Importance and Node Strength of Non-DTS Groundfish in Fisheries Participation Networks 2017-2021.png")),
-    res=200,height=800,width=1700)
-or_fig
+png(here::here(pngdir, paste0("Washington. Betweenness and Importance of Species Groups in Fisheries Participation Networks 2017-2021.png")),
+    res=200,height=1200,width=1400)
+fig_wa
 dev.off()
 
-png(here::here(pngdir, paste0("Northern and Central CA. Importance and Node Strength of Non-DTS Groundfish in Fisheries Participation Networks 2017-2021.png")),
-    res=200,height=800,width=1700)
-nca_fig
+png(here::here(pngdir, paste0("Oregon. Betweenness and Importance of Species Groups in Fisheries Participation Networks 2017-2021.png")),
+    res=200,height=1200,width=1400)
+fig_or
 dev.off()
 
-png(here::here(pngdir, paste0("Southern CA. Importance and Node Strength of Non-DTS Groundfish in Fisheries Participation Networks 2017-2021.png")),
-    res=200,height=800,width=1700)
-sca_fig
+png(here::here(pngdir, paste0("Northern and Central CA. Betweenness and Importance of Species Groups in Fisheries Participation Networks 2017-2021.png")),
+    res=200,height=1200,width=1400)
+fig_nca
+dev.off()
+
+png(here::here(pngdir, paste0("Southern CA. Betweenness and Importance of Species Groups in Fisheries Participation Networks 2017-2021.png")),
+    res=200,height=1200,width=1400)
+fig_sca
 dev.off()
 ```
 <br>
+<br>
+<br>
 
+Summarize proportion of port groups with median values of betweenness and importance >=0.25 from 2016-2020.
 
-Focus on node strength only, compile into a single figure. Save plot as png, with filename: Node Strength of Non-DTS Groundfish in Fisheries Participation Networks 2017-2021, Oregon and California.png
+Make data frame
+```{r echo=FALSE, fig.width=10}
+years <- seq(2016,2020,1)
 
+# get rid of weird duplicates for WA Coast port. still don't know why this is happening in 01_create_betworks_cciea.Rmd. JS 02-13-2022
+plotdat_summary <- dat_long2 %>% 
+  filter(year %in% years) %>%
+  select(-dataset) %>%
+  distinct() %>% # this line deals with weird WA problem
+  pivot_wider(
+      names_from = metric,
+      values_from = value
+      ) %>%
+  group_by(pcgroup, metier.cm) %>%
+  summarise(
+    median_btwn = median(Betweenness),
+    median_imp = median(Importance),
+    .groups = "drop" 
+  ) %>%
+  group_by(metier.cm) %>%
+  summarise(
+    prop_btwn_lg = length(which(median_btwn >= 0.25))/length(median_btwn),
+    prop_imp_lg = length(which(median_imp >= 0.25))/length(median_imp)
+    ) %>%
+  pivot_longer(cols = c('prop_btwn_lg','prop_imp_lg'), names_to = "metric", values_to = "value") 
+
+plotdat_summary$metric <- recode(plotdat_summary$metric, 
+                          prop_btwn_lg = "Betweenness",
+                          prop_imp_lg = "Importance")
+  
+
+glimpse(plotdat_summary)  
+  
+```
+<br>
+<br>
+<br>
+
+Make plot
+```{r echo=FALSE, fig.width=10}
+# main metric plot
+fig_prop <- ggplot(plotdat_summary, aes(x=metier.cm, y=value, fill=metier.cm)) + 
+  geom_col() +
+  facet_grid(
+    cols = vars(metric), 
+    #scales="free_y",
+    labeller = label_wrap_gen(12)
+    ) +
+  scale_fill_viridis(discrete = TRUE) +
+  #scale_fill_manual(values=pal_or) +
+  ylim(c(0,1)) +
+  labs(title='Proportion of IOPAC Port Groups with Betweenness\nand Importance Values >=0.25 for Species Groups\nin West Coast Fisheries Participation Networks',
+       subtitle = '2017-2021',
+       x = "Species Group",
+       y = "Proportion"#,
+       #fill = 'Port Group'
+       ) +
+  #coord_flip() +
+  theme_bw() +
+  theme(legend.position = 'none') +
+  theme(axis.text.x=element_text(angle=45,vjust=1,hjust=1))#,
+  #                    axis.title.x=element_text(size=13),
+  #                    axis.title.y=element_text(size=13),
+  #                    legend.title=element_text(size=13),legend.text=element_text(size=13),
+  #                    panel.grid.major=element_blank(),
+  #                    panel.grid.minor=element_blank())
+fig_prop
+```
+<br>
+<br>
+<br>
+
+Save plot as png, with filename: Proportion of IOPAC Port Groups with Betweenness and Importance Values >=0.25 for Species Groups in West Coast Fisheries Participation Networks.png
 ```{r echo=FALSE}
-
-or_ns_df <- or_fig$data %>% filter(metric == "Node Strength")
-or_ns_fig <- ggplot(or_ns_df, aes(x=pcgroup, y=value, fill=pcgroup)) + 
-  geom_boxplot(outlier.shape = NA) +
-  geom_point(size = 2, alpha = 0.3,  position = position_jitter(seed = 1, width = .2)) +
-  #facet_grid(rows=vars(metric), scales="free_y") +
-  scale_fill_manual(values=pal_or) +
-  ylim(c(0,1)) +
-  labs(title='Node Strength of Non-DTS Groundfish in\nFisheries Participation Networks: 2017-2021',
-       subtitle = 'Oregon',
-       x = "Port Group",
-       y = "Node Strength",
-       fill = 'Port Group'
-       ) +
-  coord_flip() +
-  theme_bw() +
-  theme(legend.position = 'none')
-  #+ theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5),
-  #                    axis.title.x=element_text(size=13),
-  #                    axis.title.y=element_text(size=13),
-  #                    strip.text=element_text(size=13),
-  #                    legend.title=element_text(size=13),legend.text=element_text(size=13),
-  #                    panel.grid.major=element_blank(),
-  #                    panel.grid.minor=element_blank())
-#or_ns_fig
-
-nca_ns_df <- nca_fig$data %>% filter(metric == "Node Strength")
-nca_ns_fig <- ggplot(nca_ns_df, aes(x=pcgroup, y=value, fill=pcgroup)) + 
-  geom_boxplot(outlier.shape = NA) +
-  geom_point(size = 2, alpha = 0.3,  position = position_jitter(seed = 1, width = .2)) +
-  #facet_grid(rows=vars(metric), scales="free_y") +
-  scale_fill_manual(values=pal_nca) +
-  ylim(c(0,1)) +
-  labs(subtitle = 'Northern and Central California',
-       x = "Port Group",
-       y = "Node Strength",
-       fill = 'Port Group'
-       ) +
-  coord_flip() +
-  theme_bw() +
-  theme(legend.position = 'none')
-  #+ theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5),
-  #                    axis.title.x=element_text(size=13),
-  #                    axis.title.y=element_text(size=13),
-  #                    strip.text=element_text(size=13),
-  #                    legend.title=element_text(size=13),legend.text=element_text(size=13),
-  #                    panel.grid.major=element_blank(),
-  #                    panel.grid.minor=element_blank())
-#nca_ns_fig
-
-sca_ns_df <- sca_fig$data %>% filter(metric == "Node Strength")
-sca_ns_fig <- ggplot(sca_ns_df, aes(x=pcgroup, y=value, fill=pcgroup)) + 
-  geom_boxplot(outlier.shape = NA) +
-  geom_point(size = 2, alpha = 0.3,  position = position_jitter(seed = 1, width = .2)) +
-  #facet_grid(rows=vars(metric), scales="free_y") +
-  scale_fill_manual(values=pal_sca) +
-  ylim(c(0,1)) +
-  labs(subtitle = 'Southern California',
-       x = "Port Group",
-       y = "Node Strength",
-       fill = 'Port Group'
-       ) +
-  coord_flip() +
-  theme_bw() +
-  theme(legend.position = 'none')
-  #+ theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5),
-  #                    axis.title.x=element_text(size=13),
-  #                    axis.title.y=element_text(size=13),
-  #                    strip.text=element_text(size=13),
-  #                    legend.title=element_text(size=13),legend.text=element_text(size=13),
-  #                    panel.grid.major=element_blank(),
-  #                    panel.grid.minor=element_blank())
-#sca_ns_fig
-
-plot_grid(plotlist=list(or_ns_fig, nca_ns_fig, sca_ns_fig), ncol=1, align = "v", axis = "l", labels = "AUTO", rel_heights=c(1,1,1))
-
-png(here::here(pngdir, paste0("Node Strength of Non-DTS Groundfish in Fisheries Participation Networks 2017-2021, Oregon and California.png")),
-    res=200,height=1200,width=1500)
-
-plot_grid(plotlist=list(or_ns_fig, nca_ns_fig, sca_ns_fig), ncol=1, align = "v", axis = "l", labels = "AUTO", rel_heights=c(1,1,1))
-
+png(here::here(pngdir, paste0("Proportion of IOPAC Port Groups with Betweenness and Importance Values >=0.25 for Species Groups in West Coast Fisheries Participation Networks.png")),
+    res=200,height=1400,width=1700)
+fig_prop
 dev.off()
 
+```
+<br>
+<br>
+<br>
+
+Make plot for Importance only
+```{r echo=FALSE, fig.width=10}
+# main metric plot
+fig_prop_imp <- ggplot(plotdat_summary %>% filter(metric == "Importance"), aes(x=metier.cm, y=value, fill=metier.cm)) + 
+  geom_col() +
+  scale_fill_viridis(discrete = TRUE) +
+  #scale_fill_manual(values=pal_or) +
+  ylim(c(0,1)) +
+  labs(title='Proportion of IOPAC Port Groups with Betweenness Values >=0.25\nfor Species Groups in West Coast Fisheries Participation Networks',
+       subtitle = '2017-2021',
+       x = "Species Group",
+       y = "Proportion"#,
+       #fill = 'Port Group'
+       ) +
+  #coord_flip() +
+  theme_bw() +
+  theme(legend.position = 'none') +
+  theme(axis.text.x=element_text(angle=45,vjust=1,hjust=1))#,
+  #                    axis.title.x=element_text(size=13),
+  #                    axis.title.y=element_text(size=13),
+  #                    legend.title=element_text(size=13),legend.text=element_text(size=13),
+  #                    panel.grid.major=element_blank(),
+  #                    panel.grid.minor=element_blank())
+fig_prop_imp
+```
+<br>
+<br>
+<br>
+
+Save plot as png, with filename: Proportion of IOPAC Port Groups with Importance Values >=0.25 for Species Groups in West Coast Fisheries Participation Networks.png
+```{r echo=FALSE}
+png(here::here(pngdir, paste0("Proportion of IOPAC Port Groups with Importance Values >=0.25 for Species Groups in West Coast Fisheries Participation Networks.png")),
+    res=200,height=1400,width=1700)
+fig_prop_imp
+dev.off()
 
 ```
-
-
-
-
-
+<br>
+<br>
+<br>
 
 
 
