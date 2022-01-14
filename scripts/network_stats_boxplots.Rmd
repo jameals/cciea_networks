@@ -466,7 +466,7 @@ fig_prop_imp <- ggplot(plotdat_summary %>% filter(metric == "Importance"), aes(x
   scale_fill_viridis(discrete = TRUE) +
   #scale_fill_manual(values=pal_or) +
   ylim(c(0,1)) +
-  labs(title='Proportion of IOPAC Port Groups with Betweenness Values >=0.25\nfor Species Groups in West Coast Fisheries Participation Networks',
+  labs(title='Proportion of IOPAC Port Groups with Importance Values >=0.25\nfor Species Groups in West Coast Fisheries Participation Networks',
        subtitle = '2017-2021',
        x = "Species Group",
        y = "Proportion"#,
