@@ -61,6 +61,7 @@ if(!require("grid")) {install.packages("grid")}
 if(!require("gridExtra")) {install.packages("gridExtra")}
 if(!require("ggpubr")) {install.packages("ggpubr")}
 if(!require("cowplot")) {install.packages("cowplot")}
+if(!require("viridis")) {install.packages("viridis")}
 if(!require("PNWColors")) {devtools::install_github("jakelawler/PNWColors"); library(PNWColors)}
 ```
 <br>
@@ -83,6 +84,7 @@ What are the names of the `.csv` files with the network statistics that you want
 filenames <- c("VesselLevelNodeStats_2004_2020_21pcgroups_totalrev5000_indivrev500_connectivity_rmCrab_10pContribution.csv")
 networkstats_filename <- "VesselLevelNetworkStats_2004_2020_21pcgroups_totalrev5000_indivrev500_connectivity_rmCrab_10pContribution.csv"
 hci_filename <- 'ei_hci_rgn1_M.csv'
+port_filename <- 'iopac_conversion_table.csv'
 ```
 <br>
 
