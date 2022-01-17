@@ -217,7 +217,7 @@ for(i in seq(1,dim(node_mat)[2])){
 
 Plot the first graph
 ```{r}
-g <- new_glist[[2]]
+g <- new_glist[[1]]
 # get port group / year info from graph object
 port_group <- unique(V(g)$p)
 y <- unique(V(g)$year)
@@ -796,6 +796,150 @@ This gets complicated because when I'm padding the graphs with the extra nodes, 
 
 ```{r}
 test_graphs <- seq(1,40,by=2)
+```
+<br>
+
+
+Try it out on the first two graphs
+```{r}
+g <- new_glist[[1]]
+# get port group / year info from graph object
+port_group <- unique(V(g)$p)
+y <- unique(V(g)$year)
+# prepare the layout with the `layout_in_circle` function, which allows you to specify vertex order for plot
+new_order <- match(unique_node_ids,V(g)$name)
+l <-layout_in_circle(g, order=new_order)
+# remove labels for empty nodes
+V(g)$common_name[which(V(g)$vessels == 0)] <- ""
+V(g)$vessel_label <- add_vessel_labels(g)
+
+
+V(g)$common_name <- ifelse(V(g)$common_name=="Echinoderms","Echino-\nderms",V(g)$common_name)
+
+## rescale label locations. because of the way that layout_in_circle works, radian.rescale function must take the node numbers in order of their positions. 
+position.df <- data.frame(node=seq(1:vcount(g)), position=new_order) %>%
+  arrange(position)
+lab.locs <- radian.rescale(x=position.df$node, direction=-1, start=0)
+# lab.locs <- ifelse((l[,1]==1 & l[,2]==0) | (l[,1]==0 & l[,2]==1), radian.rescale(x=1:vcount(g), direction=-1, start=0),
+#                  ifelse(l[,1] < 0, radian.rescale(x=1:vcount(g), direction=-1, start=0.25),
+#                  radian.rescale(x=1:vcount(g), direction=-1, start=-0.25)))
+
+
+
+# plot & save to file
+png(here::here('data','networks','participation_vessel_ports','plots','comparable-labels', paste0("TEST_",port_group,"_", y,"_circular.png")),bg="transparent")  # if this resolution isn't good enough, add: width = 2000, height = 1500,res=300
+if(vcount(g) == 1 | ecount(g) == 0){
+  plot(g, vertex.size = V(g)$importance/(max(V(g)$importance)*0.02), 
+       layout = l, #where to put the nodes on the plot
+       # edge.width = sqrt(E(g)$weight)/(0.037*max(sqrt(E(g)$weight))),
+       edge.curved = F, 
+       axes = F,
+       edge.color = brewer.pal(n = 11, name = "Set3")[9],
+       vertex.label = str_wrap(paste0(V(g)$common_name),
+                               width = 6), # JS updated 01-29-2021
+       vertex.color = adjustcolor(V(g)$colors, alpha.f=0.90),
+       vertex.label.family = 'sans', 
+       # vertex.label.color = V(g)$colors, # to have same color as vertices
+       vertex.label.color = "gray25",
+       vertex.label.cex= 1.4, # changed from 1.2, JS 01-29-21
+       vertex.frame.color=NA,
+       vertex.label.dist = 5,
+       vertex.label.degree=lab.locs
+  )
+  text(x=l[,1], y=l[,2], labels=V(g)$vessel_label)
+  dev.off()
+} else{
+  plot(g, vertex.size = V(g)$importance/(max(V(g)$importance)*0.02), 
+       layout = l, #where to put the nodes on the plot
+       edge.width = sqrt(E(g)$weight)/(0.037*max(sqrt(E(g)$weight))),
+       edge.curved = F, 
+       axes = F,
+       edge.color = brewer.pal(n = 11, name = "Set3")[9],
+       # vertex.label = remove_empty_labels(g), 
+       vertex.label = str_wrap(V(g)$common_name,
+                               width = 6), # JS updated 01-29-2021
+       vertex.color =adjustcolor(V(g)$colors, alpha.f=0.90),
+       vertex.label.family = 'sans', 
+       # vertex.label.color = V(tmp_g)$colors, # to have same color as vertices
+       vertex.label.color = "grey25",
+       vertex.label.cex= 1.4, # changed from 1.2, JS 01-29-21
+       vertex.frame.color=NA,
+       vertex.label.dist = 5,
+       vertex.label.degree=lab.locs
+  )
+  text(x=l[,1], y=l[,2], labels=V(g)$vessel_label)
+  dev.off()
+}
+```
+```{r}
+g <- new_glist[[2]]
+# get port group / year info from graph object
+port_group <- unique(V(g)$p)
+y <- unique(V(g)$year)
+# prepare the layout with the `layout_in_circle` function, which allows you to specify vertex order for plot
+new_order <- match(unique_node_ids,V(g)$name)
+l <-layout_in_circle(g, order=new_order)
+# remove labels for empty nodes
+V(g)$common_name[which(V(g)$vessels == 0)] <- ""
+V(g)$vessel_label <- add_vessel_labels(g)
+
+
+V(g)$common_name <- ifelse(V(g)$common_name=="Echinoderms","Echino-\nderms",V(g)$common_name)
+
+## rescale label locations. because of the way that layout_in_circle works, radian.rescale function must take the node numbers in order of their positions. 
+position.df <- data.frame(node=seq(1:vcount(g)), position=new_order) %>%
+  arrange(position)
+lab.locs <- radian.rescale(x=position.df$node, direction=-1, start=0)
+# lab.locs <- ifelse((l[,1]==1 & l[,2]==0) | (l[,1]==0 & l[,2]==1), radian.rescale(x=1:vcount(g), direction=-1, start=0),
+#                  ifelse(l[,1] < 0, radian.rescale(x=1:vcount(g), direction=-1, start=0.25),
+#                  radian.rescale(x=1:vcount(g), direction=-1, start=-0.25)))
+
+
+
+# plot & save to file
+png(here::here('data','networks','participation_vessel_ports','plots','comparable-labels', paste0("TEST_",port_group,"_", y,"_circular.png")),bg="transparent")  # if this resolution isn't good enough, add: width = 2000, height = 1500,res=300
+if(vcount(g) == 1 | ecount(g) == 0){
+  plot(g, vertex.size = V(g)$importance/(max(V(g)$importance)*0.02), 
+       layout = l, #where to put the nodes on the plot
+       # edge.width = sqrt(E(g)$weight)/(0.037*max(sqrt(E(g)$weight))),
+       edge.curved = F, 
+       axes = F,
+       edge.color = brewer.pal(n = 11, name = "Set3")[9],
+       vertex.label = str_wrap(paste0(V(g)$common_name),
+                               width = 6), # JS updated 01-29-2021
+       vertex.color = adjustcolor(V(g)$colors, alpha.f=0.90),
+       vertex.label.family = 'sans', 
+       # vertex.label.color = V(g)$colors, # to have same color as vertices
+       vertex.label.color = "gray25",
+       vertex.label.cex= 1.4, # changed from 1.2, JS 01-29-21
+       vertex.frame.color=NA,
+       vertex.label.dist = 5,
+       vertex.label.degree=lab.locs
+  )
+  text(x=l[,1], y=l[,2], labels=V(g)$vessel_label)
+  dev.off()
+} else{
+  plot(g, vertex.size = V(g)$importance/(max(V(g)$importance)*0.02), 
+       layout = l, #where to put the nodes on the plot
+       edge.width = sqrt(E(g)$weight)/(0.037*max(sqrt(E(g)$weight))),
+       edge.curved = F, 
+       axes = F,
+       edge.color = brewer.pal(n = 11, name = "Set3")[9],
+       # vertex.label = remove_empty_labels(g), 
+       vertex.label = str_wrap(V(g)$common_name,
+                               width = 6), # JS updated 01-29-2021
+       vertex.color =adjustcolor(V(g)$colors, alpha.f=0.90),
+       vertex.label.family = 'sans', 
+       # vertex.label.color = V(tmp_g)$colors, # to have same color as vertices
+       vertex.label.color = "grey25",
+       vertex.label.cex= 1.4, # changed from 1.2, JS 01-29-21
+       vertex.frame.color=NA,
+       vertex.label.dist = 5,
+       vertex.label.degree=lab.locs
+  )
+  text(x=l[,1], y=l[,2], labels=V(g)$vessel_label)
+  dev.off()
+}
 ```
 <br>
 
