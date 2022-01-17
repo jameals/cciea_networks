@@ -169,7 +169,14 @@ file.copy(here::here(pngdir_ports,list.of.files_morrobay), here::here(pngdir_por
 
 
 ```
+<br>
 
+
+The second version of this function will change the location of the labels on the plots, so that they're easier to read. 
+```{r}
+plot_comparable_networks(graphs_list, outdir='data/networks/participation_vessel_ports/plots/comparable-labels')
+```
+<br>
 
 
 
