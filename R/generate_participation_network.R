@@ -1,7 +1,7 @@
 #' Generate Participation Network
 #'
 #' Create a vessel-level fisheries participation network. Based on original 
-#' function byEmma Fuller; edits specified in comments.
+#' function by Emma Fuller; edits specified in comments.
 #'
 #' @param tickets fish tickets data frame
 #' @param edge_type type of edge weighting to use - the connectivity statistic ("connectivity"), or just number of vessels ("vessels")

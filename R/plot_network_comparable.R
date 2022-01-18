@@ -1,11 +1,16 @@
-#' Plot Comparable Participation Networks (v0)
+#' Plot Comparable Participation Networks
 #'
 #' Use igraph objects to plot a series of fisheries participation
 #' networks that have consistent node placement across plots.
-#' NOTE- this function is outdated. use plot_comparable_networks 
-#'       (from plot_network_comparable.R) instead.
+#' 
+#' Version 2 uses a re-scaling function to plot the node labels at a 
+#'        consistent distance / direction out from the center of each node,
+#'        to make the graphs easier to read. Main labels consist only of the
+#'        fishery name; vessel counts associated with the fishery are placed
+#'        at the center of the fishery node, in a smaller text.
 #'
 #' @param g network as an igraph object
+#' @param color_labels whether the label colors should match the node colors, or be a consistent dark gray text (TRUE/FALSE). If TRUE, label colors are assigned with V(g)$colors
 #' @param outdir directory where image files will be saved
 #' @param file_suffix string to be added to the suffix of the image file name. script will automatically name the files by 'port_group' and year. 'port_group' can be defined as desired based on unique(V(g)$p)
 #' @param individual save each network plot to its own png file (TRUE/FALSE)
@@ -13,9 +18,9 @@
 #' @param grid_layout layout for the multi-plot png, if grid=TRUE. Should be in format: c(nrows,ncolumns) 
 #' @return Null. Will write plots directly to files
 #' @examples
-#' plot_comparable_networks0(graphs_list, outdir="data/networks/participation/plots/comparable")
+#' plot_comparable_networks(graphs_list, outdir="data/networks/participation/plots/comparable")
 #' @export
-plot_comparable_networks0 <- function(glist, outdir, file_suffix=paste0("_compare"), individual=TRUE, grid=FALSE, grid_layout=c(2,2)){
+plot_comparable_networks <- function(glist, color_labels=FALSE, outdir, file_suffix=paste0("_compare"), individual=TRUE, grid=FALSE, grid_layout=c(2,2)){
   
   ######## set up - functions ########
   # get the vertex IDs for a graph
@@ -35,6 +40,13 @@ plot_comparable_networks0 <- function(glist, outdir, file_suffix=paste0("_compar
     }
     return(label_vec)
   }
+  
+  # re-scaling function to set positions of node labels. from: https://gist.github.com/kjhealy/834774
+  radian.rescale <- function(x, start=0, direction=1) {
+    c.rotate <- function(x) (x + start) %% (2 * pi) * direction
+    c.rotate(scales::rescale(x, c(0, 2 * pi), range(x)))
+  }
+  
   ###################################
   
   
@@ -113,6 +125,20 @@ plot_comparable_networks0 <- function(glist, outdir, file_suffix=paste0("_compar
       # add vertex attribute describing number of vessels active in each fishery, after filters
       V(g)$vessel_label <- add_vessel_labels(g)
       
+      # split echinoderms vertex into two lines, because it's too long for our graphing method
+      V(g)$common_name <- ifelse(V(g)$common_name=="Echinoderms","Echino-\nderms",V(g)$common_name)
+      
+      # set label locations. see note at end of function 
+      lab.position.df <- data.frame(node=seq(1:vcount(g)), position=new_order) %>%
+        arrange(position)
+      lab.locs <- radian.rescale(x=lab.position.df$node, direction=-1, start=0)
+      
+      # set label colors
+      if(color_labels){
+        V(g)$label_colors <- V(g)$colors
+      } else{V(g)$label_colors <- "gray25"}
+      
+      
       # plot & save to file
       png(here::here(outdir, paste0(port_group,"_", y,"_circular",file_suffix,".png")),bg="transparent")  # if this resolution isn't good enough, add: width = 2000, height = 1500,res=300
       if(vcount(g) == 1 | ecount(g) == 0){
@@ -122,17 +148,17 @@ plot_comparable_networks0 <- function(glist, outdir, file_suffix=paste0("_compar
              edge.curved = F, 
              axes = F,
              edge.color = brewer.pal(n = 11, name = "Set3")[9],
-             vertex.label = str_wrap(paste0(V(g)$common_name, V(g)$vessel_label),
-                                     width = 10), # JS updated 01-29-2021
+             vertex.label = str_wrap(V(g)$common_name,
+                                      width = 6), # JS updated 01-29-2021
              vertex.color = adjustcolor(V(g)$colors, alpha.f=0.90),
              vertex.label.family = 'sans', 
-             # vertex.label.color = V(g)$colors, # to have same color as vertices
-             vertex.label.color = "gray25",
-             vertex.label.cex= 1.6, # changed from 1.2, JS 01-29-21
-             vertex.frame.color=NA
-             # vertex.label.dist = c(-9,-8,-9,-10),               # these can be adjusted manually to make it look nicer, which is super annoying
-             # vertex.label.degree = c(pi^(0.9),pi/5,pi/5,pi*1.1) # these can be adjusted manually to make it look nicer, which is super annoying
+             vertex.label.color = V(g)$label_colors,
+             vertex.label.cex= 1.4, # changed from 1.2, JS 01-29-21
+             vertex.frame.color=NA,
+             vertex.label.dist = 5,
+             vertex.label.degree = lab.locs
         )
+        text(x=l[,1], y=l[,2], labels=V(g)$vessel_label)
         dev.off()
       } else{
         plot(g, vertex.size = V(g)$importance/(max(V(g)$importance)*0.02), 
@@ -142,17 +168,17 @@ plot_comparable_networks0 <- function(glist, outdir, file_suffix=paste0("_compar
              axes = F,
              edge.color = brewer.pal(n = 11, name = "Set3")[9],
              # vertex.label = remove_empty_labels(g), 
-             vertex.label = str_wrap(paste0(V(g)$common_name, V(g)$vessel_label),
-                                     width = 10), # JS updated 01-29-2021
-             vertex.color =adjustcolor(V(g)$colors, alpha.f=0.90),
+             vertex.label = str_wrap(V(g)$common_name,
+                                     width = 6), # JS updated 01-29-2021
+             vertex.color = adjustcolor(V(g)$colors, alpha.f=0.90),
              vertex.label.family = 'sans', 
-             # vertex.label.color = V(tmp_g)$colors, # to have same color as vertices
-             vertex.label.color = "grey25",
-             vertex.label.cex= 1.6, # changed from 1.2, JS 01-29-21
-             vertex.frame.color=NA
-             # vertex.label.dist = c(-9,-8,-9,-10),               # these can be adjusted manually to make it look nicer, which is super annoying
-             # vertex.label.degree = c(pi^(0.9),pi/5,pi/5,pi*1.1) # these can be adjusted manually to make it look nicer, which is super annoying
+             vertex.label.color = V(g)$label_colors,
+             vertex.label.cex= 1.4, # changed from 1.2, JS 01-29-21
+             vertex.frame.color=NA,
+             vertex.label.dist = 5,
+             vertex.label.degree = lab.locs
         )
+        text(x=l[,1], y=l[,2], labels=V(g)$vessel_label)
         dev.off()
       }
       
@@ -176,6 +202,17 @@ plot_comparable_networks0 <- function(glist, outdir, file_suffix=paste0("_compar
       V(g)$common_name[which(V(g)$vessels == 0)] <- ""
       # add vertex attribute describing number of vessels active in each fishery, after filters
       V(g)$vessel_label <- add_vessel_labels(g)
+      # split echinoderms vertex into two lines, because it's too long for our graphing method
+      V(g)$common_name <- ifelse(V(g)$common_name=="Echinoderms","Echino-\nderms",V(g)$common_name)
+      # set label locations. see note at end of function 
+      lab.position.df <- data.frame(node=seq(1:vcount(g)), position=new_order) %>%
+        arrange(position)
+      lab.locs <- radian.rescale(x=lab.position.df$node, direction=-1, start=0)
+      # set label colors
+      if(color_labels){
+        V(g)$label_colors <- V(g)$colors
+      } else{V(g)$label_colors <- "gray25"}
+      
       # create plot
       if(vcount(g) == 1 | ecount(g) == 0){
         plot(g, vertex.size = V(g)$importance/(max(V(g)$importance)*0.02), 
@@ -184,19 +221,19 @@ plot_comparable_networks0 <- function(glist, outdir, file_suffix=paste0("_compar
              edge.curved = F, 
              axes = F,
              edge.color = brewer.pal(n = 11, name = "Set3")[9],
-             vertex.label = str_wrap(paste0(V(g)$common_name, V(g)$vessel_label),
-                                     width = 10), # JS updated 01-29-2021
+             vertex.label = str_wrap(V(g)$common_name,
+                                      width = 6), # JS updated 01-29-2021
              vertex.color = adjustcolor(V(g)$colors, alpha.f=0.90),
              vertex.label.family = 'sans', 
-             # vertex.label.color = V(g)$colors, # to have same color as vertices
-             vertex.label.color = "gray25",
-             vertex.label.cex= 1.2, # changed from 1.2, JS 01-29-21
+             vertex.label.color = V(g)$label_colors,
+             vertex.label.cex= 1.4, # changed from 1.2, JS 01-29-21
              vertex.frame.color=NA,
              main = paste0(unique(V(g)$p), " ", unique(V(g)$year)),  # main title
-             margin = c(b=0, l=-1, t=0, r=-1)   # adjust plot margins, to get rid of whitespace
-             # vertex.label.dist = c(-9,-8,-9,-10),               # these can be adjusted manually to make it look nicer, which is super annoying
-             # vertex.label.degree = c(pi^(0.9),pi/5,pi/5,pi*1.1) # these can be adjusted manually to make it look nicer, which is super annoying
+             margin = c(b=0, l=-1, t=0, r=-1),   # adjust plot margins, to get rid of whitespace
+             vertex.label.dist = 5,
+             vertex.label.degree = lab.locs
         )
+        text(x=l[,1], y=l[,2], labels=V(g)$vessel_label)
       } else{
         plot(g, vertex.size = V(g)$importance/(max(V(g)$importance)*0.02), 
              layout = l, #where to put the nodes on the plot
@@ -205,19 +242,19 @@ plot_comparable_networks0 <- function(glist, outdir, file_suffix=paste0("_compar
              axes = F,
              edge.color = brewer.pal(n = 11, name = "Set3")[9],
              # vertex.label = remove_empty_labels(g), 
-             vertex.label = str_wrap(paste0(V(g)$common_name, V(g)$vessel_label),
-                                     width = 10), # JS updated 01-29-2021
+             vertex.label = str_wrap(V(g)$common_name,
+                                      width = 6), # JS updated 01-29-2021
              vertex.color =adjustcolor(V(g)$colors, alpha.f=0.90),
              vertex.label.family = 'sans', 
-             # vertex.label.color = V(tmp_g)$colors, # to have same color as vertices
-             vertex.label.color = "grey25",
-             vertex.label.cex= 1.2, # changed from 1.2, JS 01-29-21
+             vertex.label.color = V(g)$label_colors,
+             vertex.label.cex= 1.4, # changed from 1.2, JS 01-29-21
              vertex.frame.color=NA,
              main = paste0(unique(V(g)$p), " ", unique(V(g)$year)),   # main title
-             margin = c(b=0, l=-1, t=0, r=-1)     # adjust plot margins, to get rid of whitespace
-             # vertex.label.dist = c(-9,-8,-9,-10),               # these can be adjusted manually to make it look nicer, which is super annoying
-             # vertex.label.degree = c(pi^(0.9),pi/5,pi/5,pi*1.1) # these can be adjusted manually to make it look nicer, which is super annoying
+             margin = c(b=0, l=-1, t=0, r=-1),     # adjust plot margins, to get rid of whitespace
+             vertex.label.dist = 5,
+             vertex.label.degree = lab.locs
         )
+        text(x=l[,1], y=l[,2], labels=V(g)$vessel_label)
       }
       
       
@@ -228,4 +265,30 @@ plot_comparable_networks0 <- function(glist, outdir, file_suffix=paste0("_compar
     
   } # end if(grid)
 }
+
+
+
+
+
+
+## a note on setting label locations: ##
+# from the plot function arguments, igraph calculates the x/y position of the node labels using the following equations:
+# x <- layout[, 1] + label.dist * cos(-label.degree)
+# y <- layout[, 2] + label.dist * sin(-label.degree)
+# plus some weird ratio to scale with node size. This means that label.degree, and the x/y values from the layout dataframe, 
+# are read in as vectors; and when we re-arrange the node order in the layout_in_circle function, each node's position 
+# in the layout dataframe stops matching the corresponding position in the label.degree vector. 
+# To fix this, the input vector for the rescale.radians function must be the node numbers in order of their position in the
+# graph. Creating the lab.position.df dataframe, and arranging it by the position column (taken from new_order, used as an 
+# argument in the layout_in_circle fx), provides rescale.radians with the correct input vector.
+
+
+
+
+
+
+
+
+
+
   

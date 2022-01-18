@@ -55,7 +55,7 @@ And calls the following functions:
 source(here::here('R/color_network_nodes.R'))
 source(here::here('R/plot_network.R'))
 #source(here::here('R/plot_simple_network.R'))
-source(here::here('R/plot_network_bulk_comparable.R')) # note this script is flexible whether we want to plot vessel-level or aggregate (bulk) networks. simply change the file_suffix. similarly, it is flexible whether we want to plot port group or state networks, simply change how 'port_group' is defined based on unique(V(g)$p)
+source(here::here('R/plot_network_comparable.R')) # note this function will plot networks with (1) edge thickness according to edge weight, (2) node size according to the vertex attribute "importance", and (3) node colors according to the vertex attribute "colors". File names will be constructed using node attributes 'p' and 'year'. This means that the function can be used to plot vessel-level or aggregate (bulk) networks; simply change the file_suffix to tell the two apart if needed, and change the node attributes accordingly (e.g., whether V(g)$p represents port group or state). 
 ```
 <br>
 
@@ -147,7 +147,7 @@ Plots will be written out to .png files in the function. This is because the igr
 
 ```{r}
 #lapply(graphs_list,plot_network, my_layout, outdir=pngdir)
-plot_comparable_networks(graphs_list, outdir=pngdir_ports)
+plot_comparable_networks(graphs_list,outdir=pngdir_ports,color_labels=FALSE)
 ```
 <br>
 
@@ -169,9 +169,7 @@ file.copy(here::here(pngdir_ports,list.of.files_morrobay), here::here(pngdir_por
 
 
 ```
-
-
-
+<br>
 
 
 
