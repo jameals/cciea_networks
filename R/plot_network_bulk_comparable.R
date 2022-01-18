@@ -1,7 +1,9 @@
-#' Plot Comparable Participation Networks
+#' Plot Comparable Participation Networks (v0)
 #'
 #' Use igraph objects to plot a series of fisheries participation
 #' networks that have consistent node placement across plots.
+#' NOTE- this function is outdated. use plot_comparable_networks 
+#'       (from plot_network_comparable.R) instead.
 #'
 #' @param g network as an igraph object
 #' @param outdir directory where image files will be saved
@@ -11,9 +13,9 @@
 #' @param grid_layout layout for the multi-plot png, if grid=TRUE. Should be in format: c(nrows,ncolumns) 
 #' @return Null. Will write plots directly to files
 #' @examples
-#' plot_comparable_networks(graphs_list, outdir="data/networks/participation/plots/comparable")
+#' plot_comparable_networks0(graphs_list, outdir="data/networks/participation/plots/comparable")
 #' @export
-plot_comparable_networks <- function(glist, outdir, file_suffix=paste0("_compare"), individual=TRUE, grid=FALSE, grid_layout=c(2,2)){
+plot_comparable_networks0 <- function(glist, outdir, file_suffix=paste0("_compare"), individual=TRUE, grid=FALSE, grid_layout=c(2,2)){
   
   ######## set up - functions ########
   # get the vertex IDs for a graph
