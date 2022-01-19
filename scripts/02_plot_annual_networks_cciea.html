@@ -169,7 +169,7 @@ pre code {
 <h1 class="title toc-ignore">Plot Annual Participation Networks for CCIEA Ecosystem Status Report to the Pacific Fisheries Management Council</h1>
 <h3 class="subtitle">Preparation for network analysis in CCIEA ESR</h3>
 <h4 class="author">M. Fisher, J.F. Samhouri</h4>
-<h4 class="date">Written Jan. 6, 2021. Last Run 2022-01-13</h4>
+<h4 class="date">Written Jan. 6, 2021. Last Run 2022-01-18</h4>
 
 </div>
 
@@ -204,7 +204,7 @@ if(!require(&quot;stringr&quot;)) {install.packages(&quot;stringr&quot;)}</code>
 <pre class="r"><code>source(here::here(&#39;R/color_network_nodes.R&#39;))
 source(here::here(&#39;R/plot_network.R&#39;))
 #source(here::here(&#39;R/plot_simple_network.R&#39;))
-source(here::here(&#39;R/plot_network_bulk_comparable.R&#39;)) # note this script is flexible whether we want to plot vessel-level or aggregate (bulk) networks. simply change the file_suffix. similarly, it is flexible whether we want to plot port group or state networks, simply change how &#39;port_group&#39; is defined based on unique(V(g)$p)</code></pre>
+source(here::here(&#39;R/plot_network_comparable.R&#39;)) # note this function will plot networks with (1) edge thickness according to edge weight, (2) node size according to the vertex attribute &quot;importance&quot;, and (3) node colors according to the vertex attribute &quot;colors&quot;. File names will be constructed using node attributes &#39;p&#39; and &#39;year&#39;. This means that the function can be used to plot vessel-level or aggregate (bulk) networks; simply change the file_suffix to tell the two apart if needed, and change the node attributes accordingly (e.g., whether V(g)$p represents port group or state). </code></pre>
 <p><br></p>
 </div>
 <div id="user-inputs" class="section level1">
@@ -275,7 +275,7 @@ names(graphs_list) &lt;- graph_names</code></pre>
 <h1>2: Plot with Color-Adjusted Nodes</h1>
 <p>Plots will be written out to .png files in the function. This is because the igraph <code>plot</code> function won’t save into an object that can be returned.</p>
 <pre class="r"><code>#lapply(graphs_list,plot_network, my_layout, outdir=pngdir)
-plot_comparable_networks(graphs_list, outdir=pngdir_ports)</code></pre>
+plot_comparable_networks(graphs_list,outdir=pngdir_ports,color_labels=FALSE)</code></pre>
 <pre><code>## added 6 empty vertices to graph 1</code></pre>
 <pre><code>## added 7 empty vertices to graph 2</code></pre>
 <pre><code>## added 7 empty vertices to graph 3</code></pre>
@@ -642,6 +642,7 @@ file.copy(here::here(pngdir_ports,list.of.files_astoria), here::here(pngdir_port
 file.copy(here::here(pngdir_ports,list.of.files_morrobay), here::here(pngdir_ports, &quot;morrobay&quot;), overwrite = TRUE)</code></pre>
 <pre><code>##  [1] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
 ## [16] TRUE TRUE</code></pre>
+<p><br></p>
 </div>
 
 

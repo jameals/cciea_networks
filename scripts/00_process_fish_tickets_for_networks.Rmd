@@ -95,7 +95,8 @@ Specify file name of the raw fish ticket data file and supporting files with spe
 
 # myfile1 <- "pacfin_compiled_2004thru2018.rds"
 # myfile2 <- "fish tickets 2019-2021 121321.csv" # latest pull from PacFIN: 12-13-21. previous pulls 03-01-21, 01-27-21, and 12-07-20
-myfile2 <- "fish tickets 2004-2021 122921.csv" # latest pull from PacFIN: 12-29-21.
+# myfile2 <- "fish tickets 2004-2021 122921.csv" # latest pull from PacFIN: 12-29-21.
+myfile2 <- "pacfin_compiled_2004thru2021.rds" # latest pull from PacFIN: 12-29-21.
 
 myfile3 <- "iopac_conversion_table.csv"
 myfile4 <- "species_groupings_spgrpn2_iea.csv" # originally from first tab of species_groupings IEA.xlsx from Dan Holland. see email of 121520
@@ -134,7 +135,7 @@ dcrb_only <- FALSE
 
 This should be a `.rds` or a `.csv` file containing raw PacFIN data.
 ```{r rawdata}
-rawdat <- read_rds(paste0(out_conf_dir,"pacfin_compiled_2004thru2021.rds"))
+rawdat <- read_rds(paste0(out_conf_dir,myfile2))
 glimpse(rawdat)
 colnames(rawdat)
 
@@ -187,6 +188,7 @@ NOTE: you can skip reading in the individual raw data files if "pacfin_compiled_
 ```
 <br>
 
+### 01-18-2022 NOTE COME BACK HERE TO ADD IN COLUMN NEEDED TO DETERMINE PROP WA TIX WITH ACTUAL PORT OF LANDING
 
 Subset the raw data to include only the columns that are needed. Then rename the columns that will be retained in the final processed data. The last three columns are used to calculate per-species / total revenue and landed weight, but will not ultimately be retained.
 ```{r subset}

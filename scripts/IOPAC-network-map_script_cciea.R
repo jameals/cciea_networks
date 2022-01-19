@@ -212,3 +212,32 @@ ggsave(here::here(pngdir_ports,'iopac-node_WA_rect.png'), WA_map, width = 6, hei
 ggsave(here::here(pngdir_ports,'iopac-node_OR_rect.png'), OR_map, width = 6, height = 6, dpi =600)
 ggsave(here::here(pngdir_ports,'iopac-node_NCA_rect.png'), NCA_map, width = 6, height = 6, dpi =600)
 ggsave(here::here(pngdir_ports,'iopac-node_SCA_rect.png'), SCA_map, width = 6, height = 6, dpi =600)
+
+#all network graphs
+png(here::here(pngdir_ports, paste0("All Fisheries Participation Networks 2020-2021, by IOPAC Port Group.png")),
+    res=200, height=1600,width=1600)  # ,height=1400,width=1600
+
+ggplot(data.frame(x = 1:10, y = 1:10), aes(x, y)) +
+  geom_point(size = 1, colour=NA) +
+  draw_image(img_nwc , x = 1, y = 9, scale = 2) +
+  draw_image(img_wc , x = 3, y = 9, scale = 2) +
+  draw_image(img_ps , x = 5, y = 9, scale = 2) +
+  draw_image(img_ast , x = 7, y = 9, scale = 2) +
+  draw_image(img_tl , x = 9, y = 9, scale = 2) +
+  draw_image(img_cr , x = 1, y = 7, scale = 2) +
+  draw_image(img_nwp , x = 3, y = 7, scale = 2) +
+  draw_image(img_brk , x = 5, y = 7, scale = 2) +
+  draw_image(img_cb , x = 7, y = 7, scale = 2) +
+  draw_image(img_cc , x = 9, y = 7, scale = 2) +
+  draw_image(img_eu , x = 1, y = 5, scale = 2) +
+  draw_image(img_fb , x = 3, y = 5, scale = 2) +
+  draw_image(img_bb , x = 5, y = 5, scale = 2) +
+  draw_image(img_sf , x = 7, y = 5, scale = 2) +
+  draw_image(img_mt , x = 9, y = 5, scale = 2) +
+  draw_image(img_mb , x = 1, y = 3, scale = 2) +
+  draw_image(img_sb, x = 3, y = 3, scale = 2) + 
+  draw_image(img_la , x = 5, y = 3, scale = 2) +
+  draw_image(img_sd , x = 7, y = 3, scale = 2) + 
+  theme_void()
+
+dev.off()

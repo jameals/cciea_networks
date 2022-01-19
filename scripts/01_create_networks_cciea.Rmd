@@ -201,6 +201,24 @@ node_names <- read_csv(here::here(processdir,myfile5),
 ```
 <br>
 
+### 01-18-2022 NOTE COME BACK HERE TO ADD IN COLUMN NEEDED TO DETERMINE PROP WA TIX WITH ACTUAL PORT OF LANDING
+
+Tabulate WA fish tix to report the percentage of fish tickets for which the port assigned is derived from the license database versus the actual landing port for each year in WA. There is a “isPortDerived” field in PacFIN database. If the value is False, the port is the actual port of landing. If the value is True, the port is derived from license database. most of WA port data were derived before 2018
+```{r}
+
+fishtix %>% filter(agid == 'W') %>%
+  group_by(year) %>%
+  summarise(
+    totaltix = length(unique(trip_id)),
+    num_derived_port = ,
+    percentage_derived_port = 100* (num_derived_port/totaltix),
+    num_actual_port = ,
+    percentage_actual_port = 100 * (num_actual_port/totaltix)
+  )
+
+```
+
+
 ## Make Participation Networks
 
 For each crab year and port group, this code will:

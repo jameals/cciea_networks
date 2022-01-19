@@ -953,9 +953,9 @@ pairplot_df$region <- factor(pairplot_df$region, levels=c('Oregon', 'Northern an
 pairplot_fig2 <- ggplot(pairplot_df, aes(x=mean_rev/10^4, y=mean_ns)) + 
   geom_point(aes(colour=region), size = 2) +
   #geom_smooth(aes(colour=region), method = "lm", se = FALSE, linetype="dashed", alpha = 0.2) +
-  geom_line (stat = "smooth", method = "lm", alpha=0.5, aes(colour=region), se = FALSE, linetype="dashed") +
-  geom_text_repel(aes(label=pcgroup, colour=region), show.legend = FALSE, nudge_x = 0.5) +
-  facet_grid(rows=vars(region)) + 
+  geom_line (stat = "smooth", method = "lm", alpha=0.75, aes(colour=region), se = FALSE, linetype="dashed") +
+  geom_text_repel(aes(label=pcgroup, colour=region), show.legend = FALSE, nudge_x = 0.5, nudge_y = 0.2, size=3, segment.colour = "grey", min.segment.length = 0.1) + #segment.colour = NA
+  facet_grid(rows=vars(region),labeller = label_wrap_gen(12)) + 
   scale_colour_manual(values=pal_sca) +
   ylim(c(0,1)) +
   xlim(c(0,max_rev/10^4)) +
@@ -963,7 +963,7 @@ pairplot_fig2 <- ggplot(pairplot_df, aes(x=mean_rev/10^4, y=mean_ns)) +
     x = "Revenue\n(10,000s of $)",
     y = "Node Strength"
     ) + 
-  theme_bw() +
+  theme_half_open() + panel_border() +
   theme(legend.position = 'none')
   #+ theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5),
   #                    axis.title.x=element_text(size=13),
@@ -975,14 +975,16 @@ pairplot_fig2 <- ggplot(pairplot_df, aes(x=mean_rev/10^4, y=mean_ns)) +
 #pairplot_fig2
 
 
-p_title3 <- ggdraw() + draw_label('Non-DTS Groundfish Node Strength in Fisheries\nParticipation Networks and Aggregate Revenue 2017-2021,\n by Region for IOPAC Port Groups', fontface='bold')
+p_title3 <- ggdraw() + draw_label('Non-DTS Groundfish\nNode Strength in Fisheries\nParticipation Networks and Aggregate\nRevenue 2017-2021, by Region\nfor IOPAC Port Groups', fontface='bold', size=12)
 
 plot_grid(p_title3, pairplot_fig2, ncol=1, rel_heights=c(0.1, 1))
 
-png(here::here(pngdir, paste0("Scatter Plot of Non-DTS Groundfish Node Strength in Fisheries\nParticipation Networks and Aggregate Revenue 2017-2021, by Region for IOPAC Port Groups.png")),
-    res=200,height=1400,width=1600)
+png(here::here(pngdir, paste0("Scatter Plot of Non-DTS Groundfish Node Strength in Fisheries Participation Networks and Aggregate Revenue 2017-2021, by Region for IOPAC Port Groups.png")),
+    res=200, height=900,width=700)  # ,height=1400,width=1600
 
-plot_grid(p_title3, pairplot_fig2, ncol=1, rel_heights=c(0.1, 1))
+plot_grid(p_title3 + theme(text = element_text(size=12)), 
+          pairplot_fig2 + theme(text = element_text(size=10),  axis.text.x = element_text(size=10), axis.text.y = element_text(size=10)), 
+          ncol=1, rel_heights=c(0.25, 1))
 
 dev.off()
 
