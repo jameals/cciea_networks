@@ -446,9 +446,9 @@ fig_prop
 <br>
 <br>
 
-Save plot as png, with filename: Proportion of IOPAC Port Groups with Betweenness and Importance Values >=0.25 for Species Groups in West Coast Fisheries Participation Networks.png
+Save plot as png, with filename: Proportion of IOPAC Port Groups with Betweenness and Importance Values gtoe 0.25 for Species Groups in West Coast Fisheries Participation Networks.png
 ```{r echo=FALSE}
-png(here::here(pngdir, paste0("Proportion of IOPAC Port Groups with Betweenness and Importance Values >=0.25 for Species Groups in West Coast Fisheries Participation Networks.png")),
+png(here::here(pngdir, paste0("Proportion of IOPAC Port Groups with Betweenness and Importance Values gtoe 0.25 for Species Groups in West Coast Fisheries Participation Networks.png")),
     res=200,height=1400,width=1700)
 fig_prop
 dev.off()
@@ -487,9 +487,9 @@ fig_prop_imp
 <br>
 <br>
 
-Save plot as png, with filename: Proportion of IOPAC Port Groups with Importance Values >=0.25 for Species Groups in West Coast Fisheries Participation Networks.png
+Save plot as png, with filename: Proportion of IOPAC Port Groups with Importance Values gtoe 0.25 for Species Groups in West Coast Fisheries Participation Networks.png
 ```{r echo=FALSE}
-png(here::here(pngdir, paste0("Proportion of IOPAC Port Groups with Importance Values >=0.25 for Species Groups in West Coast Fisheries Participation Networks.png")),
+png(here::here(pngdir, paste0("Proportion of IOPAC Port Groups with Importance Values gtoe 0.25 for Species Groups in West Coast Fisheries Participation Networks.png")),
     res=200,height=1400,width=1700)
 fig_prop_imp
 dev.off()
