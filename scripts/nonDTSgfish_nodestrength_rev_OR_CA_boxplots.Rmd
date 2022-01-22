@@ -80,6 +80,7 @@ filenames <- c("VesselLevelNodeStats_2004_2020_21pcgroups_totalrev5000_indivrev5
 port_filename <- 'iopac_conversion_table.csv'
 
 tix_filenames <- c(
+  'fish_tickets_crab2015_processed_for_networks.csv',
   'fish_tickets_crab2016_processed_for_networks.csv',
   'fish_tickets_crab2017_processed_for_networks.csv',
   'fish_tickets_crab2018_processed_for_networks.csv',
@@ -233,7 +234,7 @@ dat_long2$IOPAC <- factor(dat_long2$IOPAC, levels=nonDTSports_sorted)
 Make OR, NCA, SCA data frames and color palettes.
 ```{r echo=FALSE, fig.width=10}
 # filter and re-arrange data for plotting
-years <- seq(2016,2020,1)
+years <- seq(2015,2020,1)
 plotdat_or <- dat_long %>% filter(year %in% years & pcgroup %in% or_ports) %>% select(-dataset) %>% 
   bind_rows(dat_long2 %>% 
               select (-SPGRPN2) %>%
@@ -286,7 +287,7 @@ or_fig <- ggplot(plotdat_or %>% filter(metric == 'Node Strength' | metric == 'Im
   scale_fill_manual(values=pal_or) +
   #ylim(c(0,1)) +
   labs(title='Importance and Node Strength of Non-DTS Groundfish in Fisheries Participation Networks: Oregon',
-       subtitle = '2017-2021',
+       subtitle = '2016-2021',
        x = "Port Group",
        y = "Value",
        fill = 'Port Group'
@@ -311,7 +312,7 @@ or_fig2 <- ggplot(plotdat_or %>% filter(metric != 'Node Strength' & metric != 'I
   scale_colour_manual(values=pal_or) +
   #ylim(c(0,1)) +
   labs(title='Revenue and Landed Weight of Non-DTS Groundfish in Oregon',
-       subtitle = '2017-2021',
+       subtitle = '2016-2021',
        x = "Port Group",
        y = "Value",
        colour = 'Port Group'
@@ -342,7 +343,7 @@ nca_fig <- ggplot(plotdat_nca %>% filter(metric == 'Node Strength' | metric == '
   scale_fill_manual(values=pal_nca) +
   #ylim(c(0,1)) +
   labs(title='Importance and Node Strength of Non-DTS Groundfish in Fisheries Participation Networks: Northern and Central California',
-       subtitle = '2017-2021',
+       subtitle = '2016-2021',
        x = "Port Group",
        y = "Value",
        fill = 'Port Group'
@@ -367,7 +368,7 @@ nca_fig2 <- ggplot(plotdat_nca %>% filter(metric != 'Node Strength' & metric != 
   scale_colour_manual(values=pal_nca) +
   #ylim(c(0,1)) +
   labs(title='Revenue and Landed Weight of Non-DTS Groundfish in Northern and Central California',
-       subtitle = '2017-2021',
+       subtitle = '2016-2021',
        x = "Port Group",
        y = "Value",
        colour = 'Port Group'
@@ -398,7 +399,7 @@ sca_fig <- ggplot(plotdat_sca %>% filter(metric == 'Node Strength' | metric == '
   scale_fill_manual(values=pal_sca) +
   #ylim(c(0,1)) +
   labs(title='Importance and Node Strength of Non-DTS Groundfish in Fisheries Participation Networks: Southern California',
-       subtitle = '2017-2021',
+       subtitle = '2016-2021',
        x = "Port Group",
        y = "Value",
        fill = 'Port Group'
@@ -423,7 +424,7 @@ sca_fig2 <- ggplot(plotdat_sca %>% filter(metric != 'Node Strength' & metric != 
   scale_colour_manual(values=pal_sca) +
   #ylim(c(0,1)) +
   labs(title='Revenue and Landed Weight of Non-DTS Groundfish in Southern California',
-       subtitle = '2017-2021',
+       subtitle = '2016-2021',
        x = "Port Group",
        y = "Value",
        colour = 'Port Group'
@@ -453,32 +454,32 @@ or
 Revenue and Landed Weight of Non-DTS Groundfish in State 2017-2021.png
 
 ```{r echo=FALSE}
-png(here::here(pngdir, paste0("Oregon. Importance and Node Strength of Non-DTS Groundfish in Fisheries Participation Networks 2017-2021.png")),
+png(here::here(pngdir, paste0("Oregon. Importance and Node Strength of Non-DTS Groundfish in Fisheries Participation Networks 2016-2021.png")),
     res=200,height=800,width=1700)
 or_fig
 dev.off()
 
-png(here::here(pngdir, paste0("Revenue and Landed Weight of Non-DTS Groundfish in Oregon 2017-2021.png")),
+png(here::here(pngdir, paste0("Revenue and Landed Weight of Non-DTS Groundfish in Oregon 2016-2021.png")),
     res=200,height=800,width=1700)
 or_fig2
 dev.off()
 
-png(here::here(pngdir, paste0("Northern and Central CA. Importance and Node Strength of Non-DTS Groundfish in Fisheries Participation Networks 2017-2021.png")),
+png(here::here(pngdir, paste0("Northern and Central CA. Importance and Node Strength of Non-DTS Groundfish in Fisheries Participation Networks 2016-2021.png")),
     res=200,height=800,width=1700)
 nca_fig
 dev.off()
 
-png(here::here(pngdir, paste0("Revenue and Landed Weight of Non-DTS Groundfish in Northern and Central California 2017-2021.png")),
+png(here::here(pngdir, paste0("Revenue and Landed Weight of Non-DTS Groundfish in Northern and Central California 2016-2021.png")),
     res=200,height=800,width=1700)
 nca_fig2
 dev.off()
 
-png(here::here(pngdir, paste0("Southern CA. Importance and Node Strength of Non-DTS Groundfish in Fisheries Participation Networks 2017-2021.png")),
+png(here::here(pngdir, paste0("Southern CA. Importance and Node Strength of Non-DTS Groundfish in Fisheries Participation Networks 2016-2021.png")),
     res=200,height=800,width=1700)
 sca_fig
 dev.off()
 
-png(here::here(pngdir, paste0("Revenue and Landed Weight of Non-DTS Groundfish in Southern California 2017-2021.png")),
+png(here::here(pngdir, paste0("Revenue and Landed Weight of Non-DTS Groundfish in Southern California 2016-2021.png")),
     res=200,height=800,width=1700)
 sca_fig2
 dev.off()
@@ -486,7 +487,7 @@ dev.off()
 <br>
 
 
-Focus on node strength only, compile into a single figure. Save plot as png, with filename: Non-DTS Groundfish Node Strength in Fisheries Participation Networks 2017-2021, Oregon and California.png
+Focus on node strength only, compile into a single figure. Save plot as png, with filename: Non-DTS Groundfish Node Strength in Fisheries Participation Networks 2016-2021, Oregon and California.png
 
 ```{r echo=FALSE}
 
@@ -509,7 +510,7 @@ or_ns_fig <- ggplot(or_ns_df, aes(x=pcgroup, y=value, fill=pcgroup)) +
        x = "Port Group",
        y = "Node Strength",
        fill = 'Port Group'
-       ) + #title='Node Strength of Non-DTS\nGroundfish in Fisheries\nParticipation Networks: 2017-2021',
+       ) + #title='Node Strength of Non-DTS\nGroundfish in Fisheries\nParticipation Networks: 2016-2021',
   coord_flip() +
   theme_bw() +
   theme(legend.position = 'none')
@@ -574,11 +575,11 @@ sca_ns_fig <- ggplot(sca_ns_df, aes(x=pcgroup, y=value, fill=pcgroup)) +
 
 ns_fig <- plot_grid(plotlist=list(or_ns_fig, nca_ns_fig, sca_ns_fig), ncol=1, align = "v", axis = "l", labels = "AUTO", rel_heights=c(1,1,1,1,1,1))
 
-ns_fig_title <- ggdraw() + draw_label('Non-DTS Groundfish Node Strength in Fisheries Participation Networks\n2017-2021, Oregon and California IOPAC Port Groups', fontface='bold')
+ns_fig_title <- ggdraw() + draw_label('Non-DTS Groundfish Node Strength in Fisheries Participation Networks\n2016-2021, Oregon and California IOPAC Port Groups', fontface='bold')
 
 plot_grid(ns_fig_title, ns_fig, ncol=1, rel_heights=c(0.1, 1))
 
-png(here::here(pngdir, paste0("Non-DTS Groundfish Node Strength in Fisheries Participation Networks 2017-2021, Oregon and California.png")),
+png(here::here(pngdir, paste0("Non-DTS Groundfish Node Strength in Fisheries Participation Networks 2016-2021, Oregon and California.png")),
     res=200,height=1200,width=1700)
 
 plot_grid(ns_fig_title, ns_fig, ncol=1, rel_heights=c(0.1, 1))
@@ -589,7 +590,7 @@ dev.off()
 ```
 <br>
 
-Focus on revenue only. Compile into a single figure. Save plot as png, with filename: Non-DTS Groundfish Revenue by IOPAC Port Group 2017-2021, Oregon and California.png
+Focus on revenue only. Compile into a single figure. Save plot as png, with filename: Non-DTS Groundfish Revenue by IOPAC Port Group 2016-2021, Oregon and California.png
 
 ```{r echo=FALSE}
 
@@ -612,7 +613,7 @@ or_rev_fig <- ggplot(or_rev_df, aes(x=pcgroup, y=value/10^4, fill=pcgroup)) +
        x = "Port Group",
        y = "Revenue (10,000s of $)",
        fill = 'Port Group'
-       ) + #title='Revenue from Non-DTS\nGroundfish Fisheries:\n2017-2021',
+       ) + #title='Revenue from Non-DTS\nGroundfish Fisheries:\n2016-2021',
   coord_flip() +
   theme_bw() +
   theme(legend.position = 'none')
@@ -676,11 +677,11 @@ sca_rev_fig <- ggplot(sca_rev_df, aes(x=pcgroup, y=value/10^4, fill=pcgroup)) +
 
 p_rev <- plot_grid(plotlist=list(or_rev_fig, nca_rev_fig, sca_rev_fig), ncol=1, align = "v", axis = "l", labels = "AUTO", rel_heights=c(1,1,1,1,1,1))
 
-p_rev_title <- ggdraw() + draw_label('Non-DTS Groundfish Revenue 2017-2021, Oregon and California', fontface='bold')
+p_rev_title <- ggdraw() + draw_label('Non-DTS Groundfish Revenue 2016-2021, Oregon and California', fontface='bold')
 
 plot_grid(p_rev_title, p_rev, ncol=1, rel_heights=c(0.1, 1))
 
-png(here::here(pngdir, paste0("Non-DTS Groundfish Revenue by IOPAC Port Group 2017-2021, Oregon and California.png")),
+png(here::here(pngdir, paste0("Non-DTS Groundfish Revenue by IOPAC Port Group 2016-2021, Oregon and California.png")),
     res=200,height=1200,width=1700)
 
 plot_grid(p_rev_title, p_rev, ncol=1, rel_heights=c(0.1, 1))
@@ -692,7 +693,7 @@ dev.off()
 
 
 
-Focus on node strength and revenue only, compile into a single figure. Save plot as png, with filename: Non-DTS Groundfish Node Strength in Fisheries Participation Networks and Aggregate Revenue 2017-2021, Oregon and California.png
+Focus on node strength and revenue only, compile into a single figure. Save plot as png, with filename: Non-DTS Groundfish Node Strength in Fisheries Participation Networks and Aggregate Revenue 2016-2021, Oregon and California.png
 
 Side-by-side boxplots
 ```{r echo=FALSE}
@@ -716,7 +717,7 @@ or_ns_fig <- ggplot(or_ns_df, aes(x=pcgroup, y=value, fill=pcgroup)) +
        x = "Port Group",
        y = "Node Strength",
        fill = 'Port Group'
-       ) + #title='Node Strength of Non-DTS\nGroundfish in Fisheries\nParticipation Networks: 2017-2021',
+       ) + #title='Node Strength of Non-DTS\nGroundfish in Fisheries\nParticipation Networks: 2016-2021',
   coord_flip() +
   theme_bw() +
   theme(legend.position = 'none')
@@ -741,7 +742,7 @@ or_rev_fig <- ggplot(or_rev_df, aes(x=pcgroup, y=value/10^4, fill=pcgroup)) +
        x = "Port Group",
        y = "Revenue (10,000s of $)",
        fill = 'Port Group'
-       ) + #title='Revenue from Non-DTS\nGroundfish Fisheries:\n2017-2021',
+       ) + #title='Revenue from Non-DTS\nGroundfish Fisheries:\n2016-2021',
   coord_flip() +
   theme_bw() +
   theme(legend.position = 'none')
@@ -853,11 +854,11 @@ sca_rev_fig <- ggplot(sca_rev_df, aes(x=pcgroup, y=value/10^4, fill=pcgroup)) +
 
 p <- plot_grid(plotlist=list(or_ns_fig, or_rev_fig, nca_ns_fig, nca_rev_fig, sca_ns_fig, sca_rev_fig), ncol=2, align = "v", axis = "l", labels = "AUTO", rel_heights=c(1,1,1,1,1,1))
 
-p_title <- ggdraw() + draw_label('Non-DTS Groundfish Node Strength in Fisheries Participation Networks and\nAggregate Revenue 2017-2021, Oregon and California IOPAC Port Groups', fontface='bold')
+p_title <- ggdraw() + draw_label('Non-DTS Groundfish Node Strength in Fisheries Participation Networks and\nAggregate Revenue 2016-2021, Oregon and California IOPAC Port Groups', fontface='bold')
 
 plot_grid(p_title, p, ncol=1, rel_heights=c(0.1, 1))
 
-png(here::here(pngdir, paste0("Non-DTS Groundfish Node Strength in Fisheries Participation Networks and Aggregate Revenue 2017-2021, Oregon and California IOPAC Port Groups.png")),
+png(here::here(pngdir, paste0("Non-DTS Groundfish Node Strength in Fisheries Participation Networks and Aggregate Revenue 2016-2021, Oregon and California IOPAC Port Groups.png")),
     res=200,height=1200,width=1700)
 
 plot_grid(p_title, p, ncol=1, rel_heights=c(0.1, 1))
@@ -935,11 +936,11 @@ pairplot_fig <- ggplot(pairplot_df, aes(x=mean_rev/10^4, y=mean_ns)) +
 #pairplot_fig
 
 
-p_title2 <- ggdraw() + draw_label('Non-DTS Groundfish Node Strength in Fisheries\nParticipation Networks and Aggregate Revenue 2017-2021,\n Oregon and California IOPAC Port Groups', fontface='bold')
+p_title2 <- ggdraw() + draw_label('Non-DTS Groundfish Node Strength in Fisheries\nParticipation Networks and Aggregate Revenue 2016-2021,\n Oregon and California IOPAC Port Groups', fontface='bold')
 
 plot_grid(p_title2, pairplot_fig, ncol=1, rel_heights=c(0.1, 1))
 
-png(here::here(pngdir, paste0("Scatter Plot of Non-DTS Groundfish Node Strength in Fisheries Participation Networks and Aggregate Revenue 2017-2021, Oregon and California IOPAC Port Groups.png")),
+png(here::here(pngdir, paste0("Scatter Plot of Non-DTS Groundfish Node Strength in Fisheries Participation Networks and Aggregate Revenue 2016-2021, Oregon and California IOPAC Port Groups.png")),
     res=200,height=1200,width=1500)
 
 plot_grid(p_title2, pairplot_fig, ncol=1, rel_heights=c(0.1, 1))
@@ -950,15 +951,34 @@ dev.off()
 
 pairplot_df$region <- factor(pairplot_df$region, levels=c('Oregon', 'Northern and Central California','Southern California'))
 
+max_mean_rev_or <- plotdat_or %>% filter(metric == "Revenue") %>% group_by(pcgroup) %>% summarise(mean_rev = mean(value)) %>% summarise(max_mean_rev = max(mean_rev)) %>% pull()
+max_mean_rev_nca <- plotdat_nca %>% filter(metric == "Revenue") %>% group_by(pcgroup) %>% summarise(mean_rev = mean(value)) %>% summarise(max_mean_rev = max(mean_rev)) %>% pull()
+max_mean_rev_sca <- plotdat_sca %>% filter(metric == "Revenue") %>% group_by(pcgroup) %>% summarise(mean_rev = mean(value)) %>% summarise(max_mean_rev = max(mean_rev)) %>% pull()
+
+pairplot_df <- pairplot_df %>%
+  group_by(region) %>%
+  mutate(
+    xmax = case_when(
+      region == "Southern California" ~ max_mean_rev_sca/10^4,
+      region == "Northern and Central California" ~ max_mean_rev_nca/10^4,
+      TRUE ~ max_mean_rev_or/10^4
+    )
+  )
+
 pairplot_fig2 <- ggplot(pairplot_df, aes(x=mean_rev/10^4, y=mean_ns)) + 
   geom_point(aes(colour=region), size = 2) +
   #geom_smooth(aes(colour=region), method = "lm", se = FALSE, linetype="dashed", alpha = 0.2) +
   geom_line (stat = "smooth", method = "lm", alpha=0.75, aes(colour=region), se = FALSE, linetype="dashed") +
-  geom_text_repel(aes(label=pcgroup, colour=region), show.legend = FALSE, nudge_x = 0.5, nudge_y = 0.2, size=3, segment.colour = "grey", min.segment.length = 0.1) + #segment.colour = NA
-  facet_grid(rows=vars(region),labeller = label_wrap_gen(12)) + 
+  geom_text_repel(aes(label=pcgroup, colour=region), show.legend = FALSE, nudge_x = 0.3, nudge_y = 0.1, size=3, segment.colour = "grey", min.segment.length = 0.1) + #segment.colour = NA
+  facet_grid(
+    cols=vars(region),
+    scales = "free_x",
+    labeller = label_wrap_gen(12)
+    ) + 
+  geom_blank(aes(x = xmax)) +
   scale_colour_manual(values=pal_sca) +
   ylim(c(0,1)) +
-  xlim(c(0,max_rev/10^4)) +
+  #xlim(c(0,max_rev/10^4)) +
   labs(
     x = "Revenue\n(10,000s of $)",
     y = "Node Strength"
@@ -975,12 +995,12 @@ pairplot_fig2 <- ggplot(pairplot_df, aes(x=mean_rev/10^4, y=mean_ns)) +
 #pairplot_fig2
 
 
-p_title3 <- ggdraw() + draw_label('Non-DTS Groundfish\nNode Strength in Fisheries\nParticipation Networks and Aggregate\nRevenue 2017-2021, by Region\nfor IOPAC Port Groups', fontface='bold', size=12)
+p_title3 <- ggdraw() + draw_label('Non-DTS Groundfish Node Strength in\nFisheries Participation Networks and Aggregate Revenue\n2016-2021, by Region for IOPAC Port Groups', fontface='bold', size=12)
 
 plot_grid(p_title3, pairplot_fig2, ncol=1, rel_heights=c(0.1, 1))
 
-png(here::here(pngdir, paste0("Scatter Plot of Non-DTS Groundfish Node Strength in Fisheries Participation Networks and Aggregate Revenue 2017-2021, by Region for IOPAC Port Groups.png")),
-    res=200, height=900,width=700)  # ,height=1400,width=1600
+png(here::here(pngdir, paste0("Scatter Plot of Non-DTS Groundfish Node Strength in Fisheries Participation Networks and Aggregate Revenue 2016-2021, by Region for IOPAC Port Groups.png")),
+    res=200, height=800,width=1000)  # ,height=1400,width=1600
 
 plot_grid(p_title3 + theme(text = element_text(size=12)), 
           pairplot_fig2 + theme(text = element_text(size=10),  axis.text.x = element_text(size=10), axis.text.y = element_text(size=10)), 

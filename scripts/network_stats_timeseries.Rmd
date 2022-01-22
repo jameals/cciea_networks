@@ -352,6 +352,8 @@ dev.off()
 
 ... at all ports from 2004-2020. Edge density was derived from vessel-level networks summarized at the port level. Nodes (fisheries) are included in each network with a minimum total fisheries revenue cutoff for vessels of `$5,000` and a minimum revenue cutoff for individual fisheries of `$500`.
 
+(Drop Other Coastal Washington & Unknown Ports & Columbia River)
+
 ```{r}
 plot_metric="Edge Density"
 metric_label="Edge Density"
@@ -365,14 +367,15 @@ allports_sorted <- dat2 %>% left_join(iopac_lookup %>% select(IOPAC, PACFIN_LAT)
 dat2$`Port Group` <- factor(dat2$`Port Group`, levels=allports_sorted)
 
 # main metric plot
-fig_ed <- ggplot(dat2, aes(x=Year, y=`Edge Density`, colour=`Port Group`)) + 
+fig_ed <- ggplot(dat2 %>% filter( `Port Group` != "Other Coastal Washington" & `Port Group` != "Unknown Ports" & `Port Group` != "Columbia River"), 
+                 aes(x=Year+1, y=`Edge Density`, colour=`Port Group`)) + 
   geom_point(size=2) + geom_line() +
   facet_wrap(vars(`Port Group`),labeller = label_wrap_gen(16)) +
   scale_colour_viridis(discrete = TRUE) +
-  scale_x_continuous(breaks=seq(min(dat2$Year), max(dat2$Year), by=2), labels=seq(min(dat2$Year), max(dat2$Year), by=2)) +
+  scale_x_continuous(breaks=seq(min(dat2$Year)+1, max(dat2$Year)+1, by=2), labels=seq(min(dat2$Year)+1, max(dat2$Year)+1, by=2)) +
   ylim(c(0,1)) +
   labs(title='Edge Density in Fisheries Participation Networks',
-       subtitle = '2004-2021',
+       subtitle = '2005-2021',
        x = "Year",
        y = metric_label
        ) +
@@ -392,7 +395,7 @@ fig_ed
 
 Save plot as a png, with filename: Edge Density in Fisheries Participation Networks 2004-2021
 ```{r echo=FALSE}
-png(here::here(pngdir, "Edge Density in Fisheries Participation Networks 2004-2021.png"),
+png(here::here(pngdir, "Edge Density in Fisheries Participation Networks 2005-2021.png"),
     res=200,height=1500,width=1700)
 fig_ed
 dev.off()
