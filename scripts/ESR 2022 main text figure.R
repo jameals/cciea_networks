@@ -1,4 +1,4 @@
-# Combine Coos Bay 2015 v 2021 with node strength v revenue for non-DTS groundfish
+# Combine Coos Bay 2013 v 2021 with node strength v revenue for non-DTS groundfish
 library(tidyverse)
 library(ggmap)
 library(maps)
