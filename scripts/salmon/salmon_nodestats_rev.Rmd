@@ -296,13 +296,13 @@ plotdat_wide[6,7] <- 0
 <!-- ``` -->
 
 Make  plot
-```{r make_fig, echo=FALSE, fig.width=10}
+```{r make_fig, echo=FALSE, fig.width=10, fig.height=8}
 
 # main network metric plot
 fig <- ggplot(plotdat_wide, aes(x=-(`Edge Density`), y=Revenue/10^6)) + 
   #geom_point(aes(fill = pcgroup, colour = pcgroup)) + 
   geom_point(aes(size = (Importance))) +
-  geom_text_repel(aes(label=pcgroup),
+  geom_text_repel(aes(label=pcgroup, size = 2*(Importance)),
                   force = 0.5,
                   #nudge_x = 0.1,
                   direction = "y",
@@ -335,6 +335,7 @@ fig
 
 We define a port group vulnerable to declines in the salmon fishery as one that has high economic dependence on the salmon fishery, a fisheries participation network with relatively low connectivity among fisheries, and a salmon node within that fisheries participation network that is strongly connected to other fisheries. In this plot, larger points in the upper right quadrant indicate IOPAC port groups that are most vulnerable to declines in the salmon fishery (e.g., Columbia River, Fort Bragg, Monterey), while smaller points nearer to the origin indicate IOPAC port groups that are least vulnerable (e.g., Brookings, Coos Bay). This framework was inspired by Figure 4 in: Moore, S.K., Cline, M.R., Blair, K., Klinger, T., Varney, A. & Norman, K. (2019). An index of fisheries closures due to harmful algal blooms and a framework for identifying vulnerable fishing communities on the U.S. West Coast. Marine Policy, 103543.
 
+In general, we see that the role of salmon fishing (based on Importance values) tends to be greater in port groups where salmon are more valuable economically (based on greater aggregate revenue) and where there is less flexibility and resilience (based on Edge Densities).
 
 The x-axis, Opposite Edge Density, is a statistic derived from the fisheries participation network for each IOPAC port group. Edge Density is calculated as the ratio of the number of edges present to the total possible edges in the network, and represents the extent to which nodes within a network are connected by vessels that participate in multiple fisheries. Higher Edge Densities correspond to greater flexibility in fishery participation among all vessels represented in the network. Note that Edge Density scales with network size (it is easier to achieve a high density in a low complexity network), so comparisons across networks of different sizes should be interpreted carefully. With that caveat in mind, declines in Edge Density imply a simplification of network structure, which can in turn reduce resilience to environmental or regulatory shocks (e.g., Fisher et al. 2021).  Here we have multiplied Edge Density by negative one so that values farther to the right reflect simpler, less well-connected fisheries participation networks. 
 
@@ -354,7 +355,7 @@ Grey lines in this plot are for reference only, and indicate median values of th
 
 ```{r echo=FALSE, include=FALSE, }
 png(here::here(pngdir, paste0("Salmon Revenue and Importance versus Network Edge Density from IOPAC Fisheries Participation Networks 2020-2021.png")),
-    res=200,height=800,width=1700)
+    res=200,height=1200,width=1400)
 fig
 dev.off()
 
