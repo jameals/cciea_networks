@@ -1,0 +1,1127 @@
+---
+title: "Compare Salmon Network Stats Across Ports"
+author: "J. Samhouri"
+date: "Written Sep 14, 2022. Last Run `r Sys.Date()`"
+output:
+  html_document:
+    df_print: paged
+    toc: yes
+    toc_depth: '3'
+  pdf_document:
+    highlight: haddock
+    number_sections: yes
+    toc: yes
+    toc_depth: '3'
+geometry: margin=1in
+subtitle: Preparation for network analysis for CCIEA SSC-ES meeting September 2022, ESR 2023
+fontsize: 11pt
+---
+
+# Description
+
+This document graphs network metrics for salmon alongside revenue by port groups.
+
+# Setup
+
+<br>
+```{r "setup", include=FALSE}
+if(!require("here")) {install.packages("here")}
+library(here)
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = here::here())
+
+## start time for full script
+script_start_time <- Sys.time()
+```
+<br>
+
+This script requires the following packages. 
+```{r packages, include=FALSE, message=FALSE, warning=FALSE}
+if(!require("tidyverse")) {install.packages("tidyverse")}
+if(!require("foreign")) {install.packages("foreign")}
+if(!require("lubridate")) {install.packages("lubridate")}
+if(!require("facetscales")) {devtools::install_github("zeehio/facetscales"); library(facetscales)}
+if(!require("ggplot2")) {install.packages("ggplot2")}
+if(!require("grid")) {install.packages("grid")}
+if(!require("gridExtra")) {install.packages("gridExtra")}
+if(!require("ggpubr")) {install.packages("ggpubr")}
+if(!require("cowplot")) {install.packages("cowplot")}
+if(!require("ggthemes")) {install.packages("ggthemes")}
+if(!require("ggimage")) {install.packages("ggimage")}
+if(!require("ggrepel")) {install.packages("ggrepel")}
+if(!require("PNWColors")) {devtools::install_github("jakelawler/PNWColors"); library(PNWColors)}
+```
+<br>
+
+Select your directories.
+```{r, include=FALSE}
+## directory with network statistics 
+indir <- 'results/statistics'
+
+## directory with port group lookup key
+indir2 <- 'data/input'
+
+## directory with summarized fish ticket information
+indir3 <- '/Users/jameal.samhouri/Documents/CCIEA Networks/processed/'
+
+## directory to save figures
+pngdir <- 'results/figures'
+
+# directory with network graphs
+pngdir_ports = '/Users/jameal.samhouri/Dropbox/CCIEA/cciea_networks_git/data/networks/participation_vessel_ports/plots/comparable/2020 only/.'
+```
+<br>
+
+What are the names of the `.csv` files with the network statistics that you want to compare? Would not suggest listing more than 4. Files should all be in the input directory (`indir`) specified above.
+```{r}
+filenames <- c("VesselLevelNodeStats_2004_2020_21pcgroups_totalrev5000_indivrev500_connectivity_rmCrab_10pContribution.csv") 
+
+networkstats_filename <- "VesselLevelNetworkStats_2004_2020_21pcgroups_totalrev5000_indivrev500_connectivity_rmCrab_10pContribution.csv"
+
+port_filename <- 'iopac_conversion_table.csv'
+
+tix_filenames <- c(
+  'fish_tickets_crab2004_processed_for_networks.csv',
+  'fish_tickets_crab2005_processed_for_networks.csv',
+  'fish_tickets_crab2007_processed_for_networks.csv',
+  'fish_tickets_crab2008_processed_for_networks.csv',
+  'fish_tickets_crab2009_processed_for_networks.csv',
+  'fish_tickets_crab2010_processed_for_networks.csv',
+  'fish_tickets_crab2011_processed_for_networks.csv',
+  'fish_tickets_crab2012_processed_for_networks.csv',
+  'fish_tickets_crab2013_processed_for_networks.csv',
+  'fish_tickets_crab2014_processed_for_networks.csv',
+  'fish_tickets_crab2015_processed_for_networks.csv',
+  'fish_tickets_crab2016_processed_for_networks.csv',
+  'fish_tickets_crab2017_processed_for_networks.csv',
+  'fish_tickets_crab2018_processed_for_networks.csv',
+  'fish_tickets_crab2019_processed_for_networks.csv',
+  'fish_tickets_crab2020_processed_for_networks.csv'
+  )
+
+```
+<br>
+
+Provide descriptive names to differentiate the datasets drawn from the files listed above. 
+```{r, include=FALSE}
+dataset_names <- c("NodeStats")
+dataset_names2 <- c("Network_Stats")
+
+#"NetworkStats")
+```
+<br>
+
+Specify which network metrics and fish tix info to retain from the full data set.
+```{r}
+node_metrics <- c('node_strength','eigen')
+node_metrics_scaled <- c('node_strength_scaled','node_strength_ltmean','eigen_scaled', 'eigen_ltmean')
+
+network_metrics <- c('ed') # ,'ed_weighted'
+network_metrics_scaled <- c('ed_scaled','ed_ltmean')
+
+landings_metrics <- c('adjrev', 'pounds')
+landings_metrics_scaled <- c('adjrev_scaled','adjrev_ltmean', 'pounds_scaled','pounds_ltmean')
+
+```
+<br>
+
+Specify which fisheries to retain from the full data set.
+```{r}
+myfisheries <- c('Salmon')
+my_spgroup <- c(30)
+```
+<br>
+
+Specify IOPAC port groups to retain from the full data set, and read them in. Focus on all except 'Unknown Ports'
+```{r, include=FALSE}
+
+# 01-06-22: note jameal updated OSD, SD, and SDA ports to have the same lat long as OCN. Amanda P has made the same fix. Also reassigned MCR to the Eureka IOPAC port group,  Amanda P agreed with this change
+iopac_lookup <- read_csv(here::here(indir2, port_filename))
+
+all_iopac <- iopac_lookup %>% select(IOPAC) %>% distinct() %>% pull() 
+
+all_iopac <- all_iopac[-which(all_iopac == "Unknown Ports")]
+
+
+```
+<br>
+
+
+
+# Read in Data
+
+
+Network metrics from different datasets. 
+```{r}
+for(i in seq(1,length(filenames))){
+  tmpdat <- read.csv(here::here(indir, filenames[i])) %>%
+    dplyr::select(pcgroup, year, metier.cm, all_of(node_metrics)) %>%
+    filter(pcgroup %in% all_iopac) %>%
+    filter(metier.cm %in% myfisheries) %>%
+    mutate(dataset=dataset_names[i])
+  if(i==1){
+    dat <- tmpdat
+  } else{ dat <- bind_rows(dat,tmpdat)}
+}
+
+dat <- dat %>% distinct() # remove duplicated WA Coast entries
+glimpse(dat)
+
+
+
+for(i in seq(1,length(networkstats_filename))){
+  tmpdat2 <- read.csv(here::here(indir, networkstats_filename[i])) %>%
+    dplyr::select(pcgroup, y, all_of(network_metrics)) %>%
+    #filter(pcgroup %in% myports) %>%
+    #filter(metier.cm %in% myfisheries) %>%
+    mutate(dataset=dataset_names2[i])
+  if(i==1){
+    dat2 <- tmpdat2
+  } else{ dat2 <- bind_rows(dat2,tmpdat2)}
+}
+
+dat2 <- dat2 %>% distinct() # remove duplicated WA Coast entries
+glimpse(dat2)
+
+```
+<br>
+
+Revenue and landings from different datasets. 
+```{r}
+for(i in seq(1,length(tix_filenames))){
+  tmpdat3 <- read.csv(paste0(indir3, tix_filenames[i])) %>%
+    #dplyr::select(pcgroup, year, metier.cm, all_of(node_metrics)) %>%
+    filter(IOPAC %in% all_iopac) %>%
+    filter(SPGRPN2 %in% my_spgroup) %>%
+    group_by(crab_year, IOPAC, SPGRPN2) %>%
+    summarise(
+      adjrev = sum(adj_revenue, na.rm=TRUE), # may want to remove na.rm
+      pounds = sum(pounds, na.rm=TRUE), # may want to remove na.rm
+      num_vessels = length(unique(drvid)),
+      .groups = "drop"
+    ) %>% 
+    mutate(
+      metier.cm = "Salmon"
+    )
+    #mutate(dataset=dataset_names[i])
+  if(i==1){
+    dat3 <- tmpdat3
+  } else{ dat3 <- bind_rows(dat3,tmpdat3)}
+}
+
+glimpse(dat3)
+
+```
+<br>
+
+Check to make sure that all of the datasets were read in. 
+```{r echo=FALSE, include=FALSE}
+with(dat,table(dataset,pcgroup))
+with(dat2, table(pcgroup))
+with(dat3, table(IOPAC))
+```
+<br>
+
+Convert metrics into anomalies from long-term means. Use scale() to standardize metrics. Standardization should be relative to values observed for each port 
+```{r scale_metrics}
+
+#Scale() does not alter the distribution shape
+# ggplot(dat) + geom_histogram(aes(node_strength)) + theme_classic()
+# ggplot(dat) + geom_histogram(aes(scale(node_strength))) + theme_classic()
+
+dat <- dat %>%
+  group_by(pcgroup) %>%
+  mutate(
+    node_strength_scaled = as.numeric(scale(node_strength)),
+    node_strength_ltmean = attr(scale(node_strength),"scaled:center"),
+    eigen_scaled = as.numeric(scale(eigen)),
+    eigen_ltmean = attr(scale(eigen),"scaled:center")
+  ) # note because we use scale() mutated varables return as matrices
+
+dat2 <- dat2 %>%
+  group_by(pcgroup) %>%
+  mutate(
+    ed_scaled = as.numeric(scale(ed)),
+    ed_ltmean = attr(scale(ed),"scaled:center")
+  )
+
+dat3 <- dat3 %>%
+  group_by(IOPAC) %>%
+  mutate(
+    adjrev_scaled = as.numeric(scale(adjrev)),
+    adjrev_ltmean = attr(scale(adjrev),"scaled:center"),
+    pounds_scaled = as.numeric(scale(pounds)),
+    pounds_ltmean = attr(scale(pounds),"scaled:center")
+  )
+
+```
+
+Pivot longer to graph multiple network metrics or summary stats at once.
+
+```{r, include=FALSE}
+dat_long <- dat %>%
+  pivot_longer(cols=c(all_of(node_metrics),all_of(node_metrics_scaled)), names_to = "metric", values_to = "value")
+glimpse(dat_long)
+
+dat_long2 <- dat2 %>%
+  pivot_longer(cols=c(all_of(network_metrics),all_of(network_metrics_scaled)), names_to = "metric", values_to = "value")
+glimpse(dat_long2)
+
+dat_long3 <- dat3 %>%
+  pivot_longer(cols=c(all_of(landings_metrics),all_of(landings_metrics_scaled)), names_to = "metric", values_to = "value")
+glimpse(dat_long3)
+
+```
+<br>
+
+
+Clean up metric names.
+```{r, include=FALSE}
+dat_long$metric <- recode(dat_long$metric, 
+                          node_strength = "Node Strength",
+                          node_strength_scaled = "Scaled Node Strength",
+                          node_strength_ltmean = "Long-term Mean Node Strength",
+                          eigen = "Importance",
+                          eigen_scaled = "Scaled Importance",
+                          eigen_ltmean = "Long-term Mean Importance")
+#dat_long$metric <- factor(dat_long$metric, levels=c("Size", "Edge Density","Mean Degree", "Central.", "Central. (UnW)", "Mod.", "Mod. (UnW)"))
+
+dat_long2$metric <- recode(dat_long2$metric, 
+                          ed = "Edge Density",
+                          ed_scaled = "Scaled Edge Density",
+                          ed_ltmean = "Long-term Mean Edge Density")
+
+ports_sorted <- dat_long %>% left_join(iopac_lookup %>% select(IOPAC, PACFIN_LAT), by = c('pcgroup' = 'IOPAC')) %>% select(pcgroup, PACFIN_LAT) %>% group_by(pcgroup) %>% summarise(lat = mean(PACFIN_LAT)) %>% arrange(lat) %>% select(pcgroup) %>% pull() # use arrange(-lat) if coord_flip() is NOT used
+
+dat_long$pcgroup <- factor(dat_long$pcgroup, levels=ports_sorted)
+dat_long2$pcgroup <- factor(dat_long2$pcgroup, levels=ports_sorted)
+
+dat_long3$metric <- recode(dat_long3$metric, 
+                          adjrev = "Revenue",
+                          adjrev_scaled = "Scaled Revenue",
+                          adjrev_ltmean = "Long-term Mean Revenue",
+                          pounds = "Landed Weight",
+                          pounds_scaled = "Scaled Landed Weight",
+                          pounds_ltmean = "Long-term Mean Landed Weight")
+
+dat_long3$IOPAC <- factor(dat_long3$IOPAC, levels=ports_sorted)
+
+```
+<br>
+
+Make wide data frame for plotting and/or analysis.
+
+Note that if there is only one node in a network, the Edge Density value is NA So we have arbitrarily set Edge Density to zero in the one port where this issue occurs (Columbia River).
+```{r make_combined_df, include=FALSE, echo=FALSE}
+# filter and re-arrange data for plotting
+years <- max(dat_long$year) #as of 01-19-2023, max yr is 2020, the 2020-2021 fishing year # seq(2015,2020,1)
+plotdat <- dat_long %>% filter(year %in% years & pcgroup %in% all_iopac) %>% select(-dataset) %>% 
+  bind_rows(dat_long3 %>% 
+              select (-SPGRPN2) %>%
+              rename(
+                year = crab_year,
+                pcgroup = IOPAC
+              ) %>%
+              filter(year %in% years & pcgroup %in% all_iopac) %>%
+              select(pcgroup, year, metier.cm, metric, value)
+            ) %>% 
+  bind_rows(dat_long2 %>%
+              filter(y %in% years & pcgroup %in% all_iopac) %>%
+              mutate(metier.cm = 'NA') %>%
+              rename(year = y) %>%
+              select(pcgroup, year, metier.cm, metric, value)
+  )
+
+plotdat_wide <- plotdat %>%
+  select(-metier.cm) %>%
+  pivot_wider(names_from = metric, values_from = value)
+glimpse(plotdat_wide)
+
+# assign edge density, scaled, edge density, scaled importance for Columbia River to zero. 
+#plotdat_wide[6,7] <- 0
+plotdat_wide <- plotdat_wide %>%
+  #filter(pcgroup == 'Columbia River') %>%
+  mutate(
+    `Edge Density` = replace(`Edge Density`, is.na(`Edge Density`) == TRUE, 0),
+`Scaled Edge Density` = replace(`Scaled Edge Density`, is.na(`Scaled Edge Density`) == TRUE, 0),
+`Scaled Importance` = replace(`Scaled Importance`, is.na(`Scaled Importance`) == TRUE, 0)
+    )
+
+
+```
+
+
+# Graph Plot of Salmon Dependence Against Fishery Participation Network Edge Density
+
+... at IOPAC ports for 2020-2021 fishing year. Network metrics (Edge Density, Importance, Node Strength) were derived from vessel-level networks summarized at the port level. Nodes (fisheries) are included in each network with a minimum total fisheries revenue cutoff for vessels of `$5,000` and a minimum revenue cutoff for individual fisheries of `$500`.
+
+### Check for correlated variables
+
+Consider whether revenue and network metrics are correlated with one another.
+
+```{r correlations}
+
+ggplot(plotdat_wide) +
+  geom_point(aes(x=`Scaled Node Strength`, y=`Scaled Revenue`)) +
+  theme_classic2()
+
+vars.corrs <- plotdat_wide %>% ungroup() %>%
+  dplyr::select(-(1:2)) %>% 
+  cor(use="complete.obs") %>% 
+  as_tibble(rownames="var1") %>% 
+  pivot_longer(-var1,names_to = "var2",values_to = "corr")
+
+vars.corrs %>% filter(corr !=1) %>% distinct(corr,.keep_all = T) %>% arrange(desc(corr)) %>% knitr::kable() #slice(1:15) %>% 
+
+vars.corrs %>% 
+  ggplot(aes(var1,var2,fill=corr))+
+  geom_tile()+
+  coord_equal()+
+  scale_fill_gradient2()+
+  labs(x="",y="",title="Variable Pearson Correlation Matrix",fill="")+
+  theme(axis.text.x = element_text(angle=90,vjust=0.5,hjust=1))
+```
+
+Long-term mean edge density and edge density are not highly correlated with scaled revenue, scaled importance, or scaled node strength (rho <= 0.3).
+
+Scaled revenue and scaled importance, and scaled revenue and scaled node strength, are highly correlated (rho >0.7).
+
+Therefore, we should simplify the plot below and focus on a 2D figure. Because revenue is more intuitive than the network metrics Importance and Node Strength, we drop them.
+
+## Scaled plot
+
+We define a port group that is especially vulnerable to declines in the salmon fishery in 2021-2022, relative to the period 2004-2021, as one that has:
+- salmon revenue in 2020-2021 that is higher than its long-term average, indicating relatively high economic dependence on the salmon fishery, 
+- a low long-term average resilience (or adaptive capacity) index value (where lower resilience corresponds to lower than average connectivity among fisheries based on fisheries participation networks for each port group). 
+This approach is consistent with definitions of social vulnerability in the literature (e.g., Thiault et al. 2019). 
+
+
+```{r make_scaled_fig, echo=FALSE, fig.width=10, fig.height=8}
+
+# main network metric plot
+fig_scaled <- ggplot(plotdat_wide, aes(x=(`Long-term Mean Edge Density`), y=`Scaled Revenue`)) + 
+  geom_point() + #aes(fill = pcgroup, colour = pcgroup)
+  #geom_point(aes(size = (`Long-term Mean Importance`))) +
+  geom_text_repel(aes(label=pcgroup), #, size = 2*`Scaled Revenue` #, size = 2*(`Long-term Mean Importance`)
+                  force = 0.5,
+                  #nudge_x = 0.1,
+                  direction = "y",
+                  hjust = 1,
+                  segment.size = 0.2,
+                  max.overlaps = 15) +
+  geom_hline(yintercept=0, alpha = 0.5) + 
+  geom_vline(xintercept=median(plotdat_wide$`Long-term Mean Edge Density`), colour='grey', alpha = 0.5) + 
+  xlim(0,1) +
+  labs(subtitle = '2020-2021',
+       x = "Low                                  Resilience Index                                              High",
+       y = "Salmon Revenue Anomaly"#,
+       #size = 'Long-term Mean\nImportance of Salmon\nNode in Network'
+       ) +
+  #coord_flip() +
+  theme_classic() #+
+  #theme(legend.position = 'none')
+  #+ theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5),
+  #                    axis.title.x=element_text(size=13),
+  #                    axis.title.y=element_text(size=13),
+  #                    strip.text=element_text(size=13),
+  #                    legend.title=element_text(size=13),legend.text=element_text(size=13),
+  #                    panel.grid.major=element_blank(),
+  #                    panel.grid.minor=element_blank())
+fig_scaled
+
+
+```
+<br>
+<br>
+<br>
+
+In the plot above, points in the upper left quadrant indicate IOPAC port groups that would be most vulnerable to declines in the salmon fishery following the 2020-2021 fishing season (e.g., Bodega Bay, Monterey), while points in the lower right quadrant indicate IOPAC port groups that would be least vulnerable (e.g., Brookings, Santa Barbara). Port groups with higher economic dependence on salmon and higher resilience (points in the top right quadrant such as Fort Bragg and Columbia River) have greater potential for adaptation, while those with lower  economic dependence on salmon and lower adaptive capacity  (points in the lower left quadrant such as Puget Sound and the North WA Coast) have high latent risk. 
+
+In general, we see that for most port groups in 2020-2021 economic dependence on salmon was not very different from the long-term averages (most points on the y-axis are within +/- 1 SD). 
+
+The x-axis, a resilience index based on Edge Density, is a statistic derived from the fisheries participation network for each IOPAC port group. Edge Density is calculated as the ratio of the number of edges present to the total possible edges in the network, and represents the extent to which nodes within a network are connected by vessels that participate in multiple fisheries. Higher Edge Densities correspond to greater flexibility in fishery participation among all vessels represented in the network. Note that Edge Density scales with network size (it is easier to achieve a high density in a low complexity network), so comparisons across networks of different sizes should be interpreted carefully. With that caveat in mind, declines in Edge Density imply a simplification of network structure, which can in turn reduce resilience to environmental or regulatory shocks because of diminished flexibility to participate in other fisheries in the same port group (e.g., Fisher et al. 2021). Here we have calculated the long-term average Edge Density from 2004-2021 for each port group. 
+
+The y-axis, Salmon Revenue, reflects the aggregate ex-vessel value of salmon landed in each IOPAC port group. Here we have standardized Salmon Revenue relative to each port group's long-term mean value to accentuate differences in the 2020-2021 season. We note that this Salmon Revenue Anomaly is positively correlated with statistics from fisheries participation networks that describe how well the salmon fishery is connected to other fisheries in the network.
+
+Grey lines on the x- and y-axes in this plot are for reference only. On the y-axis, this line corresponds to no difference from the long-term mean revenue for each port group. On the x-axis, this line corresponds to the median long-term resilience index across port groups.
+
+
+This framework was inspired by Figure 4 in: Moore, S.K., Cline, M.R., Blair, K., Klinger, T., Varney, A. & Norman, K. (2019). An index of fisheries closures due to harmful algal blooms and a framework for identifying vulnerable fishing communities on the U.S. West Coast. Marine Policy, 103543. It is congruent with the social vulnerability framework used in Figure 2 (right panel) of Thiault, L., S. Gelcich, N. Marshall, P. Marshall, F. Chlous, and J. Claudet. 2020. Operationalizing vulnerability for social–ecological integration in conservation and natural resource management. Conservation Letters 13:e12677.
+https://conbio.onlinelibrary.wiley.com/doi/abs/10.1111/conl.12677
+
+
+
+<!-- ## Unscaled plot -->
+
+<!-- Make unscaled plot -->
+<!-- ```{r make_unscaled_fig, echo=FALSE, fig.width=10, fig.height=8} -->
+
+<!-- # main network metric plot -->
+<!-- fig <- ggplot(plotdat_wide, aes(x=-(`Edge Density`), y=Revenue/10^6)) +  -->
+<!--   #geom_point(aes(fill = pcgroup, colour = pcgroup)) +  -->
+<!--   geom_point(aes(size = (Importance))) + -->
+<!--   geom_text_repel(aes(label=pcgroup, size = 2*(Importance)), -->
+<!--                   force = 0.5, -->
+<!--                   #nudge_x = 0.1, -->
+<!--                   direction = "y", -->
+<!--                   hjust = 1, -->
+<!--                   segment.size = 0.2, -->
+<!--                   max.overlaps = 15) + -->
+<!--   geom_hline(yintercept=median(plotdat_wide$Revenue/10^6), colour='grey', alpha = 0.5) +  -->
+<!--   geom_vline(xintercept=median(-plotdat_wide$`Edge Density`), colour='grey', alpha = 0.5) +  -->
+<!--   labs(subtitle = '2020-2021', -->
+<!--        x = "Opposite Edge Density\nDeclining Resilience of Fisheries Participation Network --->", -->
+<!--        y = "Salmon Revenue (Millions of $)\nIncreasing Economic Dependence --->", -->
+<!--        size = 'Importance of Salmon\nNode in Network' -->
+<!--        ) + -->
+<!--   #coord_flip() + -->
+<!--   theme_classic() #+ -->
+<!--   #theme(legend.position = 'none') -->
+<!--   #+ theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5), -->
+<!--   #                    axis.title.x=element_text(size=13), -->
+<!--   #                    axis.title.y=element_text(size=13), -->
+<!--   #                    strip.text=element_text(size=13), -->
+<!--   #                    legend.title=element_text(size=13),legend.text=element_text(size=13), -->
+<!--   #                    panel.grid.major=element_blank(), -->
+<!--   #                    panel.grid.minor=element_blank()) -->
+<!-- fig -->
+
+
+<!-- ``` -->
+<!-- <br> -->
+<!-- <br> -->
+<!-- <br> -->
+
+<!-- We define a port group vulnerable to declines in the salmon fishery as one that has high economic dependence on the salmon fishery, a fisheries participation network with relatively low connectivity among fisheries, and a salmon node within that fisheries participation network that is strongly connected to other fisheries. In this plot, larger points in the upper right quadrant indicate IOPAC port groups that are most vulnerable to declines in the salmon fishery (e.g., Columbia River, Fort Bragg, Monterey), while smaller points nearer to the origin indicate IOPAC port groups that are least vulnerable (e.g., Brookings, Coos Bay). This framework was inspired by Figure 4 in: Moore, S.K., Cline, M.R., Blair, K., Klinger, T., Varney, A. & Norman, K. (2019). An index of fisheries closures due to harmful algal blooms and a framework for identifying vulnerable fishing communities on the U.S. West Coast. Marine Policy, 103543. -->
+
+<!-- In general, we see that the role of salmon fishing (based on Importance values) tends to be greater in port groups where salmon are more valuable economically (based on greater aggregate revenue) and where there is less flexibility and resilience (based on Edge Densities). -->
+
+<!-- The x-axis, Opposite Edge Density, is a statistic derived from the fisheries participation network for each IOPAC port group. Edge Density is calculated as the ratio of the number of edges present to the total possible edges in the network, and represents the extent to which nodes within a network are connected by vessels that participate in multiple fisheries. Higher Edge Densities correspond to greater flexibility in fishery participation among all vessels represented in the network. Note that Edge Density scales with network size (it is easier to achieve a high density in a low complexity network), so comparisons across networks of different sizes should be interpreted carefully. With that caveat in mind, declines in Edge Density imply a simplification of network structure, which can in turn reduce resilience to environmental or regulatory shocks (e.g., Fisher et al. 2021).  Here we have multiplied Edge Density by negative one so that values farther to the right reflect simpler, less well-connected fisheries participation networks.  -->
+
+
+<!-- The y-axis, salmon revenue, reflects the aggregate ex-vessel value of salmon landed in each IOPAC port group.   -->
+
+<!-- Point size in this plot scales with Importance (also called eigenvector centrality), a statistic derived from the salmon node within each fisheries participation network for each IOPAC port group. A relatively large Importance value of the salmon node within a network signifies that it is  well-connected to other well-connected fisheries. Larger points reflect salmon nodes that are more strongly connected to other fisheries, suggesting that impacts to the salmon node are more likely to cascade to other fisheries. Note that networks with more nodes tend to have nodes with higher Importance values. (Also see Figure T.5 of the 2022 ESR, and associated text).  -->
+
+<!-- Grey lines in this plot are for reference only, and indicate median values of the x- and y-axes. -->
+
+
+<!-- <br> -->
+<!-- <br> -->
+<!-- <br> -->
+
+### Save plots as pngs 
+
+
+```{r echo=FALSE, include=FALSE}
+png(here::here(pngdir, paste0("Salmon Revenue Anomaly versus Long-term Mean Network Edge Density Anomaly from IOPAC Fisheries Participation Networks 2020-2021.png")),
+    res=200,height=1200,width=1400)
+fig_scaled
+dev.off()
+
+# png(here::here(pngdir, paste0("Salmon Revenue and Importance versus Network Edge Density from IOPAC Fisheries Participation Networks 2020-2021.png")),
+#     res=200,height=1200,width=1400)
+# fig
+# dev.off()
+
+```
+<br>
+
+
+# Plot of Salmon-Based Vulnerability and 2 Example Fishery Participation Networks
+
+## Pull in network graphs
+
+Focus on Brookings (higher resilience, lower salmon revenue) and Monterey (lower resilience, higher salmon revenue).
+
+Import png's
+```{r import_networks}
+
+ESRimages_2020 <- list.files(here::here(pngdir_ports), "2020_circular_compare")
+
+img_brookings <- magick::image_read(
+  here::here(pngdir_ports,
+             ESRimages_2020[grep("Brookings", ESRimages_2020)])
+)
+
+img_monterey <- magick::image_read(
+  here::here(pngdir_ports,
+             ESRimages_2020[grep("Monterey", ESRimages_2020)])
+)
+
+```
+
+Make plots and combine
+```{r plot_networks}
+
+p_brookings_2020 <- ggplot(data.frame(x = 1:2, y = 1:2), aes(x, y)) +
+     geom_point(size = 1, colour=NA) +
+     draw_image(img_brookings , x = 1, y = 1, scale = 1.1, halign = 0.9) +
+     theme_void()
+
+p_monterey_2020 <- ggplot(data.frame(x = 1:2, y = 1:2), aes(x, y)) +
+     geom_point(size = 1, colour=NA) +
+     draw_image(img_monterey , x = 1, y = 1, scale = 1.1, halign = 0.9) +
+     theme_void()
+
+p_2020 <- plot_grid(p_brookings_2020, p_monterey_2020,
+                            labels = c('B) Brookings', 'C) Monterey'), 
+                            label_size = 16, label_x = c(0.1,0.1), label_y = c(1, 1), align = "hv", rel_widths = c(1, 1), ncol = 1
+) #label_x = 0.4, c(0.35, 0.35, 0.35, 0.35, 0.35, 0.35)
+
+p_2020
+
+```
+
+## Combine vulnerability plot and network graphs
+
+```{r combine_all_plots}
+
+p_all <- plot_grid(fig_scaled, p_2020,
+                            labels = c('A) Salmon-Based Vulnerability','', ''), 
+                            label_size = 16, label_x = c(0.1,0.1), label_y = c(1,1), align = "hv", rel_widths = c(1.2, 1), ncol = 2
+) #label_x = 0.4, c(0.35, 0.35, 0.35, 0.35, 0.35, 0.35)
+p_all
+
+```
+
+### Save plot as png 
+
+
+```{r echo=FALSE, include=FALSE}
+png(here::here(pngdir, paste0("Salmon-Based Vulnerability and 2 Example IOPAC Fisheries Participation Networks 2020-2021.png")),
+    res=300,height=2100,width=2800)
+p_all
+dev.off()
+```
+
+<!-- Focus on node strength only, compile into a single figure. Save plot as png, with filename: Non-DTS Groundfish Node Strength in Fisheries Participation Networks 2016-2021, Oregon and California.png -->
+
+<!-- ```{r echo=FALSE} -->
+
+<!-- # set upper limit for revenue on y axis -->
+<!-- max_rev <- max( -->
+<!--   plotdat_or %>% filter(metric == "Revenue") %>% summarise(max_rev = max(value)) %>% pull(), -->
+<!--   plotdat_nca %>% filter(metric == "Revenue") %>% summarise(max_rev = max(value)) %>% pull(), -->
+<!--   plotdat_sca %>% filter(metric == "Revenue") %>% summarise(max_rev = max(value)) %>% pull() -->
+<!-- ) -->
+
+<!-- or_ns_df <- or_fig$data %>% filter(metric == "Node Strength") -->
+<!-- or_ns_fig <- ggplot(or_ns_df, aes(x=pcgroup, y=value, fill=pcgroup)) +  -->
+<!--   geom_boxplot(outlier.shape = NA) + -->
+<!--   geom_point(size = 1, alpha = 0.3,  position = position_jitter(seed = 1, width = .2)) + -->
+<!--   #facet_grid(rows=vars(metric), scales="free_y") + -->
+<!--   scale_fill_manual(values=pal_or) + -->
+<!--   ylim(c(0,1)) + -->
+<!--   labs( -->
+<!--        subtitle = 'Oregon', -->
+<!--        x = "Port Group", -->
+<!--        y = "Node Strength", -->
+<!--        fill = 'Port Group' -->
+<!--        ) + #title='Node Strength of Non-DTS\nGroundfish in Fisheries\nParticipation Networks: 2016-2021', -->
+<!--   coord_flip() + -->
+<!--   theme_bw() + -->
+<!--   theme(legend.position = 'none') -->
+<!--   #+ theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5), -->
+<!--   #                    axis.title.x=element_text(size=13), -->
+<!--   #                    axis.title.y=element_text(size=13), -->
+<!--   #                    strip.text=element_text(size=13), -->
+<!--   #                    legend.title=element_text(size=13),legend.text=element_text(size=13), -->
+<!--   #                    panel.grid.major=element_blank(), -->
+<!--   #                    panel.grid.minor=element_blank()) -->
+<!-- #or_ns_fig -->
+
+
+<!-- nca_ns_df <- nca_fig$data %>% filter(metric == "Node Strength") -->
+<!-- nca_ns_fig <- ggplot(nca_ns_df, aes(x=pcgroup, y=value, fill=pcgroup)) +  -->
+<!--   geom_boxplot(outlier.shape = NA) + -->
+<!--   geom_point(size = 1, alpha = 0.3,  position = position_jitter(seed = 1, width = .2)) + -->
+<!--   #facet_grid(rows=vars(metric), scales="free_y") + -->
+<!--   scale_fill_manual(values=pal_nca) + -->
+<!--   ylim(c(0,1)) + -->
+<!--   labs(subtitle = 'Northern and Central California', -->
+<!--        x = "Port Group", -->
+<!--        y = "Node Strength", -->
+<!--        fill = 'Port Group' -->
+<!--        ) + -->
+<!--   coord_flip() + -->
+<!--   theme_bw() + -->
+<!--   theme(legend.position = 'none') -->
+<!--   #+ theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5), -->
+<!--   #                    axis.title.x=element_text(size=13), -->
+<!--   #                    axis.title.y=element_text(size=13), -->
+<!--   #                    strip.text=element_text(size=13), -->
+<!--   #                    legend.title=element_text(size=13),legend.text=element_text(size=13), -->
+<!--   #                    panel.grid.major=element_blank(), -->
+<!--   #                    panel.grid.minor=element_blank()) -->
+<!-- #nca_ns_fig -->
+
+<!-- sca_ns_df <- sca_fig$data %>% filter(metric == "Node Strength") -->
+<!-- sca_ns_fig <- ggplot(sca_ns_df, aes(x=pcgroup, y=value, fill=pcgroup)) +  -->
+<!--   geom_boxplot(outlier.shape = NA) + -->
+<!--   geom_point(size = 1, alpha = 0.3,  position = position_jitter(seed = 1, width = .2)) + -->
+<!--   #facet_grid(rows=vars(metric), scales="free_y") + -->
+<!--   scale_fill_manual(values=pal_sca) + -->
+<!--   ylim(c(0,1)) + -->
+<!--   labs(subtitle = 'Southern California', -->
+<!--        x = "Port Group", -->
+<!--        y = "Node Strength", -->
+<!--        fill = 'Port Group' -->
+<!--        ) + -->
+<!--   coord_flip() + -->
+<!--   theme_bw() + -->
+<!--   theme(legend.position = 'none') -->
+<!--   #+ theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5), -->
+<!--   #                    axis.title.x=element_text(size=13), -->
+<!--   #                    axis.title.y=element_text(size=13), -->
+<!--   #                    strip.text=element_text(size=13), -->
+<!--   #                    legend.title=element_text(size=13),legend.text=element_text(size=13), -->
+<!--   #                    panel.grid.major=element_blank(), -->
+<!--   #                    panel.grid.minor=element_blank()) -->
+<!-- #sca_ns_fig -->
+
+
+<!-- ns_fig <- plot_grid(plotlist=list(or_ns_fig, nca_ns_fig, sca_ns_fig), ncol=1, align = "v", axis = "l", labels = "AUTO", rel_heights=c(1,1,1,1,1,1)) -->
+
+<!-- ns_fig_title <- ggdraw() + draw_label('Non-DTS Groundfish Node Strength in Fisheries Participation Networks\n2016-2021, Oregon and California IOPAC Port Groups', fontface='bold') -->
+
+<!-- plot_grid(ns_fig_title, ns_fig, ncol=1, rel_heights=c(0.1, 1)) -->
+
+<!-- png(here::here(pngdir, paste0("Non-DTS Groundfish Node Strength in Fisheries Participation Networks 2016-2021, Oregon and California.png")), -->
+<!--     res=200,height=1200,width=1700) -->
+
+<!-- plot_grid(ns_fig_title, ns_fig, ncol=1, rel_heights=c(0.1, 1)) -->
+
+<!-- dev.off() -->
+
+
+<!-- ``` -->
+<!-- <br> -->
+
+<!-- Focus on revenue only. Compile into a single figure. Save plot as png, with filename: Non-DTS Groundfish Revenue by IOPAC Port Group 2016-2021, Oregon and California.png -->
+
+<!-- ```{r echo=FALSE} -->
+
+<!-- # set upper limit for revenue on y axis -->
+<!-- max_rev <- max( -->
+<!--   plotdat_or %>% filter(metric == "Revenue") %>% summarise(max_rev = max(value)) %>% pull(), -->
+<!--   plotdat_nca %>% filter(metric == "Revenue") %>% summarise(max_rev = max(value)) %>% pull(), -->
+<!--   plotdat_sca %>% filter(metric == "Revenue") %>% summarise(max_rev = max(value)) %>% pull() -->
+<!-- ) -->
+
+<!-- or_rev_df <- or_fig2$data %>% filter(metric == "Revenue") -->
+<!-- or_rev_fig <- ggplot(or_rev_df, aes(x=pcgroup, y=value/10^4, fill=pcgroup)) +  -->
+<!--   geom_boxplot(outlier.shape = NA) + -->
+<!--   geom_point(size = 1, alpha = 0.3,  position = position_jitter(seed = 1, width = .2)) + -->
+<!--   #facet_grid(rows=vars(metric), scales="free_y") + -->
+<!--   scale_fill_manual(values=pal_or) + -->
+<!--   ylim(c(0,max_rev/10^4)) + -->
+<!--   labs( -->
+<!--        subtitle = 'Oregon', -->
+<!--        x = "Port Group", -->
+<!--        y = "Revenue (10,000s of $)", -->
+<!--        fill = 'Port Group' -->
+<!--        ) + #title='Revenue from Non-DTS\nGroundfish Fisheries:\n2016-2021', -->
+<!--   coord_flip() + -->
+<!--   theme_bw() + -->
+<!--   theme(legend.position = 'none') -->
+<!--   #+ theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5), -->
+<!--   #                    axis.title.x=element_text(size=13), -->
+<!--   #                    axis.title.y=element_text(size=13), -->
+<!--   #                    strip.text=element_text(size=13), -->
+<!--   #                    legend.title=element_text(size=13),legend.text=element_text(size=13), -->
+<!--   #                    panel.grid.major=element_blank(), -->
+<!--   #                    panel.grid.minor=element_blank()) -->
+<!-- #or_rev_fig -->
+
+
+<!-- nca_rev_df <- nca_fig2$data %>% filter(metric == "Revenue") -->
+<!-- nca_rev_fig <- ggplot(nca_rev_df, aes(x=pcgroup, y=value/10^4, fill=pcgroup)) +  -->
+<!--   geom_boxplot(outlier.shape = NA) + -->
+<!--   geom_point(size = 1, alpha = 0.3,  position = position_jitter(seed = 1, width = .2)) + -->
+<!--   #facet_grid(rows=vars(metric), scales="free_y") + -->
+<!--   scale_fill_manual(values=pal_nca) + -->
+<!--   ylim(c(0,max_rev/10^4)) + -->
+<!--   labs(subtitle = 'Northern and Central California', -->
+<!--        x = "Port Group", -->
+<!--        y = "Revenue (10,000s of $)", -->
+<!--        fill = 'Port Group' -->
+<!--        ) + -->
+<!--   coord_flip() + -->
+<!--   theme_bw() + -->
+<!--   theme(legend.position = 'none') -->
+<!--   #+ theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5), -->
+<!--   #                    axis.title.x=element_text(size=13), -->
+<!--   #                    axis.title.y=element_text(size=13), -->
+<!--   #                    strip.text=element_text(size=13), -->
+<!--   #                    legend.title=element_text(size=13),legend.text=element_text(size=13), -->
+<!--   #                    panel.grid.major=element_blank(), -->
+<!--   #                    panel.grid.minor=element_blank()) -->
+<!-- #nca_rev_fig -->
+
+<!-- sca_rev_df <- sca_fig2$data %>% filter(metric == "Revenue") -->
+<!-- sca_rev_fig <- ggplot(sca_rev_df, aes(x=pcgroup, y=value/10^4, fill=pcgroup)) +  -->
+<!--   geom_boxplot(outlier.shape = NA) + -->
+<!--   geom_point(size = 1, alpha = 0.3,  position = position_jitter(seed = 1, width = .2)) + -->
+<!--   #facet_grid(rows=vars(metric), scales="free_y") + -->
+<!--   scale_fill_manual(values=pal_sca) + -->
+<!--   ylim(c(0,max_rev/10^4)) + -->
+<!--   labs(subtitle = 'Southern California', -->
+<!--        x = "Port Group", -->
+<!--        y = "Revenue (10,000s of $)", -->
+<!--        fill = 'Port Group' -->
+<!--        ) + -->
+<!--   coord_flip() + -->
+<!--   theme_bw() + -->
+<!--   theme(legend.position = 'none') -->
+<!--   #+ theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5), -->
+<!--   #                    axis.title.x=element_text(size=13), -->
+<!--   #                    axis.title.y=element_text(size=13), -->
+<!--   #                    strip.text=element_text(size=13), -->
+<!--   #                    legend.title=element_text(size=13),legend.text=element_text(size=13), -->
+<!--   #                    panel.grid.major=element_blank(), -->
+<!--   #                    panel.grid.minor=element_blank()) -->
+<!-- #sca_rev_fig -->
+
+<!-- p_rev <- plot_grid(plotlist=list(or_rev_fig, nca_rev_fig, sca_rev_fig), ncol=1, align = "v", axis = "l", labels = "AUTO", rel_heights=c(1,1,1,1,1,1)) -->
+
+<!-- p_rev_title <- ggdraw() + draw_label('Non-DTS Groundfish Revenue 2016-2021, Oregon and California', fontface='bold') -->
+
+<!-- plot_grid(p_rev_title, p_rev, ncol=1, rel_heights=c(0.1, 1)) -->
+
+<!-- png(here::here(pngdir, paste0("Non-DTS Groundfish Revenue by IOPAC Port Group 2016-2021, Oregon and California.png")), -->
+<!--     res=200,height=1200,width=1700) -->
+
+<!-- plot_grid(p_rev_title, p_rev, ncol=1, rel_heights=c(0.1, 1)) -->
+
+<!-- dev.off() -->
+
+
+<!-- ``` -->
+
+
+
+<!-- Focus on node strength and revenue only, compile into a single figure. Save plot as png, with filename: Non-DTS Groundfish Node Strength in Fisheries Participation Networks and Aggregate Revenue 2016-2021, Oregon and California.png -->
+
+<!-- Side-by-side boxplots -->
+<!-- ```{r echo=FALSE} -->
+
+<!-- # set upper limit for revenue on y axis -->
+<!-- max_rev <- max( -->
+<!--   plotdat_or %>% filter(metric == "Revenue") %>% summarise(max_rev = max(value)) %>% pull(), -->
+<!--   plotdat_nca %>% filter(metric == "Revenue") %>% summarise(max_rev = max(value)) %>% pull(), -->
+<!--   plotdat_sca %>% filter(metric == "Revenue") %>% summarise(max_rev = max(value)) %>% pull() -->
+<!-- ) -->
+
+<!-- or_ns_df <- or_fig$data %>% filter(metric == "Node Strength") -->
+<!-- or_ns_fig <- ggplot(or_ns_df, aes(x=pcgroup, y=value, fill=pcgroup)) +  -->
+<!--   geom_boxplot(outlier.shape = NA) + -->
+<!--   geom_point(size = 1, alpha = 0.3,  position = position_jitter(seed = 1, width = .2)) + -->
+<!--   #facet_grid(rows=vars(metric), scales="free_y") + -->
+<!--   scale_fill_manual(values=pal_or) + -->
+<!--   ylim(c(0,1)) + -->
+<!--   labs( -->
+<!--        subtitle = 'Oregon', -->
+<!--        x = "Port Group", -->
+<!--        y = "Node Strength", -->
+<!--        fill = 'Port Group' -->
+<!--        ) + #title='Node Strength of Non-DTS\nGroundfish in Fisheries\nParticipation Networks: 2016-2021', -->
+<!--   coord_flip() + -->
+<!--   theme_bw() + -->
+<!--   theme(legend.position = 'none') -->
+<!--   #+ theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5), -->
+<!--   #                    axis.title.x=element_text(size=13), -->
+<!--   #                    axis.title.y=element_text(size=13), -->
+<!--   #                    strip.text=element_text(size=13), -->
+<!--   #                    legend.title=element_text(size=13),legend.text=element_text(size=13), -->
+<!--   #                    panel.grid.major=element_blank(), -->
+<!--   #                    panel.grid.minor=element_blank()) -->
+<!-- #or_ns_fig -->
+
+<!-- or_rev_df <- or_fig2$data %>% filter(metric == "Revenue") -->
+<!-- or_rev_fig <- ggplot(or_rev_df, aes(x=pcgroup, y=value/10^4, fill=pcgroup)) +  -->
+<!--   geom_boxplot(outlier.shape = NA) + -->
+<!--   geom_point(size = 1, alpha = 0.3,  position = position_jitter(seed = 1, width = .2)) + -->
+<!--   #facet_grid(rows=vars(metric), scales="free_y") + -->
+<!--   scale_fill_manual(values=pal_or) + -->
+<!--   ylim(c(0,max_rev/10^4)) + -->
+<!--   labs( -->
+<!--        subtitle = 'Oregon', -->
+<!--        x = "Port Group", -->
+<!--        y = "Revenue (10,000s of $)", -->
+<!--        fill = 'Port Group' -->
+<!--        ) + #title='Revenue from Non-DTS\nGroundfish Fisheries:\n2016-2021', -->
+<!--   coord_flip() + -->
+<!--   theme_bw() + -->
+<!--   theme(legend.position = 'none') -->
+<!--   #+ theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5), -->
+<!--   #                    axis.title.x=element_text(size=13), -->
+<!--   #                    axis.title.y=element_text(size=13), -->
+<!--   #                    strip.text=element_text(size=13), -->
+<!--   #                    legend.title=element_text(size=13),legend.text=element_text(size=13), -->
+<!--   #                    panel.grid.major=element_blank(), -->
+<!--   #                    panel.grid.minor=element_blank()) -->
+<!-- #or_rev_fig -->
+
+
+<!-- nca_ns_df <- nca_fig$data %>% filter(metric == "Node Strength") -->
+<!-- nca_ns_fig <- ggplot(nca_ns_df, aes(x=pcgroup, y=value, fill=pcgroup)) +  -->
+<!--   geom_boxplot(outlier.shape = NA) + -->
+<!--   geom_point(size = 1, alpha = 0.3,  position = position_jitter(seed = 1, width = .2)) + -->
+<!--   #facet_grid(rows=vars(metric), scales="free_y") + -->
+<!--   scale_fill_manual(values=pal_nca) + -->
+<!--   ylim(c(0,1)) + -->
+<!--   labs(subtitle = 'Northern and Central California', -->
+<!--        x = "Port Group", -->
+<!--        y = "Node Strength", -->
+<!--        fill = 'Port Group' -->
+<!--        ) + -->
+<!--   coord_flip() + -->
+<!--   theme_bw() + -->
+<!--   theme(legend.position = 'none') -->
+<!--   #+ theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5), -->
+<!--   #                    axis.title.x=element_text(size=13), -->
+<!--   #                    axis.title.y=element_text(size=13), -->
+<!--   #                    strip.text=element_text(size=13), -->
+<!--   #                    legend.title=element_text(size=13),legend.text=element_text(size=13), -->
+<!--   #                    panel.grid.major=element_blank(), -->
+<!--   #                    panel.grid.minor=element_blank()) -->
+<!-- #nca_ns_fig -->
+
+<!-- nca_rev_df <- nca_fig2$data %>% filter(metric == "Revenue") -->
+<!-- nca_rev_fig <- ggplot(nca_rev_df, aes(x=pcgroup, y=value/10^4, fill=pcgroup)) +  -->
+<!--   geom_boxplot(outlier.shape = NA) + -->
+<!--   geom_point(size = 1, alpha = 0.3,  position = position_jitter(seed = 1, width = .2)) + -->
+<!--   #facet_grid(rows=vars(metric), scales="free_y") + -->
+<!--   scale_fill_manual(values=pal_nca) + -->
+<!--   ylim(c(0,max_rev/10^4)) + -->
+<!--   labs(subtitle = 'Northern and Central California', -->
+<!--        x = "Port Group", -->
+<!--        y = "Revenue (10,000s of $)", -->
+<!--        fill = 'Port Group' -->
+<!--        ) + -->
+<!--   coord_flip() + -->
+<!--   theme_bw() + -->
+<!--   theme(legend.position = 'none') -->
+<!--   #+ theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5), -->
+<!--   #                    axis.title.x=element_text(size=13), -->
+<!--   #                    axis.title.y=element_text(size=13), -->
+<!--   #                    strip.text=element_text(size=13), -->
+<!--   #                    legend.title=element_text(size=13),legend.text=element_text(size=13), -->
+<!--   #                    panel.grid.major=element_blank(), -->
+<!--   #                    panel.grid.minor=element_blank()) -->
+<!-- #nca_rev_fig -->
+
+<!-- sca_ns_df <- sca_fig$data %>% filter(metric == "Node Strength") -->
+<!-- sca_ns_fig <- ggplot(sca_ns_df, aes(x=pcgroup, y=value, fill=pcgroup)) +  -->
+<!--   geom_boxplot(outlier.shape = NA) + -->
+<!--   geom_point(size = 1, alpha = 0.3,  position = position_jitter(seed = 1, width = .2)) + -->
+<!--   #facet_grid(rows=vars(metric), scales="free_y") + -->
+<!--   scale_fill_manual(values=pal_sca) + -->
+<!--   ylim(c(0,1)) + -->
+<!--   labs(subtitle = 'Southern California', -->
+<!--        x = "Port Group", -->
+<!--        y = "Node Strength", -->
+<!--        fill = 'Port Group' -->
+<!--        ) + -->
+<!--   coord_flip() + -->
+<!--   theme_bw() + -->
+<!--   theme(legend.position = 'none') -->
+<!--   #+ theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5), -->
+<!--   #                    axis.title.x=element_text(size=13), -->
+<!--   #                    axis.title.y=element_text(size=13), -->
+<!--   #                    strip.text=element_text(size=13), -->
+<!--   #                    legend.title=element_text(size=13),legend.text=element_text(size=13), -->
+<!--   #                    panel.grid.major=element_blank(), -->
+<!--   #                    panel.grid.minor=element_blank()) -->
+<!-- #sca_ns_fig -->
+
+<!-- sca_rev_df <- sca_fig2$data %>% filter(metric == "Revenue") -->
+<!-- sca_rev_fig <- ggplot(sca_rev_df, aes(x=pcgroup, y=value/10^4, fill=pcgroup)) +  -->
+<!--   geom_boxplot(outlier.shape = NA) + -->
+<!--   geom_point(size = 1, alpha = 0.3,  position = position_jitter(seed = 1, width = .2)) + -->
+<!--   #facet_grid(rows=vars(metric), scales="free_y") + -->
+<!--   scale_fill_manual(values=pal_sca) + -->
+<!--   ylim(c(0,max_rev/10^4)) + -->
+<!--   labs(subtitle = 'Southern California', -->
+<!--        x = "Port Group", -->
+<!--        y = "Revenue (10,000s of $)", -->
+<!--        fill = 'Port Group' -->
+<!--        ) + -->
+<!--   coord_flip() + -->
+<!--   theme_bw() + -->
+<!--   theme(legend.position = 'none') -->
+<!--   #+ theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5), -->
+<!--   #                    axis.title.x=element_text(size=13), -->
+<!--   #                    axis.title.y=element_text(size=13), -->
+<!--   #                    strip.text=element_text(size=13), -->
+<!--   #                    legend.title=element_text(size=13),legend.text=element_text(size=13), -->
+<!--   #                    panel.grid.major=element_blank(), -->
+<!--   #                    panel.grid.minor=element_blank()) -->
+<!-- #sca_rev_fig -->
+
+<!-- p <- plot_grid(plotlist=list(or_ns_fig, or_rev_fig, nca_ns_fig, nca_rev_fig, sca_ns_fig, sca_rev_fig), ncol=2, align = "v", axis = "l", labels = "AUTO", rel_heights=c(1,1,1,1,1,1)) -->
+
+<!-- p_title <- ggdraw() + draw_label('Non-DTS Groundfish Node Strength in Fisheries Participation Networks and\nAggregate Revenue 2016-2021, Oregon and California IOPAC Port Groups', fontface='bold') -->
+
+<!-- plot_grid(p_title, p, ncol=1, rel_heights=c(0.1, 1)) -->
+
+<!-- png(here::here(pngdir, paste0("Non-DTS Groundfish Node Strength in Fisheries Participation Networks and Aggregate Revenue 2016-2021, Oregon and California IOPAC Port Groups.png")), -->
+<!--     res=200,height=1200,width=1700) -->
+
+<!-- plot_grid(p_title, p, ncol=1, rel_heights=c(0.1, 1)) -->
+
+<!-- dev.off() -->
+
+
+<!-- ``` -->
+<!-- <br> -->
+<!-- <br> -->
+<!-- <br> -->
+<!-- Pairwise plot -->
+<!-- ```{r echo=FALSE} -->
+
+<!-- # make OR, NCA, SCA df's wide, combine, subset, summarize -->
+
+<!-- pairplot_df <- bind_rows( -->
+<!--   plotdat_or %>% -->
+<!--     mutate(region = "Oregon") %>% -->
+<!--     filter( -->
+<!--       metric == "Node Strength" | metric == "Revenue" -->
+<!--     ) %>% -->
+<!--     pivot_wider( -->
+<!--       names_from = metric, -->
+<!--       values_from = value -->
+<!--       ), -->
+<!--   plotdat_nca %>% -->
+<!--     mutate(region = "Northern and Central California") %>% -->
+<!--     filter( -->
+<!--       metric == "Node Strength" | metric == "Revenue" -->
+<!--     ) %>% -->
+<!--     pivot_wider( -->
+<!--       names_from = metric, -->
+<!--       values_from = value -->
+<!--       ), -->
+<!--   plotdat_sca %>% -->
+<!--     mutate(region = "Southern California") %>% -->
+<!--     filter( -->
+<!--       metric == "Node Strength" | metric == "Revenue" -->
+<!--     ) %>% -->
+<!--     pivot_wider( -->
+<!--       names_from = metric, -->
+<!--       values_from = value -->
+<!--       ) -->
+<!-- ) %>% -->
+<!--   group_by(pcgroup, region, metier.cm) %>% -->
+<!--   summarise( -->
+<!--     mean_ns = mean(`Node Strength`, na.rm=TRUE), -->
+<!--     mean_rev = mean(Revenue, na.rm=TRUE), -->
+<!--     .groups = "drop" -->
+<!--   ) -->
+<!-- glimpse(pairplot_df) -->
+
+<!-- pairplot_fig <- ggplot(pairplot_df, aes(x=mean_rev/10^4, y=mean_ns)) +  -->
+<!--   geom_point(aes(colour=region), size = 2) + -->
+<!--   geom_smooth(method = "lm", se = FALSE, colour = "black") + -->
+<!--   geom_text_repel(aes(label=pcgroup, colour=region), show.legend = FALSE, nudge_x = 0.5) + -->
+<!--   scale_colour_manual(values=pal_sca) + -->
+<!--   ylim(c(0,1)) + -->
+<!--   xlim(c(0,max_rev/10^4)) + -->
+<!--   labs( -->
+<!--     x = "Revenue\n(10,000s of $)", -->
+<!--     y = "Node Strength", -->
+<!--     colour = 'Region' -->
+<!--     ) +  -->
+<!--   theme_bw() + -->
+<!--   theme(legend.position = 'bottom') -->
+<!--   #+ theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5), -->
+<!--   #                    axis.title.x=element_text(size=13), -->
+<!--   #                    axis.title.y=element_text(size=13), -->
+<!--   #                    strip.text=element_text(size=13), -->
+<!--   #                    legend.title=element_text(size=13),legend.text=element_text(size=13), -->
+<!--   #                    panel.grid.major=element_blank(), -->
+<!--   #                    panel.grid.minor=element_blank()) -->
+<!-- #pairplot_fig -->
+
+
+<!-- p_title2 <- ggdraw() + draw_label('Non-DTS Groundfish Node Strength in Fisheries\nParticipation Networks and Aggregate Revenue 2016-2021,\n Oregon and California IOPAC Port Groups', fontface='bold') -->
+
+<!-- plot_grid(p_title2, pairplot_fig, ncol=1, rel_heights=c(0.1, 1)) -->
+
+<!-- png(here::here(pngdir, paste0("Scatter Plot of Non-DTS Groundfish Node Strength in Fisheries Participation Networks and Aggregate Revenue 2016-2021, Oregon and California IOPAC Port Groups.png")), -->
+<!--     res=200,height=1200,width=1500) -->
+
+<!-- plot_grid(p_title2, pairplot_fig, ncol=1, rel_heights=c(0.1, 1)) -->
+
+<!-- dev.off() -->
+
+<!-- # this time faceted by region -->
+
+<!-- pairplot_df$region <- factor(pairplot_df$region, levels=c('Oregon', 'Northern and Central California','Southern California')) -->
+
+<!-- max_mean_rev_or <- plotdat_or %>% filter(metric == "Revenue") %>% group_by(pcgroup) %>% summarise(mean_rev = mean(value)) %>% summarise(max_mean_rev = max(mean_rev)) %>% pull() -->
+<!-- max_mean_rev_nca <- plotdat_nca %>% filter(metric == "Revenue") %>% group_by(pcgroup) %>% summarise(mean_rev = mean(value)) %>% summarise(max_mean_rev = max(mean_rev)) %>% pull() -->
+<!-- max_mean_rev_sca <- plotdat_sca %>% filter(metric == "Revenue") %>% group_by(pcgroup) %>% summarise(mean_rev = mean(value)) %>% summarise(max_mean_rev = max(mean_rev)) %>% pull() -->
+
+<!-- pairplot_df <- pairplot_df %>% -->
+<!--   group_by(region) %>% -->
+<!--   mutate( -->
+<!--     xmax = case_when( -->
+<!--       region == "Southern California" ~ max_mean_rev_sca/10^4, -->
+<!--       region == "Northern and Central California" ~ max_mean_rev_nca/10^4, -->
+<!--       TRUE ~ max_mean_rev_or/10^4 -->
+<!--     ) -->
+<!--   ) -->
+
+<!-- pairplot_fig2 <- ggplot(pairplot_df, aes(x=mean_rev/10^4, y=mean_ns)) +  -->
+<!--   geom_point(aes(colour=region), size = 2) + -->
+<!--   #geom_smooth(aes(colour=region), method = "lm", se = FALSE, linetype="dashed", alpha = 0.2) + -->
+<!--   geom_line (stat = "smooth", method = "lm", alpha=0.75, aes(colour=region), se = FALSE, linetype="dashed") + -->
+<!--   geom_text_repel(aes(label=pcgroup, colour=region), show.legend = FALSE, nudge_x = 0.3, nudge_y = 0.1, size=3, segment.colour = "grey", min.segment.length = 0.1) + #segment.colour = NA -->
+<!--   facet_grid( -->
+<!--     cols=vars(region), -->
+<!--     scales = "free_x", -->
+<!--     labeller = label_wrap_gen(12) -->
+<!--     ) +  -->
+<!--   geom_blank(aes(x = xmax)) + -->
+<!--   scale_colour_manual(values=pal_sca) + -->
+<!--   ylim(c(0,1)) + -->
+<!--   #xlim(c(0,max_rev/10^4)) + -->
+<!--   labs( -->
+<!--     x = "Revenue\n(10,000s of $)", -->
+<!--     y = "Node Strength" -->
+<!--     ) +  -->
+<!--   theme_half_open() + panel_border() + -->
+<!--   theme(legend.position = 'none') -->
+<!--   #+ theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5), -->
+<!--   #                    axis.title.x=element_text(size=13), -->
+<!--   #                    axis.title.y=element_text(size=13), -->
+<!--   #                    strip.text=element_text(size=13), -->
+<!--   #                    legend.title=element_text(size=13),legend.text=element_text(size=13), -->
+<!--   #                    panel.grid.major=element_blank(), -->
+<!--   #                    panel.grid.minor=element_blank()) -->
+<!-- #pairplot_fig2 -->
+
+
+<!-- p_title3 <- ggdraw() + draw_label('Non-DTS Groundfish Node Strength in\nFisheries Participation Networks and Aggregate Revenue\n2016-2021, by Region for IOPAC Port Groups', fontface='bold', size=12) -->
+
+<!-- plot_grid(p_title3, pairplot_fig2, ncol=1, rel_heights=c(0.1, 1)) -->
+
+<!-- png(here::here(pngdir, paste0("Scatter Plot of Non-DTS Groundfish Node Strength in Fisheries Participation Networks and Aggregate Revenue 2016-2021, by Region for IOPAC Port Groups.png")), -->
+<!--     res=200, height=800,width=1000)  # ,height=1400,width=1600 -->
+
+<!-- plot_grid(p_title3 + theme(text = element_text(size=12)),  -->
+<!--           pairplot_fig2 + theme(text = element_text(size=10),  axis.text.x = element_text(size=10), axis.text.y = element_text(size=10)),  -->
+<!--           ncol=1, rel_heights=c(0.25, 1)) -->
+
+<!-- dev.off() -->
+
+
+<!-- ``` -->
+
+
+
+
+
+
+
