@@ -412,9 +412,9 @@ fig_scaled <- ggplot(plotdat_wide, aes(x=(`Long-term Mean Edge Density`), y=`Sca
   geom_hline(yintercept=0, alpha = 0.5) + 
   geom_vline(xintercept=median(plotdat_wide$`Long-term Mean Edge Density`), colour='grey', alpha = 0.5) + 
   xlim(0,1) +
-  labs(subtitle = '2020-2021',
-       x = "Low                                  Resilience Index                                              High",
-       y = "Salmon Revenue Anomaly"#,
+  labs(#subtitle = '2020-2021',
+       x = "Low                                    Resilience Index                                 High",
+       y = "Salmon Revenue Anomaly\n2020-2021"#,
        #size = 'Long-term Mean\nImportance of Salmon\nNode in Network'
        ) +
   #coord_flip() +
@@ -578,8 +578,8 @@ p_2020
 ```{r combine_all_plots}
 
 p_all <- plot_grid(fig_scaled, p_2020,
-                            labels = c('A) Salmon-Based Vulnerability','', ''), 
-                            label_size = 16, label_x = c(0.1,0.1), label_y = c(1,1), align = "hv", rel_widths = c(1.2, 1), ncol = 2
+                            labels = c('A) Salmon-Based Vulnerability',''), 
+                            label_size = 16, label_x = c(0,0.1), label_y = c(1,1), align = "hv", rel_widths = c(1.2, 1), ncol = 2
 ) #label_x = 0.4, c(0.35, 0.35, 0.35, 0.35, 0.35, 0.35)
 p_all
 
@@ -590,7 +590,7 @@ p_all
 
 ```{r echo=FALSE, include=FALSE}
 png(here::here(pngdir, paste0("Salmon-Based Vulnerability and 2 Example IOPAC Fisheries Participation Networks 2020-2021.png")),
-    res=300,height=2100,width=2800)
+    res=300,height=2500,width=2900)
 p_all
 dev.off()
 ```
