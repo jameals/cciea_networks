@@ -115,12 +115,13 @@ dataset_names2 <- c("Network_Stats")
 Specify which network metrics and fish tix info to retain from the full data set.
 ```{r}
 node_metrics <- c('node_strength','eigen')
-node_metrics_scaled <- c('node_strength_scaled','node_strength_ltmean','eigen_scaled', 'eigen_ltmean')
+node_metrics_scaled <- c('node_strength_scaled','node_strength_ltmean','ma_node_strength','eigen_scaled', 'eigen_ltmean', 'ma_eigen')
 
 network_metrics <- c('ed') # ,'ed_weighted'
-network_metrics_scaled <- c('ed_scaled','ed_ltmean')
+network_metrics_scaled <- c('ed_scaled','ed_ltmean', 'ma_ed')
 
-landings_metrics <- c('adjrev', 'pounds')
+landings_metrics <- c('adjrev', 'ma_adjrev','pounds',
+                    'ma_pounds')
 landings_metrics_scaled <- c('adjrev_scaled','adjrev_ltmean','ma_adjrev_scaled', 'pounds_scaled','pounds_ltmean','ma_pounds_scaled')
 
 ```
@@ -131,7 +132,7 @@ Specify which fisheries to retain from the full data set and whether to calculat
 myfisheries <- c('Salmon')
 my_spgroup <- c(30)
 # how long should the moving average sensitivity be calculated over?
-salmon_moving_average <- 3
+salmon_moving_average <- 5
 ```
 <br>
 
@@ -238,14 +239,26 @@ dat <- dat %>%
     node_strength_scaled = as.numeric(scale(node_strength)),
     node_strength_ltmean = attr(scale(node_strength),"scaled:center"),
     eigen_scaled = as.numeric(scale(eigen)),
-    eigen_ltmean = attr(scale(eigen),"scaled:center")
-  ) # note because we use scale() mutated varables return as matrices
+    eigen_ltmean = attr(scale(eigen),"scaled:center") # note because we use scale() mutated varables return as matrices
+  ) %>%
+  arrange(year) %>%
+  group_by(pcgroup) %>%
+  mutate(
+    ma_node_strength=rollapply(node_strength,width=salmon_moving_average,mean,align='right',fill=NA),
+    ma_eigen=rollapply(eigen,width=salmon_moving_average,mean,align='right',fill=NA)
+  )
+
 
 dat2 <- dat2 %>%
   group_by(pcgroup) %>%
   mutate(
     ed_scaled = as.numeric(scale(ed)),
     ed_ltmean = attr(scale(ed),"scaled:center")
+  ) %>%
+  arrange(y) %>%
+  group_by(pcgroup) %>%
+  mutate(
+    ma_ed=rollapply(ed,width=salmon_moving_average,mean,align='right',fill=NA)
   )
 
 dat3 <- dat3 %>%
@@ -259,7 +272,9 @@ dat3 <- dat3 %>%
   arrange(crab_year) %>%
   group_by(IOPAC) %>%
   mutate(
+    ma_adjrev=rollapply(adjrev,width=salmon_moving_average,mean,align='right',fill=NA),
     ma_adjrev_scaled=rollapply(adjrev_scaled,width=salmon_moving_average,mean,align='right',fill=NA),
+    ma_pounds=rollapply(pounds,width=salmon_moving_average,mean,align='right',fill=NA),
     ma_pounds_scaled=rollapply(pounds_scaled,width=salmon_moving_average,mean,align='right',fill=NA)
     )
 
@@ -291,15 +306,20 @@ dat_long$metric <- recode(dat_long$metric,
                           node_strength = "Node Strength",
                           node_strength_scaled = "Scaled Node Strength",
                           node_strength_ltmean = "Long-term Mean Node Strength",
+                          ma_node_strength = paste0(salmon_moving_average,"-Year Mean Node Strength"),
                           eigen = "Importance",
                           eigen_scaled = "Scaled Importance",
-                          eigen_ltmean = "Long-term Mean Importance")
+                          eigen_ltmean = "Long-term Mean Importance",
+                          ma_eigen = paste0(salmon_moving_average,"-Year Mean Importance")
+                          )
 #dat_long$metric <- factor(dat_long$metric, levels=c("Size", "Edge Density","Mean Degree", "Central.", "Central. (UnW)", "Mod.", "Mod. (UnW)"))
 
 dat_long2$metric <- recode(dat_long2$metric, 
                           ed = "Edge Density",
                           ed_scaled = "Scaled Edge Density",
-                          ed_ltmean = "Long-term Mean Edge Density")
+                          ed_ltmean = "Long-term Mean Edge Density",
+                          ma_ed = paste0(salmon_moving_average,"-Year Mean Edge Density")
+                          )
 
 ports_sorted <- dat_long %>% left_join(iopac_lookup %>% select(IOPAC, PACFIN_LAT), by = c('pcgroup' = 'IOPAC')) %>% select(pcgroup, PACFIN_LAT) %>% group_by(pcgroup) %>% summarise(lat = mean(PACFIN_LAT)) %>% arrange(lat) %>% select(pcgroup) %>% pull() # use arrange(-lat) if coord_flip() is NOT used
 
@@ -310,10 +330,12 @@ dat_long3$metric <- recode(dat_long3$metric,
                           adjrev = "Revenue",
                           adjrev_scaled = "Scaled Revenue",
                           adjrev_ltmean = "Long-term Mean Revenue",
+                          ma_adjrev = paste0(salmon_moving_average,"-Year Mean Revenue"),
                           ma_adjrev_scaled = paste0(salmon_moving_average,"-Year Mean Scaled Revenue"),
                           pounds = "Landed Weight",
                           pounds_scaled = "Scaled Landed Weight",
                           pounds_ltmean = "Long-term Mean Landed Weight",
+                          ma_pounds = paste0(salmon_moving_average,"-Year Mean Landed Weight"),
                           ma_pounds_scaled = paste0(salmon_moving_average,"-Year Mean Scaled Landed Weight")
                           )
 
@@ -325,6 +347,8 @@ dat_long3$IOPAC <- factor(dat_long3$IOPAC, levels=ports_sorted)
 Make wide data frame for plotting and/or analysis.
 
 Note that if there is only one node in a network, the Edge Density value is NA So we have arbitrarily set Edge Density to zero in the one port where this issue occurs (Columbia River).
+
+Will need to be updated if we change the value of salmon_moving_average so that it is not 5
 ```{r make_combined_df, include=FALSE, echo=FALSE}
 # filter and re-arrange data for plotting
 years <- max(dat_long$year) #as of 01-19-2023, max yr is 2020, the 2020-2021 fishing year # seq(2015,2020,1)
@@ -357,7 +381,9 @@ plotdat_wide <- plotdat_wide %>%
   mutate(
     `Edge Density` = replace(`Edge Density`, is.na(`Edge Density`) == TRUE, 0),
 `Scaled Edge Density` = replace(`Scaled Edge Density`, is.na(`Scaled Edge Density`) == TRUE, 0),
-`Scaled Importance` = replace(`Scaled Importance`, is.na(`Scaled Importance`) == TRUE, 0)
+`5-Year Mean Edge Density` = replace(`5-Year Mean Edge Density`, is.na(`5-Year Mean Edge Density`) == TRUE, 0),
+`Scaled Importance` = replace(`Scaled Importance`, is.na(`Scaled Importance`) == TRUE, 0),
+`5-Year Mean Importance` = replace(`5-Year Mean Importance`, is.na(`5-Year Mean Importance`) == TRUE, 0)
     )
 
 
@@ -376,6 +402,10 @@ Consider whether revenue and network metrics are correlated with one another.
 
 ggplot(plotdat_wide) +
   geom_point(aes(x=`Scaled Node Strength`, y=`Scaled Revenue`)) +
+  theme_classic2()
+
+ggplot(plotdat_wide) +
+  geom_point(aes(x=`5-Year Mean Node Strength`, y=`5-Year Mean Revenue`)) +
   theme_classic2()
 
 vars.corrs <- plotdat_wide %>% ungroup() %>%
@@ -607,6 +637,81 @@ https://conbio.onlinelibrary.wiley.com/doi/abs/10.1111/conl.12677
 png(here::here(pngdir, paste0("Salmon Revenue 3-Year Anomaly versus Long-term Mean Network Edge Density Anomaly from IOPAC Fisheries Participation Networks 2018-2021.png")),
     res=200,height=1200,width=1400)
 fig_ma_scaled
+dev.off()
+
+# png(here::here(pngdir, paste0("Salmon Revenue and Importance versus Network Edge Density from IOPAC Fisheries Participation Networks 2020-2021.png")),
+#     res=200,height=1200,width=1400)
+# fig
+# dev.off()
+
+```
+<br>
+
+## Scaled plot, moving average for economic dependence and edge density
+
+We define a port group that is especially vulnerable to declines in the salmon fishery in 2021-2022, relative to the period 2004-2021, as one that has:
+- high average salmon revenue from 2016-2021, indicating relatively high economic dependence on the salmon fishery over the last 5 years, 
+- a low 5-year average resilience (or adaptive capacity) index value (where lower resilience corresponds to lower than average connectivity among fisheries based on fisheries participation networks for each port group). 
+This approach is consistent with definitions of social vulnerability in the literature (e.g., Thiault et al. 2019). 
+
+
+```{r make_ma_fig, echo=FALSE, fig.width=10, fig.height=8}
+
+# main network metric plot
+fig_ma <- ggplot(plotdat_wide, aes(x=(`5-Year Mean Edge Density`), y=`5-Year Mean Revenue`/10^6)) + 
+  geom_point() + #aes(fill = pcgroup, colour = pcgroup)
+  #geom_point(aes(size = (`Long-term Mean Importance`))) +
+  geom_text_repel(aes(label=pcgroup), #, size = 2*`Scaled Revenue` #, size = 2*(`Long-term Mean Importance`)
+                  force = 0.5,
+                  #nudge_x = 0.1,
+                  direction = "y",
+                  hjust = 1,
+                  segment.size = 0.2,
+                  max.overlaps = 15) +
+  geom_hline(yintercept=mean(plotdat_wide$`5-Year Mean Revenue`/10^6), alpha = 0.5) + 
+  geom_vline(xintercept=mean(plotdat_wide$`5-Year Mean Edge Density`), colour='grey', alpha = 0.5) + 
+  xlim(0,1) +
+  labs(#subtitle = '2020-2021',
+       x = "Low                                    Resilience Index                                 High\n(average, 2016-2021)",
+       y = "Economic Dependence on Salmon\n(average, 2016-2021)"#,
+       #size = 'Long-term Mean\nImportance of Salmon\nNode in Network'
+       ) +
+  #coord_flip() +
+  theme_classic() #+
+  #theme(legend.position = 'none')
+  #+ theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5),
+  #                    axis.title.x=element_text(size=13),
+  #                    axis.title.y=element_text(size=13),
+  #                    strip.text=element_text(size=13),
+  #                    legend.title=element_text(size=13),legend.text=element_text(size=13),
+  #                    panel.grid.major=element_blank(),
+  #                    panel.grid.minor=element_blank())
+fig_ma
+
+
+```
+<br>
+<br>
+<br>
+
+In the plot above, points in the upper left quadrant indicate IOPAC port groups that would be most vulnerable to declines in the salmon fishery following the 2020-2021 fishing season (e.g., Puget Sound, Monterey), while points in the lower right quadrant indicate IOPAC port groups that would be least vulnerable (e.g., Brookings, Santa Barbara). Port groups with higher economic dependence on salmon and higher resilience (points in the top right quadrant such as Bodega Bay) have greater potential for adaptation, while those with lower economic dependence on salmon and lower adaptive capacity  (points in the lower left quadrant such as the North WA Coast and Morro Bay) have high latent risk. 
+
+In general, we see that economic dependence on salmon from 2016-2021 (y-axis) has been high San Francisco, Bodega Bay, and Puget Sound (among other port groups), and low in Santa Barbara and Astoria (among other port groups). We note that economic dependence on salmon (i.e., salmon revenue) is positively correlated with statistics from fisheries participation networks that describe how well the salmon fishery is connected to other fisheries in the network.
+
+The x-axis, a resilience index based on Edge Density, is a statistic derived from the fisheries participation network for each IOPAC port group. Edge Density is calculated as the ratio of the number of edges present to the total possible edges in the network, and represents the extent to which nodes within a network are connected by vessels that participate in multiple fisheries. Higher Edge Densities correspond to greater flexibility in fishery participation among all vessels represented in the network. Note that Edge Density scales with network size (it is easier to achieve a high density in a low complexity network), so comparisons across networks of different sizes should be interpreted carefully. With that caveat in mind, declines in Edge Density imply a simplification of network structure, which can in turn reduce resilience to environmental or regulatory shocks because of diminished flexibility to participate in other fisheries in the same port group (e.g., Fisher et al. 2021). Here we have calculated the 5-year average Edge Density from 2016-2021 for each port group. 
+
+Grey lines on the x- and y-axes in this plot are for reference only. These lines correspond to the mean long-term values across port groups.
+
+This framework was inspired by Figure 4 in: Moore, S.K., Cline, M.R., Blair, K., Klinger, T., Varney, A. & Norman, K. (2019). An index of fisheries closures due to harmful algal blooms and a framework for identifying vulnerable fishing communities on the U.S. West Coast. Marine Policy, 103543. It is congruent with the social vulnerability framework used in Figure 2 (right panel) of Thiault, L., S. Gelcich, N. Marshall, P. Marshall, F. Chlous, and J. Claudet. 2020. Operationalizing vulnerability for social–ecological integration in conservation and natural resource management. Conservation Letters 13:e12677.
+https://conbio.onlinelibrary.wiley.com/doi/abs/10.1111/conl.12677
+
+### Save plots as pngs 
+
+
+```{r echo=FALSE, include=FALSE}
+png(here::here(pngdir, paste0("5-Year Mean Salmon Revenue versus 5-Year Mean Network Edge Density from IOPAC Fisheries Participation Networks 2016-2021.png")),
+    res=200,height=1200,width=1400)
+fig_ma
 dev.off()
 
 # png(here::here(pngdir, paste0("Salmon Revenue and Importance versus Network Edge Density from IOPAC Fisheries Participation Networks 2020-2021.png")),
