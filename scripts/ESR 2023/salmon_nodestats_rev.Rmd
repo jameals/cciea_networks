@@ -570,82 +570,82 @@ dev.off()
 ```
 <br>
 
-## Scaled plot, moving average anomaly for economic dependence
+<!-- ## Scaled plot, moving average anomaly for economic dependence -->
 
-We define a port group that is especially vulnerable to declines in the salmon fishery in 2021-2022, relative to the period 2004-2021, as one that has:
-- salmon revenue in 2018-2021 that is higher than its long-term average, indicating relatively high economic dependence on the salmon fishery over the last 3 years, 
-- a low long-term average resilience (or adaptive capacity) index value (where lower resilience corresponds to lower than average connectivity among fisheries based on fisheries participation networks for each port group). 
-This approach is consistent with definitions of social vulnerability in the literature (e.g., Thiault et al. 2019). 
-
-
-```{r make_ma_scaled_fig, echo=FALSE, fig.width=10, fig.height=8}
-
-# main network metric plot
-fig_ma_scaled <- ggplot(plotdat_wide, aes(x=(`Long-term Mean Edge Density`), y=`3-Year Mean Scaled Revenue`)) + 
-  geom_point() + #aes(fill = pcgroup, colour = pcgroup)
-  #geom_point(aes(size = (`Long-term Mean Importance`))) +
-  geom_text_repel(aes(label=pcgroup), #, size = 2*`Scaled Revenue` #, size = 2*(`Long-term Mean Importance`)
-                  force = 0.5,
-                  #nudge_x = 0.1,
-                  direction = "y",
-                  hjust = 1,
-                  segment.size = 0.2,
-                  max.overlaps = 15) +
-  geom_hline(yintercept=0, alpha = 0.5) + 
-  geom_vline(xintercept=median(plotdat_wide$`Long-term Mean Edge Density`), colour='grey', alpha = 0.5) + 
-  xlim(0,1) +
-  labs(#subtitle = '2020-2021',
-       x = "Low                                    Resilience Index                                 High",
-       y = "Salmon Revenue Anomaly\n2018-2021"#,
-       #size = 'Long-term Mean\nImportance of Salmon\nNode in Network'
-       ) +
-  #coord_flip() +
-  theme_classic() #+
-  #theme(legend.position = 'none')
-  #+ theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5),
-  #                    axis.title.x=element_text(size=13),
-  #                    axis.title.y=element_text(size=13),
-  #                    strip.text=element_text(size=13),
-  #                    legend.title=element_text(size=13),legend.text=element_text(size=13),
-  #                    panel.grid.major=element_blank(),
-  #                    panel.grid.minor=element_blank())
-fig_ma_scaled
+<!-- We define a port group that is especially vulnerable to declines in the salmon fishery in 2021-2022, relative to the period 2004-2021, as one that has: -->
+<!-- - salmon revenue in 2018-2021 that is higher than its long-term average, indicating relatively high economic dependence on the salmon fishery over the last 3 years,  -->
+<!-- - a low long-term average resilience (or adaptive capacity) index value (where lower resilience corresponds to lower than average connectivity among fisheries based on fisheries participation networks for each port group).  -->
+<!-- This approach is consistent with definitions of social vulnerability in the literature (e.g., Thiault et al. 2019).  -->
 
 
-```
+<!-- ```{r make_ma_scaled_fig, echo=FALSE, fig.width=10, fig.height=8} -->
+
+<!-- # main network metric plot -->
+<!-- fig_ma_scaled <- ggplot(plotdat_wide, aes(x=(`Long-term Mean Edge Density`), y=`3-Year Mean Scaled Revenue`)) +  -->
+<!--   geom_point() + #aes(fill = pcgroup, colour = pcgroup) -->
+<!--   #geom_point(aes(size = (`Long-term Mean Importance`))) + -->
+<!--   geom_text_repel(aes(label=pcgroup), #, size = 2*`Scaled Revenue` #, size = 2*(`Long-term Mean Importance`) -->
+<!--                   force = 0.5, -->
+<!--                   #nudge_x = 0.1, -->
+<!--                   direction = "y", -->
+<!--                   hjust = 1, -->
+<!--                   segment.size = 0.2, -->
+<!--                   max.overlaps = 15) + -->
+<!--   geom_hline(yintercept=0, alpha = 0.5) +  -->
+<!--   geom_vline(xintercept=median(plotdat_wide$`Long-term Mean Edge Density`), colour='grey', alpha = 0.5) +  -->
+<!--   xlim(0,1) + -->
+<!--   labs(#subtitle = '2020-2021', -->
+<!--        x = "Low                                    Resilience Index                                 High", -->
+<!--        y = "Salmon Revenue Anomaly\n2018-2021"#, -->
+<!--        #size = 'Long-term Mean\nImportance of Salmon\nNode in Network' -->
+<!--        ) + -->
+<!--   #coord_flip() + -->
+<!--   theme_classic() #+ -->
+<!--   #theme(legend.position = 'none') -->
+<!--   #+ theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5), -->
+<!--   #                    axis.title.x=element_text(size=13), -->
+<!--   #                    axis.title.y=element_text(size=13), -->
+<!--   #                    strip.text=element_text(size=13), -->
+<!--   #                    legend.title=element_text(size=13),legend.text=element_text(size=13), -->
+<!--   #                    panel.grid.major=element_blank(), -->
+<!--   #                    panel.grid.minor=element_blank()) -->
+<!-- fig_ma_scaled -->
+
+
+<!-- ``` -->
 <br>
 <br>
 <br>
 
-In the plot above, points in the upper left quadrant indicate IOPAC port groups that would be most vulnerable to declines in the salmon fishery following the 2020-2021 fishing season (e.g., Bodega Bay, Monterey), while points in the lower right quadrant indicate IOPAC port groups that would be least vulnerable (e.g., Brookings, Fort Bragg). Port groups with higher economic dependence on salmon and higher resilience (points in the top right quadrant such as Santa Barbara) have greater potential for adaptation, while those with lower economic dependence on salmon and lower adaptive capacity  (points in the lower left quadrant such as Puget Sound and the North WA Coast) have high latent risk. 
+<!-- In the plot above, points in the upper left quadrant indicate IOPAC port groups that would be most vulnerable to declines in the salmon fishery following the 2020-2021 fishing season (e.g., Bodega Bay, Monterey), while points in the lower right quadrant indicate IOPAC port groups that would be least vulnerable (e.g., Brookings, Fort Bragg). Port groups with higher economic dependence on salmon and higher resilience (points in the top right quadrant such as Santa Barbara) have greater potential for adaptation, while those with lower economic dependence on salmon and lower adaptive capacity  (points in the lower left quadrant such as Puget Sound and the North WA Coast) have high latent risk.  -->
 
-In general, we see that for most port groups in 2018-2021 economic dependence on salmon was not very different from the long-term averages (most points on the y-axis are within +/- 1 SD). However, the 3-year average salmon revenue has been substantially higher than the long-term average in Crescent City, Bodega Bay, Monterey, San Francisco, and Morro Bay, and substantially lower than the long-term average in Puget Sound.
+<!-- In general, we see that for most port groups in 2018-2021 economic dependence on salmon was not very different from the long-term averages (most points on the y-axis are within +/- 1 SD). However, the 3-year average salmon revenue has been substantially higher than the long-term average in Crescent City, Bodega Bay, Monterey, San Francisco, and Morro Bay, and substantially lower than the long-term average in Puget Sound. -->
 
-The x-axis, a resilience index based on Edge Density, is a statistic derived from the fisheries participation network for each IOPAC port group. Edge Density is calculated as the ratio of the number of edges present to the total possible edges in the network, and represents the extent to which nodes within a network are connected by vessels that participate in multiple fisheries. Higher Edge Densities correspond to greater flexibility in fishery participation among all vessels represented in the network. Note that Edge Density scales with network size (it is easier to achieve a high density in a low complexity network), so comparisons across networks of different sizes should be interpreted carefully. With that caveat in mind, declines in Edge Density imply a simplification of network structure, which can in turn reduce resilience to environmental or regulatory shocks because of diminished flexibility to participate in other fisheries in the same port group (e.g., Fisher et al. 2021). Here we have calculated the long-term average Edge Density from 2004-2021 for each port group. 
+<!-- The x-axis, a resilience index based on Edge Density, is a statistic derived from the fisheries participation network for each IOPAC port group. Edge Density is calculated as the ratio of the number of edges present to the total possible edges in the network, and represents the extent to which nodes within a network are connected by vessels that participate in multiple fisheries. Higher Edge Densities correspond to greater flexibility in fishery participation among all vessels represented in the network. Note that Edge Density scales with network size (it is easier to achieve a high density in a low complexity network), so comparisons across networks of different sizes should be interpreted carefully. With that caveat in mind, declines in Edge Density imply a simplification of network structure, which can in turn reduce resilience to environmental or regulatory shocks because of diminished flexibility to participate in other fisheries in the same port group (e.g., Fisher et al. 2021). Here we have calculated the long-term average Edge Density from 2004-2021 for each port group.  -->
 
-The y-axis, Salmon Revenue, reflects the aggregate ex-vessel value of salmon landed in each IOPAC port group. Here we have standardized Salmon Revenue relative to each port group's long-term mean value to accentuate differences in the 2018-2021 season. We note that this Salmon Revenue Anomaly is positively correlated with statistics from fisheries participation networks that describe how well the salmon fishery is connected to other fisheries in the network.
+<!-- The y-axis, Salmon Revenue, reflects the aggregate ex-vessel value of salmon landed in each IOPAC port group. Here we have standardized Salmon Revenue relative to each port group's long-term mean value to accentuate differences in the 2018-2021 season. We note that this Salmon Revenue Anomaly is positively correlated with statistics from fisheries participation networks that describe how well the salmon fishery is connected to other fisheries in the network. -->
 
-Grey lines on the x- and y-axes in this plot are for reference only. On the y-axis, this line corresponds to no difference from the long-term mean revenue for each port group. On the x-axis, this line corresponds to the median long-term resilience index across port groups.
+<!-- Grey lines on the x- and y-axes in this plot are for reference only. On the y-axis, this line corresponds to no difference from the long-term mean revenue for each port group. On the x-axis, this line corresponds to the median long-term resilience index across port groups. -->
 
-This framework was inspired by Figure 4 in: Moore, S.K., Cline, M.R., Blair, K., Klinger, T., Varney, A. & Norman, K. (2019). An index of fisheries closures due to harmful algal blooms and a framework for identifying vulnerable fishing communities on the U.S. West Coast. Marine Policy, 103543. It is congruent with the social vulnerability framework used in Figure 2 (right panel) of Thiault, L., S. Gelcich, N. Marshall, P. Marshall, F. Chlous, and J. Claudet. 2020. Operationalizing vulnerability for social–ecological integration in conservation and natural resource management. Conservation Letters 13:e12677.
-https://conbio.onlinelibrary.wiley.com/doi/abs/10.1111/conl.12677
+<!-- This framework was inspired by Figure 4 in: Moore, S.K., Cline, M.R., Blair, K., Klinger, T., Varney, A. & Norman, K. (2019). An index of fisheries closures due to harmful algal blooms and a framework for identifying vulnerable fishing communities on the U.S. West Coast. Marine Policy, 103543. It is congruent with the social vulnerability framework used in Figure 2 (right panel) of Thiault, L., S. Gelcich, N. Marshall, P. Marshall, F. Chlous, and J. Claudet. 2020. Operationalizing vulnerability for social–ecological integration in conservation and natural resource management. Conservation Letters 13:e12677. -->
+<!-- https://conbio.onlinelibrary.wiley.com/doi/abs/10.1111/conl.12677 -->
 
-### Save plots as pngs 
+<!-- ### Save plots as pngs  -->
 
 
-```{r echo=FALSE, include=FALSE}
-png(here::here(pngdir, paste0("Salmon Revenue 3-Year Anomaly versus Long-term Mean Network Edge Density Anomaly from IOPAC Fisheries Participation Networks 2018-2021.png")),
-    res=200,height=1200,width=1400)
-fig_ma_scaled
-dev.off()
+<!-- ```{r echo=FALSE, include=FALSE} -->
+<!-- png(here::here(pngdir, paste0("Salmon Revenue 3-Year Anomaly versus Long-term Mean Network Edge Density Anomaly from IOPAC Fisheries Participation Networks 2018-2021.png")), -->
+<!--     res=200,height=1200,width=1400) -->
+<!-- fig_ma_scaled -->
+<!-- dev.off() -->
 
-# png(here::here(pngdir, paste0("Salmon Revenue and Importance versus Network Edge Density from IOPAC Fisheries Participation Networks 2020-2021.png")),
-#     res=200,height=1200,width=1400)
-# fig
-# dev.off()
+<!-- # png(here::here(pngdir, paste0("Salmon Revenue and Importance versus Network Edge Density from IOPAC Fisheries Participation Networks 2020-2021.png")), -->
+<!-- #     res=200,height=1200,width=1400) -->
+<!-- # fig -->
+<!-- # dev.off() -->
 
-```
-<br>
+<!-- ``` -->
+<!-- <br> -->
 
 ## Scaled plot, moving average for economic dependence and edge density
 
@@ -672,8 +672,8 @@ fig_ma <- ggplot(plotdat_wide, aes(x=(`5-Year Mean Edge Density`), y=`5-Year Mea
   geom_vline(xintercept=mean(plotdat_wide$`5-Year Mean Edge Density`), colour='grey', alpha = 0.5) + 
   xlim(0,1) +
   labs(#subtitle = '2020-2021',
-       x = "Low                                    Resilience Index                                 High\n(average, 2016-2021)",
-       y = "Economic Dependence on Salmon\n(average, 2016-2021)"#,
+       x = "Low                                    Resilience Index                                 High\n(2016-2021)",
+       y = "Economic Dependence on Salmon\n(2016-2021)"#,
        #size = 'Long-term Mean\nImportance of Salmon\nNode in Network'
        ) +
   #coord_flip() +
@@ -700,7 +700,7 @@ In general, we see that economic dependence on salmon from 2016-2021 (y-axis) ha
 
 The x-axis, a resilience index based on Edge Density, is a statistic derived from the fisheries participation network for each IOPAC port group. Edge Density is calculated as the ratio of the number of edges present to the total possible edges in the network, and represents the extent to which nodes within a network are connected by vessels that participate in multiple fisheries. Higher Edge Densities correspond to greater flexibility in fishery participation among all vessels represented in the network. Note that Edge Density scales with network size (it is easier to achieve a high density in a low complexity network), so comparisons across networks of different sizes should be interpreted carefully. With that caveat in mind, declines in Edge Density imply a simplification of network structure, which can in turn reduce resilience to environmental or regulatory shocks because of diminished flexibility to participate in other fisheries in the same port group (e.g., Fisher et al. 2021). Here we have calculated the 5-year average Edge Density from 2016-2021 for each port group. 
 
-Grey lines on the x- and y-axes in this plot are for reference only. These lines correspond to the mean long-term values across port groups.
+Grey lines on the x- and y-axes in this plot are for reference only. These lines correspond to the mean values across port groups.
 
 This framework was inspired by Figure 4 in: Moore, S.K., Cline, M.R., Blair, K., Klinger, T., Varney, A. & Norman, K. (2019). An index of fisheries closures due to harmful algal blooms and a framework for identifying vulnerable fishing communities on the U.S. West Coast. Marine Policy, 103543. It is congruent with the social vulnerability framework used in Figure 2 (right panel) of Thiault, L., S. Gelcich, N. Marshall, P. Marshall, F. Chlous, and J. Claudet. 2020. Operationalizing vulnerability for social–ecological integration in conservation and natural resource management. Conservation Letters 13:e12677.
 https://conbio.onlinelibrary.wiley.com/doi/abs/10.1111/conl.12677
@@ -745,10 +745,20 @@ img_monterey <- magick::image_read(
              ESRimages_2020[grep("Monterey", ESRimages_2020)])
 )
 
+img_bodega <- magick::image_read(
+  here::here(pngdir_ports,
+             ESRimages_2020[grep("Bodega", ESRimages_2020)])
+)
+
+img_nwc <- magick::image_read(
+  here::here(pngdir_ports,
+             ESRimages_2020[grep("North", ESRimages_2020)])
+)
+
 ```
 
 Make plots and combine
-```{r plot_networks}
+```{r plot_networks_brook_monterey}
 
 p_brookings_2020 <- ggplot(data.frame(x = 1:2, y = 1:2), aes(x, y)) +
      geom_point(size = 1, colour=NA) +
@@ -769,6 +779,30 @@ p_2020
 
 ```
 
+Make plots and combine
+```{r plot_networks_bodega_nwc}
+
+p_bodega_2020 <- ggplot(data.frame(x = 1:2, y = 1:2), aes(x, y)) +
+     geom_point(size = 1, colour=NA) +
+     draw_image(img_bodega , x = 1, y = 1, scale = 1.1, halign = 0.9) +
+     theme_void()
+
+p_nwc_2020 <- ggplot(data.frame(x = 1:2, y = 1:2), aes(x, y)) +
+     geom_point(size = 1, colour=NA) +
+     draw_image(img_nwc , x = 1, y = 1, scale = 1.1, halign = 0.9) +
+     theme_void()
+
+p_2020_bodega_nwc <- plot_grid(p_bodega_2020, p_nwc_2020,
+                            labels = c('B) Bodega Bay', 'C) North WA Coast'), 
+                            label_size = 16, label_x = c(0.1,0.1), label_y = c(1, 1), align = "hv", rel_widths = c(1, 1), ncol = 1
+) #label_x = 0.4, c(0.35, 0.35, 0.35, 0.35, 0.35, 0.35)
+
+p_2020_bodega_nwc
+
+```
+
+
+
 ## Combine vulnerability plot and network graphs
 
 ```{r combine_all_plots}
@@ -779,7 +813,13 @@ p_all <- plot_grid(fig_scaled, p_2020,
 ) #label_x = 0.4, c(0.35, 0.35, 0.35, 0.35, 0.35, 0.35)
 p_all
 
-p_all_ma <- plot_grid(fig_ma_scaled, p_2020,
+# p_all_ma_scaled <- plot_grid(fig_ma_scaled, p_2020,
+#                             labels = c('A) Salmon-Based Vulnerability',''), 
+#                             label_size = 16, label_x = c(0,0.1), label_y = c(1,1), align = "hv", rel_widths = c(1.2, 1), ncol = 2
+# ) #label_x = 0.4, c(0.35, 0.35, 0.35, 0.35, 0.35, 0.35)
+# p_all_ma_scaled
+
+p_all_ma <- plot_grid(fig_ma, p_2020_bodega_nwc,
                             labels = c('A) Salmon-Based Vulnerability',''), 
                             label_size = 16, label_x = c(0,0.1), label_y = c(1,1), align = "hv", rel_widths = c(1.2, 1), ncol = 2
 ) #label_x = 0.4, c(0.35, 0.35, 0.35, 0.35, 0.35, 0.35)
@@ -796,10 +836,16 @@ png(here::here(pngdir, paste0("Salmon-Based Vulnerability and 2 Example IOPAC Fi
 p_all
 dev.off()
 
-png(here::here(pngdir, paste0("Salmon-Based Vulnerability (3-Year Average) and 2 Example IOPAC Fisheries Participation Networks 2018-2021.png")),
+# png(here::here(pngdir, paste0("Salmon-Based Vulnerability (3-Year Average) and 2 Example IOPAC Fisheries Participation Networks 2018-2021.png")),
+#     res=300,height=2500,width=2900)
+# p_all_ma
+# dev.off()
+
+png(here::here(pngdir, paste0("Salmon-Based Vulnerability (5-Year Average) and 2 Example IOPAC Fisheries Participation Networks 2016-2021.png")),
     res=300,height=2500,width=2900)
 p_all_ma
 dev.off()
+
 ```
 
 <!-- Focus on node strength only, compile into a single figure. Save plot as png, with filename: Non-DTS Groundfish Node Strength in Fisheries Participation Networks 2016-2021, Oregon and California.png -->
