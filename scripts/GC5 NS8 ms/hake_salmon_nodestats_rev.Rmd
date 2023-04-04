@@ -73,6 +73,10 @@ pngdir <- 'results/figures/gc5_ns8'
 
 # directory with network graphs
 pngdir_ports = '/Users/jameal.samhouri/Dropbox/CCIEA/cciea_networks_git/data/networks/participation_vessel_ports/plots/comparable/2020 only/.'
+
+# directory to write out df's
+data_out_dir <- 'data/gc5_ns8'
+
 ```
 <br>
 
@@ -412,6 +416,10 @@ plotdat_wide <- plotdat_wide %>%
 `5-Year Mean Importance` = replace(`5-Year Mean Importance`, is.na(`5-Year Mean Importance`) == TRUE, 0)
     )
 
+
+write_csv(plotdat_wide,
+          here::here(data_out_dir,'plotdat_wide.csv')
+          )
 
 ```
 
