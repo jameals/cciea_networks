@@ -736,9 +736,13 @@ This approach is consistent with definitions of social vulnerability in the lite
 
 ```{r make_ma_fig_salmon_imp, echo=FALSE, fig.width=10, fig.height=8}
 
+plotdat_wide <- read_csv(here::here(data_out_dir,'plotdat_wide_vuln.csv'))
+
+starfishpal=pnw_palette("Starfish",19)
+
 # main network metric plot
 fig_ma_salmon_imp <- ggplot(plotdat_wide %>% filter(metier.cm == 'Salmon'), aes(x=(`5-Year Mean Importance`), y=`5-Year Mean Revenue`/10^6)) + 
-  geom_point() + #aes(fill = pcgroup, colour = pcgroup)
+  geom_point(aes(fill = CSVI, colour = CSVI), size=4) + 
   #geom_point(aes(size = (`Long-term Mean Importance`))) +
   geom_text_repel(aes(label=pcgroup), #, size = 2*`Scaled Revenue` #, size = 2*(`Long-term Mean Importance`)
                   force = 0.5,
@@ -765,6 +769,8 @@ fig_ma_salmon_imp <- ggplot(plotdat_wide %>% filter(metier.cm == 'Salmon'), aes(
           ), 
           colour='grey', alpha = 0.5) + 
   xlim(0,1) +
+  scale_colour_gradientn(colours = starfishpal) +
+  scale_fill_gradientn(colours = starfishpal) +
   labs(#subtitle = '2020-2021',
        x = "Salmon Node Network Importance\n(2016-2021)",
        y = "Economic Dependence on Salmon\n(2016-2021)"#,
@@ -809,9 +815,13 @@ This approach is consistent with definitions of social vulnerability in the lite
 
 ```{r make_ma_fig_whiting_imp, echo=FALSE, fig.width=10, fig.height=8}
 
+plotdat_wide <- read_csv(here::here(data_out_dir,'plotdat_wide_vuln.csv'))
+
+starfishpal=pnw_palette("Starfish",19)
+
 # main network metric plot
 fig_ma_whiting_imp <- ggplot(plotdat_wide %>% filter(metier.cm == 'Whiting'), aes(x=(`5-Year Mean Importance`), y=`5-Year Mean Revenue`/10^6)) + 
-  geom_point() + #aes(fill = pcgroup, colour = pcgroup)
+  geom_point(aes(fill = CSVI, colour = CSVI), size=4) + 
   #geom_point(aes(size = (`Long-term Mean Importance`))) +
   geom_text_repel(aes(label=pcgroup), #, size = 2*`Scaled Revenue` #, size = 2*(`Long-term Mean Importance`)
                   force = 0.5,
@@ -838,6 +848,8 @@ fig_ma_whiting_imp <- ggplot(plotdat_wide %>% filter(metier.cm == 'Whiting'), ae
           ), 
           colour='grey', alpha = 0.5) + 
   xlim(0,1) +
+  scale_colour_gradientn(colours = starfishpal) +
+  scale_fill_gradientn(colours = starfishpal) +
   labs(#subtitle = '2020-2021',
        x = "Whiting Node Network Importance\n(2016-2021)",
        y = "Economic Dependence on Whiting\n(2016-2021)"#,
