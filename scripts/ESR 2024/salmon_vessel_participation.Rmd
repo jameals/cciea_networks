@@ -1,0 +1,200 @@
+---
+title: "Changes in salmon vessel participation 2023"
+author: "Jameal Samhouri"
+date: "Written 2024-01-11. Last Run `r Sys.Date()`"
+output:
+  html_document:
+    df_print: paged
+    toc: yes
+    toc_depth: '3'
+  pdf_document:
+    highlight: haddock
+    number_sections: yes
+    toc: yes
+    toc_depth: '3'
+geometry: margin=1in
+subtitle: Preparation for CCIEA ESR 2023-2024
+fontsize: 11pt
+---
+
+# Setup
+
+<br>
+```{r "setup", include=FALSE}
+if(!require("here")) {install.packages("here")}
+library(here)
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = here::here())
+
+## start time for full script
+script_start_time <- Sys.time()
+```
+<br>
+
+This script requires the following packages. 
+```{r packages, message=FALSE, warning=FALSE}
+if(!require("tidyverse")) {install.packages("tidyverse")}
+if(!require("lubridate")) {install.packages("lubridate")}
+if(!require("ggplot2")) {install.packages("ggplot2")}
+```
+<br>
+
+# User Inputs 
+
+Select your directories.
+```{r}
+## location of fish ticket with metiers assigned, metier key for each port group
+indir = '/Users/jameal.samhouri/Documents/CCIEA Networks/processed'
+
+## output file (including directory) for figures
+figdir = 'results/figures'
+
+## directory for species group key. not confidential
+processdir <- "data/input"
+```
+<br>
+
+Specify file name of the species groupings lookup key that contains labels for the network graphs.
+```{r get_filenames}
+
+myfile5 <- "spgrpn2_iea_key.csv"
+
+```
+<br>
+
+
+Identify the crab years, port groups, and states that you would like to produce networks for. The port groups vector should include only those port groups which are present in the single data file produced with script 00. The states vector should include only those states which are present in the agid column of the fishtix data produced with script 00. 
+```{r}
+## (crab) years
+years <- seq(2016,2022)
+
+## IOPAC port groups
+myports <- c("Puget Sound","North WA Coast","WA Coast","Other Coastal Washington","Astoria","Tillamook","Columbia River","Newport","Coos Bay","Brookings","Crescent City","Eureka","Morro Bay","Fort Bragg","Bodega Bay","San Francisco","San Diego","Monterey","Santa Barbara","Los Angeles","Unknown Ports" )
+
+# wa_ports <- myports[1:4]
+# or_ports <- myports[5:10]
+# ca_ports <- myports[11:20]
+
+## west coast states
+mystates <- c("C", "O","W")
+
+```
+<br>
+
+Some Dungeness crab landings may be recorded prior to the official opening date of the season as a part of domoic acid testing. We remove these landings because we are interested in flows of fishers between fisheries as a result of within-season activity.
+```{r}
+rm_crab = TRUE
+```
+<br>
+
+For confidentiality, three or more salmon vessels must be participating in a port group for that port group to be included in the analysis 
+
+```{r}
+
+vessel_cutoff <- 3
+
+```
+<br>
+
+# Read in data
+
+Read in the landings data, from the file containing all fish tickets across port groups, within a single crab year.
+
+NOTE: this step takes a while if you have not already made a compiled rds
+
+NOTES FOR JAMEAL: 
+1) read in fish ticket files with this naming convention: fish_tickets_crab2016_processed_for_networks_2024-01-10.csv
+
+```{r}
+# for(y in years){
+#     tmptix <- read.csv(paste0(indir,"/fish_tickets_crab", y, "_processed_for_networks_2024-01-10.csv"), stringsAsFactors = FALSE) %>%
+#     filter(IOPAC %in% myports)
+#     
+#     if(exists('fishtix')){
+#       fishtix <- rbind(fishtix, tmptix)
+#     } else { fishtix <- tmptix }
+#   }
+# rm(tmptix)
+# 
+# # some checks on species groups
+# unique(fishtix$SPGRPN2)
+# length(which(is.na(fishtix$SPGRPN2)))
+# unique(fishtix[which(is.na(fishtix$SPGRPN2)),]$spid)
+# unique(fishtix[which(is.na(fishtix$SPGRPN2)),]$year)
+# unique(fishtix[which(is.na(fishtix$SPGRPN2)),]$agid)
+# unique(fishtix[which(is.na(fishtix$SPGRPN2)),]$pcid)
+
+# write out compiled fishtix for future use
+# write_rds(fishtix, paste0(indir,"/fish_tickets_crab", min(years), "-", max(years), "_processed_for_networks_2024-01-10.rds"))
+
+fishtix <- read_rds(paste0(indir,"/fish_tickets_crab", min(years), "-", max(years), "_processed_for_networks_2024-01-10.rds"))
+
+```
+<br>
+
+Make sure that all dates are `Posixt` objects and species group labels are characters.
+```{r}
+#dates_df$odate <- mdy(dates_df$odate)
+fishtix$tdate <- date(parse_date_time(fishtix$tdate, orders=c("ymd", "mdy")))
+fishtix$SPGRPN2 = as.character(fishtix$SPGRPN2)
+```
+<br>
+
+Species group names
+```{r}
+
+# Read in species group labels key #
+spgrp_names <- read_csv(here::here(processdir,myfile5),
+                       col_types = list(col_character(), col_character(), col_character()))
+
+#### join sp group names to fishtix
+fishtix <- fishtix %>%
+  left_join(spgrp_names)
+
+```
+
+# Analyze salmon vessel participation
+
+## Collect salmon vessels and tabulate
+
+```{r salmon_vessels}
+
+# create table of salmon vessels by crab yr and port group
+salmon_vessels <- fishtix %>%
+  group_by(crab_year, IOPAC) %>%
+  filter(
+    SPGRPN2 == '30'
+  ) %>%
+  dplyr::select(crab_year, IOPAC, drvid) %>%
+  distinct() 
+
+```
+
+## Subset fishtix to salmon vessels only
+
+```{r subset_salmon}
+
+salmontix <- fishtix %>%
+  filter(
+    drvid %in%  salmon_vessels$drvid
+  )
+
+dim(salmontix)[1]/dim(fishtix)[1]
+# salmon vessels account for almost 60% of all fish tix across all commercial fisheries in pacfin from 2016-2023
+
+```
+
+## Determine which fisheries salmon vessels participate in and how much
+
+Determine which fisheries salmon vessels in each port participated in during 2017-2021
+```{r salmon_v_participation}
+
+sv_participation <- salmontix %>%
+  group_by(crab_year, IOPAC) %>%
+  distinct(crab_year, IOPAC, species_group_2_label2, SPGRPN2) %>% 
+  arrange(IOPAC, crab_year)
+
+
+```
+
+Summarise the number of salmon vessels participating in each fishery, and the total landings and revenue associated with each, by port and year
