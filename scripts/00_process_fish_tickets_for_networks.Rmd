@@ -89,6 +89,23 @@ processdir <- "data/input"
 ```
 <br>
 
+If you have a new download of fish ticket data and want to clean it up a bit and convert it to RDS, use this chunk.
+```{r csv2rds}
+
+# NOTE: reading in PacFIN csv's for multiple years is SLOW, and took >1.5hrs on JS macbook
+
+# tmpfile <- 'fish tickets 2016-2023 121323.csv' # latest pull from PacFIN 12-13-2023
+# tmpfile2 <- read.csv(paste0(indir2,tmpfile))
+# glimpse(tmpfile2)
+# 
+# #as.Date(tmpfile2[1,]$LANDING_DATE, "%m/%d/%Y")
+# 
+# # # LANDING_YEAR in more recent data pulls has a time associated with it. convert myfile2$LANDING_DATE to date formats that exclude time. added 12-29-2021
+# tmpfile2$LANDING_DATE <- as.Date(tmpfile2$LANDING_DATE, "%m/%d/%Y")
+# write_rds(tmpfile2, paste0(out_conf_dir,'fish tickets 2016-2023 121323.rds'))
+
+```
+
 Specify file name of the raw fish ticket data file and supporting files with species and port grouping keys. This script takes a flexible input file name, but will write out hard-coded file names for consistency through the rest of the analysis.
 ```{r get_filenames}
 # will need to glue 2004-2018 data to 2019-2020 data
@@ -96,7 +113,9 @@ Specify file name of the raw fish ticket data file and supporting files with spe
 # myfile1 <- "pacfin_compiled_2004thru2018.rds"
 # myfile2 <- "fish tickets 2019-2021 121321.csv" # latest pull from PacFIN: 12-13-21. previous pulls 03-01-21, 01-27-21, and 12-07-20
 # myfile2 <- "fish tickets 2004-2021 122921.csv" # latest pull from PacFIN: 12-29-21.
-myfile2 <- "pacfin_compiled_2004thru2021.rds" # latest pull from PacFIN: 12-29-21.
+# myfile2 <- "pacfin_compiled_2004thru2021.rds" # latest pull from PacFIN: 12-29-21.
+
+myfile2 <- 'fish tickets 2016-2023 121323.rds' # latest pull from PacFIN 12-13-2023
 
 myfile3 <- "iopac_conversion_table.csv"
 myfile4 <- "species_groupings_spgrpn2_iea.csv" # originally from first tab of species_groupings IEA.xlsx from Dan Holland. see email of 121520
@@ -114,10 +133,10 @@ Set a few more user inputs to process the fish tickets
 crab_year = TRUE
 
 ## if crab_year = TRUE, which crab years of fish tickets are you processing? [numeric vector]
-crab_years <- seq(2004,2020)
+crab_years <- seq(2016,2022)
 
 ## which years of fish tickets are you processing? [numeric vector]
-years <- seq(2004,2021)
+years <- seq(2016,2023)
 
 ## do you want to write out the average price per pounds calculated from the data? [TRUE/FALSE]
 write_ppp = FALSE
@@ -140,7 +159,7 @@ glimpse(rawdat)
 colnames(rawdat)
 
 port_grps <- read_csv(here::here(processdir,myfile3))
-sp_grps <- read_csv(here::here(processdir,myfile4))
+sp_grps <- read_csv(here::here(processdir,myfile4)) %>% distinct() # remove duplicate rows (GPH1 is duplicated)
 
 ```
 <br>
@@ -274,6 +293,9 @@ rm(rawdat.sub1)
 <br>
 
 Next add columns which describe the port group for landings, based on IOPAC port codes, and species group, based on Holland CCIEA ESR species groupings.
+
+01-09-2024: the chunk below caused a warning that needs checking. Warning: Detected an unexpected many-to-many relationship between `x` and `y`
+
 ```{r nom_ID_2}
 rawdat.sub3 <- rawdat.sub2 %>%
   left_join(
@@ -341,7 +363,7 @@ for(y in years){
                        spid, spid_recode, SPGRPN2, council,
                        grgroup, grid, removal_type,removal_type_code,
                        drvid, drvid_year,proc, fleet, pounds, ppp, adj_ppp,revenue,adj_revenue))
-  write.csv(tmp_out, paste0(out_conf_dir, paste0("fish_tickets_", y, "_processed_for_networks.csv")), row.names=FALSE)
+  write.csv(tmp_out, paste0(out_conf_dir, paste0("fish_tickets_", y, "_processed_for_networks_",Sys.Date(),".csv")), row.names=FALSE)
 }
 ```
 <br>
