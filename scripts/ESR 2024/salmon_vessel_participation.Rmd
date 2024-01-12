@@ -36,6 +36,8 @@ This script requires the following packages.
 if(!require("tidyverse")) {install.packages("tidyverse")}
 if(!require("lubridate")) {install.packages("lubridate")}
 if(!require("ggplot2")) {install.packages("ggplot2")}
+if(!require("knitr")) {install.packages("knitr")}
+if(!require("ggalluvial")) {install.packages("ggalluvial")}
 ```
 <br>
 
@@ -48,6 +50,9 @@ indir = '/Users/jameal.samhouri/Documents/CCIEA Networks/processed'
 
 ## output file (including directory) for figures
 figdir = 'results/figures'
+
+## output file (including directory) for data frames
+nonconoutdir = 'data/esr_2024'
 
 ## directory for species group key. not confidential
 processdir <- "data/input"
@@ -186,15 +191,72 @@ dim(salmontix)[1]/dim(fishtix)[1]
 
 ## Determine which fisheries salmon vessels participate in and how much
 
-Determine which fisheries salmon vessels in each port participated in during 2017-2021
+Determine which fisheries salmon vessels in each port participated in during 2016-2022
+
+Also summarise the number of salmon vessels participating in each fishery, and the total landings and revenue associated with each, by port and year. Make a nonconfidential data frame
 ```{r salmon_v_participation}
 
-sv_participation <- salmontix %>%
+# confidential summary because it includes all fisheries even if <3 vessels participate
+sv_participation_con <- salmontix %>%
   group_by(crab_year, IOPAC) %>%
   distinct(crab_year, IOPAC, species_group_2_label2, SPGRPN2) %>% 
   arrange(IOPAC, crab_year)
 
+sv_participation_noncon <- salmontix %>%
+  group_by(crab_year, IOPAC, species_group_2_label2, SPGRPN2) %>%
+  summarise(
+    num_vessels = length(unique(drvid)),
+    total_rev = sum(adj_revenue), # come back to this to include afi_revenue instead
+    total_pounds = sum(pounds),
+    .groups = 'drop'
+  ) %>% 
+  filter(
+    num_vessels >= vessel_cutoff 
+  ) %>%
+  arrange(IOPAC, crab_year) 
+
+#sv_participation_noncon %>% kable #1073 rows
+
+write_csv(sv_participation_noncon, paste0(nonconoutdir,"/salmon_vessel_participation_", min(years), "-", max(years), "_port_summaries.csv"))
+
 
 ```
 
-Summarise the number of salmon vessels participating in each fishery, and the total landings and revenue associated with each, by port and year
+# Plot changes in salmon participation over time
+
+By port
+```{r v_participation_plot}
+
+# probably easiest to start by converting df to wide format
+
+sv_participation_noncon_wide <- sv_participation_noncon %>%
+  pivot_wider(
+    names_from = species_group_2_label2,
+    values_from = c(num_vessels, total_rev, total_pounds)
+  )
+
+ggplot(data = titanic_wide,
+       aes(axis1 = Class, axis2 = Sex, axis3 = Age,
+           y = Freq)) +
+  scale_x_discrete(limits = c("Class", "Sex", "Age"), expand = c(.2, .05)) +
+  xlab("Demographic") +
+  geom_alluvium(aes(fill = Survived)) +
+  geom_stratum() +
+  geom_text(stat = "stratum", aes(label = after_stat(stratum))) +
+  theme_minimal() +
+  ggtitle("passengers on the maiden voyage of the Titanic",
+          "stratified by demographics and survival")
+ 
+ggplot(data = sv_participation_noncon %>% filter(IOPAC == 'Bodega Bay'),
+       aes(x = species_group_2_label2, stratum = stratum, alluvium = alluvium,
+           y = num_vessels, label = species_group_2_label2)) +
+  geom_alluvium(aes(fill = num_vessels)) +
+  geom_stratum() + geom_text(stat = "stratum") +
+  theme_minimal()
+  # theme_minimal() +
+  # ggtitle("passengers on the maiden voyage of the Titanic",
+  #         "stratified by demographics and survival")
+
+
+
+```
