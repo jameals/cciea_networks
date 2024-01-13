@@ -38,6 +38,7 @@ if(!require("lubridate")) {install.packages("lubridate")}
 if(!require("ggplot2")) {install.packages("ggplot2")}
 if(!require("knitr")) {install.packages("knitr")}
 if(!require("ggalluvial")) {install.packages("ggalluvial")}
+if(!require("ggpubr")) {install.packages("ggpubr")}
 ```
 <br>
 
@@ -191,6 +192,7 @@ dim(salmontix)[1]/dim(fishtix)[1]
 
 ## Determine which fisheries salmon vessels participate in and how much
 
+### Annual data
 Determine which fisheries salmon vessels in each port participated in during 2016-2022
 
 Also summarise the number of salmon vessels participating in each fishery, and the total landings and revenue associated with each, by port and year. Make a nonconfidential data frame
@@ -202,6 +204,21 @@ sv_participation_con <- salmontix %>%
   distinct(crab_year, IOPAC, species_group_2_label2, SPGRPN2) %>% 
   arrange(IOPAC, crab_year)
 
+# ignoring sp groups
+sv_bulkparticipation_noncon <- salmontix %>%
+  group_by(crab_year, IOPAC) %>%
+  summarise(
+    num_vessels = length(unique(drvid)),
+    total_rev = sum(adj_revenue), # come back to this to include afi_revenue instead
+    total_pounds = sum(pounds),
+    .groups = 'drop'
+  ) %>% 
+  filter(
+    num_vessels >= vessel_cutoff 
+  ) %>%
+  arrange(IOPAC, crab_year) 
+
+# noncon summary
 sv_participation_noncon <- salmontix %>%
   group_by(crab_year, IOPAC, species_group_2_label2, SPGRPN2) %>%
   summarise(
@@ -217,15 +234,85 @@ sv_participation_noncon <- salmontix %>%
 
 #sv_participation_noncon %>% kable #1073 rows
 
+write_csv(sv_bulkparticipation_noncon, paste0(nonconoutdir,"/salmon_vessel_bulkparticipation_", min(years), "-", max(years), "_port_summaries.csv"))
+
 write_csv(sv_participation_noncon, paste0(nonconoutdir,"/salmon_vessel_participation_", min(years), "-", max(years), "_port_summaries.csv"))
+
+
+```
+
+### Crab year 2017-2021 vs 2022 data
+Determine which fisheries salmon vessels in each port participated in during 2017-2021 vs 2022
+
+Also summarise the number of salmon vessels participating in each fishery, and the total landings and revenue associated with each, by port and year. Make a nonconfidential data frame
+```{r salmon_v_participation_beforeafter}
+
+# ignoring sp groups
+sv_bulk_mean20172021_noncon <- sv_bulkparticipation_noncon %>%
+  filter (crab_year %in% c(seq(2017,2021))) %>%
+  group_by(IOPAC) %>%
+  summarise(
+    num_vessels = mean(num_vessels, na.rm=TRUE),
+    sd_num_vessels = sd(num_vessels, na.rm=TRUE), 
+    total_rev = mean(total_rev, na.rm=TRUE),# come back to this to include afi_revenue instead
+    sd_total_rev = sd(total_rev, na.rm=TRUE),# come back to this to include afi_revenue instead
+    total_pounds = mean(total_pounds, na.rm=TRUE),
+    sd_total_pounds = sd(total_pounds, na.rm=TRUE),
+    .groups = 'drop'
+  ) %>%
+  mutate(
+    crab_year = '2017-2021'
+  ) %>%
+  dplyr::select('crab_year','IOPAC', 'num_vessels', 'total_rev', 'total_pounds', 'sd_num_vessels', 'sd_total_rev', 'sd_total_pounds')
+
+sv_bulk_2022_noncon <- sv_bulkparticipation_noncon %>%
+  filter (crab_year == 2022) %>%
+  mutate(
+    crab_year = as.character(crab_year)
+  )
+
+sv_bulk_noncon <- sv_bulk_mean20172021_noncon %>% 
+  bind_rows(sv_bulk_2022_noncon)
+
 
 
 ```
 
 # Plot changes in salmon participation over time
 
+Compare number of salmon vessels participating in crab years 2017-2021 to 2022
+
+```{r plot_bulk_sv_participation}
+myports <- c("Puget Sound","North WA Coast","WA Coast","Other Coastal Washington","Astoria","Tillamook","Columbia River","Newport","Coos Bay","Brookings","Crescent City","Eureka","Morro Bay","Fort Bragg","Bodega Bay","San Francisco","San Diego","Monterey","Santa Barbara","Los Angeles","Unknown Ports" )
+
+ca_focal <- c('Santa Barbara','Morro Bay','Monterey','Bodega Bay')
+
+ggplot(sv_bulk_noncon %>% filter(IOPAC %in% ca_focal),
+       aes(x=crab_year,y=num_vessels, colour=IOPAC, group=IOPAC)) + #,shape=factor(IOPAC, levels = myports)
+  geom_point(alpha=.8,size=3)+
+  #geom_jitter() +
+  geom_line(alpha=0.8)+
+  #scale_colour_gradientn(colours = pal, name=str_wrap("Initial Biomass",20), guide = gc)+
+    xlab("Time Period") +
+  # scale_shape_discrete(name = "Course correction timing",
+  #                      labels = c("Lag (75)", "Sync (50)", "Lead (25)")) +
+  # scale_x_discrete(limits = c('sq','abrupt', 'gradual'), labels = c(str_wrap('Status Quo',20),str_wrap('Abrupt Climate Adaptive',20), str_wrap('Gradual Climate Adaptive',20))) +
+  ylab("Number of Active Salmon Vessels") +
+  #ggtitle('Step Decrease in K') +
+  theme_pubr(legend="right")+
+  theme(
+    axis.text.x=element_text(size=10),
+    axis.text.y=element_text(size=10),
+    axis.title = element_text(size = 14),
+    strip.background = element_blank(),
+    strip.text.x = element_blank()
+  )
+
+
+```
+
 By port
-```{r v_participation_plot}
+```{r v_participation_alluvial_ plot}
 
 # probably easiest to start by converting df to wide format
 
