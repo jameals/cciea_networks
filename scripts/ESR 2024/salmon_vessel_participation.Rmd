@@ -7,6 +7,7 @@ output:
     df_print: paged
     toc: yes
     toc_depth: '3'
+    toc_float: true
   pdf_document:
     highlight: haddock
     number_sections: yes
@@ -39,6 +40,8 @@ if(!require("ggplot2")) {install.packages("ggplot2")}
 if(!require("knitr")) {install.packages("knitr")}
 if(!require("ggalluvial")) {install.packages("ggalluvial")}
 if(!require("ggpubr")) {install.packages("ggpubr")}
+if(!require("PNWColors")) {install.packages("PNWColors")}
+if(!require("cowplot")) {install.packages("cowplot")}
 ```
 <br>
 
@@ -176,16 +179,20 @@ salmon_vessels <- fishtix %>%
 
 ```
 
-## Subset fishtix to salmon vessels only
+## Subset fishtix to salmon vessels only, 2017-2022
 
 ```{r subset_salmon}
 
 salmontix <- fishtix %>%
   filter(
     drvid %in%  salmon_vessels$drvid
+  ) %>%
+  filter(
+    crab_year > 2016
   )
+  
 
-dim(salmontix)[1]/dim(fishtix)[1]
+dim(salmontix)[1]/dim(fishtix %>% filter(crab_year > 2016))[1]
 # salmon vessels account for almost 60% of all fish tix across all commercial fisheries in pacfin from 2016-2023
 
 ```
@@ -234,9 +241,9 @@ sv_participation_noncon <- salmontix %>%
 
 #sv_participation_noncon %>% kable #1073 rows
 
-write_csv(sv_bulkparticipation_noncon, paste0(nonconoutdir,"/salmon_vessel_bulkparticipation_", min(years), "-", max(years), "_port_summaries.csv"))
+write_csv(sv_bulkparticipation_noncon, paste0(nonconoutdir,"/salmon_vessel_bulkparticipation_", min(years)+1, "-", max(years)+1, "_port_summaries.csv"))
 
-write_csv(sv_participation_noncon, paste0(nonconoutdir,"/salmon_vessel_participation_", min(years), "-", max(years), "_port_summaries.csv"))
+write_csv(sv_participation_noncon, paste0(nonconoutdir,"/salmon_vessel_participation_", min(years)+1, "-", max(years)+1, "_port_summaries.csv"))
 
 
 ```
@@ -252,12 +259,14 @@ sv_bulk_mean20172021_noncon <- sv_bulkparticipation_noncon %>%
   filter (crab_year %in% c(seq(2017,2021))) %>%
   group_by(IOPAC) %>%
   summarise(
+    sd_num_vessels = sd(num_vessels, na.rm=TRUE),
     num_vessels = mean(num_vessels, na.rm=TRUE),
-    sd_num_vessels = sd(num_vessels, na.rm=TRUE), 
-    total_rev = mean(total_rev, na.rm=TRUE),# come back to this to include afi_revenue instead
+     
     sd_total_rev = sd(total_rev, na.rm=TRUE),# come back to this to include afi_revenue instead
-    total_pounds = mean(total_pounds, na.rm=TRUE),
+    total_rev = mean(total_rev, na.rm=TRUE),# come back to this to include afi_revenue instead
+    
     sd_total_pounds = sd(total_pounds, na.rm=TRUE),
+    total_pounds = mean(total_pounds, na.rm=TRUE),
     .groups = 'drop'
   ) %>%
   mutate(
@@ -274,7 +283,7 @@ sv_bulk_2022_noncon <- sv_bulkparticipation_noncon %>%
 sv_bulk_noncon <- sv_bulk_mean20172021_noncon %>% 
   bind_rows(sv_bulk_2022_noncon)
 
-
+sv_bulk_noncon %>% kable()
 
 ```
 
@@ -282,23 +291,36 @@ sv_bulk_noncon <- sv_bulk_mean20172021_noncon %>%
 
 Compare number of salmon vessels participating in crab years 2017-2021 to 2022
 
-```{r plot_bulk_sv_participation}
-myports <- c("Puget Sound","North WA Coast","WA Coast","Other Coastal Washington","Astoria","Tillamook","Columbia River","Newport","Coos Bay","Brookings","Crescent City","Eureka","Morro Bay","Fort Bragg","Bodega Bay","San Francisco","San Diego","Monterey","Santa Barbara","Los Angeles","Unknown Ports" )
+```{r plot_portsetup}
+allports <- c("Puget Sound","North WA Coast","WA Coast","Other Coastal Washington","Astoria","Tillamook","Columbia River","Newport","Coos Bay","Brookings","Crescent City","Eureka","Morro Bay","Fort Bragg","Bodega Bay","San Francisco","San Diego","Monterey","Santa Barbara","Los Angeles","Unknown Ports" )
 
 ca_focal <- c('Santa Barbara','Morro Bay','Monterey','Bodega Bay')
 
-ggplot(sv_bulk_noncon %>% filter(IOPAC %in% ca_focal),
-       aes(x=crab_year,y=num_vessels, colour=IOPAC, group=IOPAC)) + #,shape=factor(IOPAC, levels = myports)
-  geom_point(alpha=.8,size=3)+
+ca_focal_pal <- pnw_palette("Bay", 4)
+
+all_pal <- pnw_palette('Bay', length(allports))
+```
+
+```{r plot_bulk_sv_participation}
+p_vessels <- ggplot(sv_bulk_noncon %>% 
+         filter(IOPAC %in% ca_focal), 
+       aes(x=crab_year, y=num_vessels, colour=IOPAC, group=IOPAC)
+       ) + #,shape=factor(IOPAC, levels = myports)
+  geom_pointrange(
+    aes(ymin = num_vessels - 2*sd_num_vessels, ymax= num_vessels + 2*sd_num_vessels), 
+    na.rm = TRUE,
+    alpha=.8, size=1.1,
+    position = position_dodge(width = 0.5)
+    ) +
   #geom_jitter() +
-  geom_line(alpha=0.8)+
+  geom_line(alpha=0.8,
+    position = position_dodge(width = 0.5))+
   #scale_colour_gradientn(colours = pal, name=str_wrap("Initial Biomass",20), guide = gc)+
     xlab("Time Period") +
-  # scale_shape_discrete(name = "Course correction timing",
-  #                      labels = c("Lag (75)", "Sync (50)", "Lead (25)")) +
-  # scale_x_discrete(limits = c('sq','abrupt', 'gradual'), labels = c(str_wrap('Status Quo',20),str_wrap('Abrupt Climate Adaptive',20), str_wrap('Gradual Climate Adaptive',20))) +
+    scale_x_discrete(labels = c('2017-2022','2022-2023')) +
   ylab("Number of Active Salmon Vessels") +
-  #ggtitle('Step Decrease in K') +
+  scale_colour_manual(values=rev(ca_focal_pal)) +
+  guides(colour=guide_legend(title="Port Group")) +
   theme_pubr(legend="right")+
   theme(
     axis.text.x=element_text(size=10),
@@ -308,42 +330,154 @@ ggplot(sv_bulk_noncon %>% filter(IOPAC %in% ca_focal),
     strip.text.x = element_blank()
   )
 
+p_vessels
 
 ```
 
-By port
-```{r v_participation_alluvial_ plot}
+This plot shows the mean number of active salmon vessels from Nov 2016 through Oct 2022 compared to the total number of active salmon vessels from Nov 2022 to Oct 2023. Active here means that a vessel had commercial salmon landings anytime between Nov 2016 and Oct 2023, and participated in the fishery or any other commercial fishery during either the Nov 2016 through Oct 2022 or Nov 2022 to Oct 2023 time period.
 
-# probably easiest to start by converting df to wide format
+Compare revenue of salmon vessels participating in crab years 2017-2021 to 2022
 
-sv_participation_noncon_wide <- sv_participation_noncon %>%
-  pivot_wider(
-    names_from = species_group_2_label2,
-    values_from = c(num_vessels, total_rev, total_pounds)
+```{r plot_bulk_sv_rev}
+
+p_rev <- ggplot(sv_bulk_noncon %>% 
+         filter(IOPAC %in% ca_focal), 
+       aes(x=crab_year, y=total_rev/10^6, colour=IOPAC, group=IOPAC)
+       ) + #,shape=factor(IOPAC, levels = myports)
+  geom_pointrange(
+    aes(ymin = (total_rev - 2*sd_total_rev)/10^6, ymax= (total_rev + 2*sd_total_rev)/10^6), 
+    na.rm = TRUE,
+    alpha=.8, size=1.1,
+    position = position_dodge(width = 0.5)
+    ) +
+  #geom_jitter() +
+  geom_line(alpha=0.8,
+    position = position_dodge(width = 0.5))+
+    xlab("Time Period") +
+  scale_x_discrete(labels = c('2017-2022','2022-2023')) +
+  ylab("Total Annual Commercial Fishing\nRevenue for Salmon Vessels\n(Millions USD)") +
+  scale_colour_manual(values=rev(ca_focal_pal)) +
+  guides(colour=guide_legend(title="Port Group")) +
+  theme_pubr(legend="right")+
+  theme(
+    axis.text.x=element_text(size=10),
+    axis.text.y=element_text(size=10),
+    axis.title = element_text(size = 14),
+    strip.background = element_blank(),
+    strip.text.x = element_blank()
   )
 
-ggplot(data = titanic_wide,
-       aes(axis1 = Class, axis2 = Sex, axis3 = Age,
-           y = Freq)) +
-  scale_x_discrete(limits = c("Class", "Sex", "Age"), expand = c(.2, .05)) +
-  xlab("Demographic") +
-  geom_alluvium(aes(fill = Survived)) +
-  geom_stratum() +
-  geom_text(stat = "stratum", aes(label = after_stat(stratum))) +
-  theme_minimal() +
-  ggtitle("passengers on the maiden voyage of the Titanic",
-          "stratified by demographics and survival")
- 
-ggplot(data = sv_participation_noncon %>% filter(IOPAC == 'Bodega Bay'),
-       aes(x = species_group_2_label2, stratum = stratum, alluvium = alluvium,
-           y = num_vessels, label = species_group_2_label2)) +
-  geom_alluvium(aes(fill = num_vessels)) +
-  geom_stratum() + geom_text(stat = "stratum") +
-  theme_minimal()
-  # theme_minimal() +
-  # ggtitle("passengers on the maiden voyage of the Titanic",
-  #         "stratified by demographics and survival")
-
-
+p_rev
 
 ```
+
+Compare landings of salmon vessels participating in crab years 2017-2021 to 2022
+
+```{r plot_bulk_sv_landings}
+
+p_lbs <- ggplot(sv_bulk_noncon %>% 
+         filter(IOPAC %in% ca_focal), 
+       aes(x=crab_year, y=total_pounds/10^6, colour=IOPAC, group=IOPAC)
+       ) + #,shape=factor(IOPAC, levels = myports)
+  geom_pointrange(
+    aes(ymin = (total_pounds - 2*sd_total_pounds)/10^6, ymax= (total_pounds + 2*sd_total_pounds)/10^6), 
+    na.rm = TRUE,
+    alpha=.8, size=1.1,
+    position = position_dodge(width = 0.5)
+    ) +
+  #geom_jitter() +
+  geom_line(alpha=0.8,
+    position = position_dodge(width = 0.5))+
+  ylab("Total Annual Commercial Fishing\nLandings for Salmon Vessels\n(Millions of Pounds)") +
+  xlab("Time Period") +
+  scale_x_discrete(labels = c('2017-2022','2022-2023')) +
+  scale_colour_manual(values=rev(ca_focal_pal)) +
+  guides(colour=guide_legend(title="Port Group")) +
+  theme_pubr(legend="right")+
+  theme(
+    axis.text.x=element_text(size=10),
+    axis.text.y=element_text(size=10),
+    axis.title = element_text(size = 14),
+    strip.background = element_blank(),
+    strip.text.x = element_blank()
+  )
+
+p_lbs
+
+```
+
+Glue participation and revenue together
+
+```{r combine_plots}
+p_row_ca <- plot_grid(
+  p_vessels + theme(legend.position="none"),
+  p_rev + theme(legend.position="none"),
+  align = 'vh',
+  labels = "auto", 
+  hjust = -1,
+  nrow = 1
+)
+
+legend_b <- get_legend(
+  p_vessels + 
+    guides(color = guide_legend(nrow = 1)) +
+    theme(legend.position = "bottom")
+)
+
+# add the legend underneath the row we made earlier. Give it 10%
+# of the height of one plot (via rel_heights).
+plot_grid(p_row_ca,
+          legend_b, 
+          ncol = 1, 
+          rel_heights = c(1, .1)
+          )
+
+ggsave(paste0(figdir,'/ca_sv_part_rev.png'))
+
+```
+
+Across California port groups, participation in commercial fisheries by salmon vessels that were active from 2017-2022 fell by as little as 6% (Santa Barbara) to almost 70% (Monterey) during the 2022-2023 fishing season. Like participation, the total revenue from commercial fishing in 2022-2023 for these salmon vessels declined as well (50-60%) in all of these port groups except Santa Barbara. In Santa Barbara, commercial fishing revenue increased >80% in 2022-2023 compared to the average from 2017-2022.
+
+Changes in participation by fishery can be found in salmon_vessel_participation_2017-2023_port_summaries.csv. This table only includes fisheries in which >=3 vessels participated.
+
+These plots show (a) the mean number of active salmon vessels from Nov 2017 through Oct 2022 compared to the total number of active salmon vessels from Nov 2022 to Oct 2023, and (b) the mean revenue across all commercial fisheries on the west coast from Nov 2016 through Oct 2022 compared to the total commercial fishing revenue on the west coast from Nov 2022 to Oct 2023. Active here means that a vessel had commercial salmon landings anytime between Nov 2017 and Oct 2023, and participated in the fishery or any other commercial fishery during either the Nov 2017 through Oct 2022 or Nov 2022 to Oct 2023 time period.
+
+Points represent averages (2017-2022) or totals (2022-2023) for each port group, and error bars reflect 2 standard deviations (2017-2022). A fishing season in defined from November of year y through November of year (y+1), specifically week 46 of year y through week 45 of year (y+1), to capture the strong influence of the Dungeness crab fishery.
+
+
+<!-- By CA port -->
+<!-- ```{r v_participation_alluvial_ plot} -->
+
+<!-- # probably easiest to start by converting df to wide format -->
+
+<!-- sv_participation_noncon_wide <- sv_participation_noncon %>% -->
+<!--   pivot_wider( -->
+<!--     names_from = species_group_2_label2, -->
+<!--     values_from = c(num_vessels, total_rev, total_pounds) -->
+<!--   ) -->
+
+<!-- ggplot(data = titanic_wide, -->
+<!--        aes(axis1 = Class, axis2 = Sex, axis3 = Age, -->
+<!--            y = Freq)) + -->
+<!--   scale_x_discrete(limits = c("Class", "Sex", "Age"), expand = c(.2, .05)) + -->
+<!--   xlab("Demographic") + -->
+<!--   geom_alluvium(aes(fill = Survived)) + -->
+<!--   geom_stratum() + -->
+<!--   geom_text(stat = "stratum", aes(label = after_stat(stratum))) + -->
+<!--   theme_minimal() + -->
+<!--   ggtitle("passengers on the maiden voyage of the Titanic", -->
+<!--           "stratified by demographics and survival") -->
+
+<!-- ggplot(data = sv_participation_noncon %>% filter(IOPAC == 'Bodega Bay'), -->
+<!--        aes(x = species_group_2_label2, stratum = stratum, alluvium = alluvium, -->
+<!--            y = num_vessels, label = species_group_2_label2)) + -->
+<!--   geom_alluvium(aes(fill = num_vessels)) + -->
+<!--   geom_stratum() + geom_text(stat = "stratum") + -->
+<!--   theme_minimal() -->
+<!--   # theme_minimal() + -->
+<!--   # ggtitle("passengers on the maiden voyage of the Titanic", -->
+<!--   #         "stratified by demographics and survival") -->
+
+
+
+<!-- ``` -->
