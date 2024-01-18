@@ -106,6 +106,15 @@ vessel_cutoff <- 3
 ```
 <br>
 
+We only include vessels that generate >=`$5,000` in total fisheries revenue each year and >=`$500` in revenue from individual fisheries.
+
+```{r}
+
+total_rev_cutoff <- 5000
+indiv_rev_cutoff <- 500
+
+```
+
 # Read in data
 
 Read in the landings data, from the file containing all fish tickets across port groups, within a single crab year.
@@ -113,11 +122,11 @@ Read in the landings data, from the file containing all fish tickets across port
 NOTE: this step takes a while if you have not already made a compiled rds
 
 NOTES FOR JAMEAL: 
-1) read in fish ticket files with this naming convention: fish_tickets_crab2016_processed_for_networks_2024-01-10.csv
+1) read in fish ticket files with this naming convention: fish_tickets_crab2016_processed_for_networks_2024-01-18.csv
 
 ```{r}
 # for(y in years){
-#     tmptix <- read.csv(paste0(indir,"/fish_tickets_crab", y, "_processed_for_networks_2024-01-10.csv"), stringsAsFactors = FALSE) %>%
+#     tmptix <- read.csv(paste0(indir,"/fish_tickets_crab", y, "_processed_for_networks_2024-01-18.csv"), stringsAsFactors = FALSE) %>%
 #     filter(IOPAC %in% myports)
 # 
 #     if(exists('fishtix')){
@@ -133,11 +142,13 @@ NOTES FOR JAMEAL:
 # unique(fishtix[which(is.na(fishtix$SPGRPN2)),]$year)
 # unique(fishtix[which(is.na(fishtix$SPGRPN2)),]$agid)
 # unique(fishtix[which(is.na(fishtix$SPGRPN2)),]$pcid)
+# sum(is.na(fishtix$adj_afi_revenue))
+# sum(is.na(fishtix$pounds))
 # 
 # # write out compiled fishtix for future use
-# write_rds(fishtix, paste0(indir,"/fish_tickets_crab", min(years), "-", max(years), "_processed_for_networks_2024-01-10.rds"))
+# write_rds(fishtix, paste0(indir,"/fish_tickets_crab", min(years), "-", max(years), "_processed_for_networks_2024-01-18.rds"))
 
-fishtix <- read_rds(paste0(indir,"/fish_tickets_crab", min(years), "-", max(years), "_processed_for_networks_2024-01-10.rds"))
+fishtix <- read_rds(paste0(indir,"/fish_tickets_crab", min(years), "-", max(years), "_processed_for_networks_2024-01-18.rds"))
 
 ```
 <br>
@@ -219,7 +230,7 @@ sv_bulkparticipation_noncon <- salmontix %>%
   group_by(crab_year, IOPAC) %>%
   summarise(
     num_vessels = length(unique(drvid)),
-    total_rev = sum(adj_revenue), # come back to this to include afi_revenue instead
+    total_rev = sum(adj_afi_revenue), 
     total_pounds = sum(pounds),
     .groups = 'drop'
   ) %>% 
@@ -233,7 +244,7 @@ sv_participation_noncon <- salmontix %>%
   group_by(crab_year, IOPAC, species_group_2_label2, SPGRPN2) %>%
   summarise(
     num_vessels = length(unique(drvid)),
-    total_rev = sum(adj_revenue), # come back to this to include afi_revenue instead
+    total_rev = sum(adj_afi_revenue), 
     total_pounds = sum(pounds),
     .groups = 'drop'
   ) %>% 
@@ -270,8 +281,8 @@ sv_bulk_mean20172021_noncon <- sv_bulkparticipation_noncon %>%
     sd_num_vessels = sd(num_vessels, na.rm=TRUE),
     num_vessels = mean(num_vessels, na.rm=TRUE),
      
-    sd_total_rev = sd(total_rev, na.rm=TRUE),# come back to this to include afi_revenue instead
-    total_rev = mean(total_rev, na.rm=TRUE),# come back to this to include afi_revenue instead
+    sd_total_rev = sd(total_rev, na.rm=TRUE),
+    total_rev = mean(total_rev, na.rm=TRUE),
     
     sd_total_pounds = sd(total_pounds, na.rm=TRUE),
     total_pounds = mean(total_pounds, na.rm=TRUE),
@@ -295,8 +306,8 @@ salmon_only_mean20172021_noncon <- salmon_only_noncon %>%
   filter (crab_year %in% c(seq(2017,2021))) %>%
   group_by(IOPAC) %>%
   summarise(
-    sd_salmon_rev = sd(total_rev, na.rm=TRUE),# come back to this to include afi_revenue instead
-    salmon_rev = mean(total_rev, na.rm=TRUE),# come back to this to include afi_revenue instead
+    sd_salmon_rev = sd(total_rev, na.rm=TRUE),
+    salmon_rev = mean(total_rev, na.rm=TRUE),
     
     sd_salmon_pounds = sd(total_pounds, na.rm=TRUE),
     salmon_pounds = mean(total_pounds, na.rm=TRUE),
@@ -324,6 +335,16 @@ salmon_only_noncon <- salmon_only_mean20172021_noncon %>%
 sv_bulk_noncon <- sv_bulk_noncon %>%
   left_join(salmon_only_noncon)
 
+sv_ports_states <- sv_bulk_noncon %>%
+  dplyr::select(IOPAC) %>%
+  distinct() %>%
+  mutate(
+    state = c('Oregon','California','Oregon','Oregon','Oregon','California','California','California','California','California','Oregon','Washington','Washington','California','California','Oregon','None','Washington')
+  )
+
+sv_bulk_noncon <- sv_bulk_noncon %>%
+  left_join(sv_ports_states)
+
 sv_bulk_noncon %>% kable()
 
 ```
@@ -337,7 +358,7 @@ ca_focal <- c('Santa Barbara','Morro Bay','Monterey','Bodega Bay')
 
 ca_focal_pal <- pnw_palette("Bay", 4)
 
-all_pal <- pnw_palette('Bay', length(allports)- length(ca_focal))
+all_pal <- pnw_palette('Starfish', 4) # 1 color for each state and 1 for unlabeled points
 ```
 
 ## 4 California ports
@@ -359,16 +380,18 @@ sv_bulk_noncon_ca <- sv_bulk_noncon %>%
 p_vessels <- ggplot(sv_bulk_noncon_ca, 
        aes(x=crab_year, y=num_vessels, colour=IOPAC, group=IOPAC)
        ) + #,shape=factor(IOPAC, levels = myports)
-  geom_pointrange(
-    aes(ymin = num_vessels - 2*sd_num_vessels, ymax= num_vessels + 2*sd_num_vessels, size = salmon_rev_sizeforplotting), 
+  geom_point(aes(size = salmon_rev_sizeforplotting),
+             alpha=.8, 
+             position = position_dodge(width = 0.5)
+    ) +
+  geom_errorbar(
+    aes(ymin = num_vessels - 2*sd_num_vessels, ymax= num_vessels + 2*sd_num_vessels), 
     na.rm = TRUE,
     alpha=.8, 
-    position = position_dodge(width = 0.5)
+    position = position_dodge(width = 0.5),
+    width = 0
     ) +
   #geom_jitter() +
-  scale_size_continuous(name = "Salmon Revenue\n(Millions USD)",
-                        range = c(min(sv_bulk_noncon_ca$salmon_rev_sizeforplotting),max(sv_bulk_noncon_ca$salmon_rev_sizeforplotting))) +
-    guides(size = guide_legend(override.aes = list(shape = 1))) +
   geom_line(alpha=0.8,
     position = position_dodge(width = 0.5))+
   #scale_colour_gradientn(colours = pal, name=str_wrap("Initial Biomass",20), guide = gc)+
@@ -376,7 +399,7 @@ p_vessels <- ggplot(sv_bulk_noncon_ca,
     scale_x_discrete(labels = c('2017-2022','2022-2023')) +
   ylab("Number of Active Salmon Vessels") +
   scale_colour_manual(values=rev(ca_focal_pal)) +
-  guides(colour=guide_legend(title="Port Group")) +
+  guides(colour=guide_legend(title="Port Group"), size = guide_legend(title="Salmon Revenue\n(Millions USD)", override.aes = list(shape = 1))) +
   theme_pubr(legend="right")+
   theme(
     axis.text.x=element_text(size=10),
@@ -399,23 +422,24 @@ Compare revenue of salmon vessels participating in crab years 2017-2021 to 2022
 p_rev <- ggplot(sv_bulk_noncon_ca, 
        aes(x=crab_year, y=total_rev/10^6, colour=IOPAC, group=IOPAC)
        ) + #,shape=factor(IOPAC, levels = myports)
-  geom_pointrange(
-    aes(ymin = (total_rev - 2*sd_total_rev)/10^6, ymax= (total_rev + 2*sd_total_rev)/10^6, size = salmon_rev_sizeforplotting), 
+  geom_point(aes(size = salmon_rev_sizeforplotting),
+             alpha=.8, 
+             position = position_dodge(width = 0.5)
+    ) +
+  geom_errorbar(
+    aes(ymin = (total_rev - 2*sd_total_rev)/10^6, ymax= (total_rev + 2*sd_total_rev)/10^6), 
     na.rm = TRUE,
     alpha=.8, 
-    position = position_dodge(width = 0.5)
+    position = position_dodge(width = 0.5),
+    width = 0
     ) +
-  #geom_jitter() +
   geom_line(alpha=0.8,
     position = position_dodge(width = 0.5))+
     xlab("Time Period") +
   scale_x_discrete(labels = c('2017-2022','2022-2023')) +
   ylab("Total Annual Commercial Fishing\nRevenue for Salmon Vessels\n(Millions USD)") +
   scale_colour_manual(values=rev(ca_focal_pal)) +
-  scale_size_continuous(name = "Salmon Revenue\n(Millions USD)",
-                        range = c(min(sv_bulk_noncon_ca$salmon_rev_sizeforplotting),max(sv_bulk_noncon_ca$salmon_rev_sizeforplotting))) +
-    guides(size = guide_legend(override.aes = list(shape = 1))) +
-  guides(colour=guide_legend(title="Port Group")) +
+  guides(colour=guide_legend(title="Port Group"), size = guide_legend(title="Salmon Revenue\n(Millions USD)", override.aes = list(shape = 1))) +
   theme_pubr(legend="right")+
   theme(
     axis.text.x=element_text(size=10),
@@ -436,23 +460,24 @@ Compare landings of salmon vessels participating in crab years 2017-2021 to 2022
 p_lbs <- ggplot(sv_bulk_noncon_ca, 
        aes(x=crab_year, y=total_pounds/10^6, colour=IOPAC, group=IOPAC)
        ) + #,shape=factor(IOPAC, levels = myports)
-  geom_pointrange(
-    aes(ymin = (total_pounds - 2*sd_total_pounds)/10^6, ymax= (total_pounds + 2*sd_total_pounds)/10^6, size = salmon_rev_sizeforplotting), 
+  geom_point(aes(size = salmon_rev_sizeforplotting),
+             alpha=.8, 
+             position = position_dodge(width = 0.5)
+    ) +
+  geom_errorbar(
+    aes(ymin = (total_pounds - 2*total_pounds)/10^6, ymax= (total_pounds + 2*total_pounds)/10^6), 
     na.rm = TRUE,
     alpha=.8, 
-    position = position_dodge(width = 0.5)
+    position = position_dodge(width = 0.5),
+    width = 0
     ) +
-  #geom_jitter() +
   geom_line(alpha=0.8,
     position = position_dodge(width = 0.5))+
   ylab("Total Annual Commercial Fishing\nLandings for Salmon Vessels\n(Millions of Pounds)") +
   xlab("Time Period") +
   scale_x_discrete(labels = c('2017-2022','2022-2023')) +
   scale_colour_manual(values=rev(ca_focal_pal)) +
-  scale_size_continuous(name = "Salmon Revenue\n(Millions USD)",
-                        range = c(min(sv_bulk_noncon_ca$salmon_rev_sizeforplotting),max(sv_bulk_noncon_ca$salmon_rev_sizeforplotting))) +
-    guides(size = guide_legend(override.aes = list(shape = 1))) +
-  guides(colour=guide_legend(title="Port Group")) +
+  guides(colour=guide_legend(title="Port Group"), size = guide_legend(title="Salmon Revenue\n(Millions USD)", override.aes = list(shape = 1))) +
   theme_pubr(legend="right")+
   theme(
     axis.text.x=element_text(size=10),
@@ -496,13 +521,32 @@ ggsave(paste0(figdir,'/ca_sv_part_rev.png'), height=6, width=14, units="in")
 
 ```
 
-Across California port groups, participation in commercial fisheries by salmon vessels that were active from 2017-2022 fell by as little as 6% (Santa Barbara) to almost 70% (Monterey) during the 2022-2023 fishing season. Like participation, the total revenue from commercial fishing in 2022-2023 for these salmon vessels declined as well (50-60%) in all of these port groups except Santa Barbara. In Santa Barbara, commercial fishing revenue increased >80% in 2022-2023 compared to the average from 2017-2022.
+```{r ca4_stats}
+
+sv_bulk_noncon_ca %>%
+  dplyr::select(
+    IOPAC, crab_year, num_vessels, total_rev, total_pounds
+  ) %>%
+  pivot_wider(
+    names_from = crab_year, values_from = c(num_vessels, total_rev, total_pounds)
+  ) %>%
+  group_by(IOPAC) %>%
+  summarise(
+    percent_change_num_vessels = 100*(`num_vessels_2017-2021` - num_vessels_2022)/`num_vessels_2017-2021`,
+    percent_change_total_rev = 100*(`total_rev_2017-2021` - total_rev_2022)/`total_rev_2017-2021`,
+    percent_change_total_pounds = 100*(`total_pounds_2017-2021` - total_pounds_2022)/`total_pounds_2017-2021`
+  ) %>%
+  kable()
+  
+```
+
+Across California port groups, participation in commercial fisheries by salmon vessels that were active from 2017-2022 fell by as little as 5% (Santa Barbara) to more than 70% (Bodega Bay) during the 2022-2023 fishing season. Like participation, the total revenue from commercial fishing in 2022-2023 for these salmon vessels declined as well (54-64%) in all of these port groups except Santa Barbara. In Santa Barbara, commercial fishing revenue increased >90% in 2022-2023 compared to the average from 2017-2022.
 
 Changes in participation by fishery can be found in salmon_vessel_participation_2017-2023_port_summaries.csv. This table only includes fisheries in which >=3 vessels participated.
 
 These plots show (a) the mean number of active salmon vessels from Nov 2017 through Oct 2022 compared to the total number of active salmon vessels from Nov 2022 to Oct 2023, and (b) the mean revenue across all commercial fisheries on the west coast from Nov 2016 through Oct 2022 compared to the total commercial fishing revenue on the west coast from Nov 2022 to Oct 2023. Active here means that a vessel had commercial salmon landings anytime between Nov 2017 and Oct 2023, and participated in the fishery or any other commercial fishery during either the Nov 2017 through Oct 2022 or Nov 2022 to Oct 2023 time period.
 
-Points represent averages (2017-2022) or totals (2022-2023) for each port group, and error bars reflect 2 standard deviations (2017-2022). A fishing season in defined from November of year y through November of year (y+1), specifically week 46 of year y through week 45 of year (y+1), to capture the strong influence of the Dungeness crab fishery.
+Points represent averages (2017-2022) or totals (2022-2023) for each port group, and error bars reflect 2 standard deviations (2017-2022). Point size scales with the mean (2017-2022) or total (2022-2023) salmon revenue generated in each port. A fishing season is defined from November of year y through November of year (y+1), specifically week 46 of year y through week 45 of year (y+1), to capture the strong influence of the Dungeness crab fishery.
 
 
 ## All ports except 4 California ports
@@ -511,45 +555,50 @@ Compare number of salmon vessels participating in crab years 2017-2021 to 2022
 
 ```{r plot_bulk_sv_participation_all}
 sv_bulk_noncon_allbut4ca <- sv_bulk_noncon %>%
-  filter(!(IOPAC %in% ca_focal))
+  filter(!(IOPAC %in% ca_focal)) %>%
+  filter(state != 'None')
 
 p_vessels_all <- ggplot(sv_bulk_noncon_allbut4ca, 
-       aes(x=crab_year, y=num_vessels, colour=IOPAC, group=IOPAC)
+       aes(x=crab_year, y=num_vessels, colour=state, group=IOPAC)
        ) + 
   geom_text_repel(
-    aes(label = ifelse(crab_year == "2022", IOPAC, ""), colour = ifelse(crab_year == "2022", IOPAC, ""), fontface = 'bold'), 
+    aes(label = ifelse(crab_year == "2022", IOPAC, ""), colour = ifelse(crab_year == "2022", state, ""), fontface = 'bold'), 
     show.legend  = FALSE,
     #nudge_x = 0.4, 
     direction = "x", 
-    vjust = 1,
-    hjust = 0,
+    vjust = 2,
+    hjust = -0.5,
     point.padding = 0.2,
-    position = position_dodge(width = 0.5)
+    position = position_dodge(width = 0.5),
+    segment.linetype = 'dotted',   
+    min.segment.length = 0
   ) +  
-  geom_pointrange(
-    aes(ymin = num_vessels - 2*sd_num_vessels, ymax= num_vessels + 2*sd_num_vessels, size = salmon_rev_sizeforplotting), 
-    na.rm = TRUE,
-    alpha=.8,
-    position = position_dodge(width = 0.5)
+  geom_point(aes(size = salmon_rev_sizeforplotting),
+             alpha=.8, 
+             position = position_dodge(width = 0.5)
     ) +
-  scale_size_continuous(name = "Salmon Revenue\n(Millions USD)",
-                        range = c(min(sv_bulk_noncon_allbut4ca$salmon_rev_sizeforplotting),max(sv_bulk_noncon_allbut4ca$salmon_rev_sizeforplotting))) +
-    guides(size = guide_legend(override.aes = list(shape = 1))) +
+  geom_errorbar(
+    aes(ymin = num_vessels - 2*sd_num_vessels, ymax= num_vessels + 2*sd_num_vessels), 
+    na.rm = TRUE,
+    alpha=.8, 
+    position = position_dodge(width = 0.5),
+    width = 0
+    ) +
   geom_line(alpha=0.8,
     position = position_dodge(width = 0.5))+
-  #scale_colour_gradientn(colours = pal, name=str_wrap("Initial Biomass",20), guide = gc)+
   xlab("Time Period") +
-    scale_x_discrete(labels = c('2017-2022','2022-2023')) +
+  scale_x_discrete(labels = c('2017-2022','2022-2023')) +
   ylab("Number of Active Salmon Vessels") +
-  scale_colour_manual(values=rev(all_pal), guide = "none") +
-  #guides(colour=guide_legend(title="Port Group")) +
+  facet_wrap(vars(state), ncol=1) +
+  scale_colour_manual(values=all_pal, guide = "none") +
+  guides(size = guide_legend(title="Salmon Revenue\n(Millions USD)", override.aes = list(shape = 1))) +
   theme_pubr(legend='bottom')+ #legend="none"
   theme(
     axis.text.x=element_text(size=10),
     axis.text.y=element_text(size=10),
     axis.title = element_text(size = 14),
     strip.background = element_blank(),
-    strip.text.x = element_blank()
+    strip.text.x = element_text(size = 14)
   )
 
 p_vessels_all
@@ -563,41 +612,46 @@ Compare revenue of salmon vessels participating in crab years 2017-2021 to 2022
 ```{r plot_bulk_sv_rev_all}
 
 p_rev_all <- ggplot(sv_bulk_noncon_allbut4ca, 
-       aes(x=crab_year, y=total_rev/10^6, colour=IOPAC, group=IOPAC)
+       aes(x=crab_year, y=total_rev/10^6, colour=state, group=IOPAC)
        ) + #,shape=factor(IOPAC, levels = myports)
   geom_text_repel(
-    aes(label = ifelse(crab_year == "2022", IOPAC, ""), colour = ifelse(crab_year == "2022", IOPAC, ""), fontface = 'bold'), 
+    aes(label = ifelse(crab_year == "2022", IOPAC, ""), colour = ifelse(crab_year == "2022", state, ""), fontface = 'bold'), 
     show.legend  = FALSE,
     #nudge_x = 0.4, 
     direction = "x", 
-    vjust = 1,
-    hjust = 0,
+    vjust = 2,
+    hjust = -0.5,
     point.padding = 0.2,
-    position = position_dodge(width = 0.5)
+    position = position_dodge(width = 0.5),
+    segment.linetype = 'dotted',   
+    min.segment.length = 0
   ) +  
-  geom_pointrange(
-    aes(ymin = (total_rev - 2*sd_total_rev)/10^6, ymax= (total_rev + 2*sd_total_rev)/10^6, size = salmon_rev_sizeforplotting), 
+  geom_point(aes(size = salmon_rev_sizeforplotting),
+             alpha=.8, 
+             position = position_dodge(width = 0.5)
+    ) +
+  geom_errorbar(
+    aes(ymin = (total_rev - 2*sd_total_rev)/10^6, ymax= (total_rev + 2*sd_total_rev)/10^6), 
     na.rm = TRUE,
     alpha=.8, 
-    position = position_dodge(width = 0.5)
+    position = position_dodge(width = 0.5),
+    width = 0
     ) +
-  #geom_jitter() +
   geom_line(alpha=0.8,
     position = position_dodge(width = 0.5))+
-    xlab("Time Period") +
+  xlab("Time Period") +
   scale_x_discrete(labels = c('2017-2022','2022-2023')) +
-  scale_size_continuous(name = "Salmon Revenue\n(Millions USD)",
-                        range = c(min(sv_bulk_noncon_allbut4ca$salmon_rev_sizeforplotting),max(sv_bulk_noncon_allbut4ca$salmon_rev_sizeforplotting))) +
-    guides(size = guide_legend(override.aes = list(shape = 1))) +
+  facet_wrap(vars(state), ncol=1) +
+  scale_colour_manual(values=all_pal, guide = "none") +
+  guides(size = guide_legend(title="Salmon Revenue\n(Millions USD)", override.aes = list(shape = 1))) +
   ylab("Total Annual Commercial Fishing\nRevenue for Salmon Vessels\n(Millions USD)") +
-  scale_colour_manual(values=rev(all_pal), guide = "none") +
   theme_pubr(legend="bottom")+
   theme(
     axis.text.x=element_text(size=10),
     axis.text.y=element_text(size=10),
     axis.title = element_text(size = 14),
     strip.background = element_blank(),
-    strip.text.x = element_blank()
+    strip.text.x = element_text(size = 14)
   )
 
 p_rev_all
@@ -609,34 +663,40 @@ Compare landings of salmon vessels participating in crab years 2017-2021 to 2022
 ```{r plot_bulk_sv_landings_all}
 
 p_lbs_all <- ggplot(sv_bulk_noncon_allbut4ca, 
-       aes(x=crab_year, y=log10(total_pounds), colour=IOPAC, group=IOPAC)
+       aes(x=crab_year, y=total_pounds/10^6, colour=state, group=IOPAC)
        ) + #,shape=factor(IOPAC, levels = myports)
   geom_text_repel(
-    aes(label = ifelse(crab_year == "2022", IOPAC, ""), colour = ifelse(crab_year == "2022", IOPAC, ""), fontface = 'bold'), 
+    aes(label = ifelse(crab_year == "2022", IOPAC, ""), colour = ifelse(crab_year == "2022", state, ""), fontface = 'bold'), 
     show.legend  = FALSE,
     #nudge_x = 0.4, 
     direction = "x", 
-    vjust = 1,
-    hjust = 0,
+    vjust = 2,
+    hjust = -0.5,
     point.padding = 0.2,
-    position = position_dodge(width = 0.5)
+    position = position_dodge(width = 0.5),
+    segment.linetype = 'dotted',   
+    min.segment.length = 0
   ) +  
-  geom_pointrange(
-    aes(ymin = log10(total_pounds - 2*sd_total_pounds), ymax= log10(total_pounds + 2*sd_total_pounds), size = salmon_rev_sizeforplotting), 
+  geom_point(aes(size = salmon_rev_sizeforplotting),
+             alpha=.8, 
+             position = position_dodge(width = 0.5)
+    ) +
+  geom_errorbar(
+    aes(ymin = (total_pounds - 2*sd_total_pounds)/10^6, ymax= (total_pounds + 2*sd_total_pounds)/10^6), 
     na.rm = TRUE,
     alpha=.8, 
-    position = position_dodge(width = 0.5)
+    position = position_dodge(width = 0.5),
+    width = 0
     ) +
-  #geom_jitter() +
   geom_line(alpha=0.8,
     position = position_dodge(width = 0.5))+
-  ylab("Total Annual Commercial Fishing\nLandings for Salmon Vessels\n(Log10 Millions of Pounds)") +
+  ylab("Total Annual Commercial Fishing\nLandings for Salmon Vessels\n(Millions of Pounds)") +
   xlab("Time Period") +
   scale_x_discrete(labels = c('2017-2022','2022-2023')) +
-  scale_colour_manual(values=rev(all_pal), guide = "none") +
-  scale_size_continuous(name = "Salmon Revenue\n(Millions USD)",
-                        range = c(min(sv_bulk_noncon_allbut4ca$salmon_rev_sizeforplotting),max(sv_bulk_noncon_allbut4ca$salmon_rev_sizeforplotting))) +
-    guides(size = guide_legend(override.aes = list(shape = 1))) +
+  scale_y_continuous(trans = 'pseudo_log') +
+  facet_wrap(vars(state), ncol=1) +
+  scale_colour_manual(values=all_pal, guide = "none") +
+  guides(size = guide_legend(title="Salmon Revenue\n(Millions USD)", override.aes = list(shape = 1))) +
   #guides(colour=guide_legend(title="Port Group")) +
   theme_pubr(legend="bottom")+
   theme(
@@ -644,7 +704,7 @@ p_lbs_all <- ggplot(sv_bulk_noncon_allbut4ca,
     axis.text.y=element_text(size=10),
     axis.title = element_text(size = 14),
     strip.background = element_blank(),
-    strip.text.x = element_blank()
+    strip.text.x = element_text(size = 14)
   )
 
 p_lbs_all
@@ -665,8 +725,8 @@ p_row_all <- plot_grid(
 
 legend_b_all <- get_legend(
   p_vessels_all + 
-    guides(size = guide_legend(override.aes = list(shape = 1),
-                               nrow = 1)) +
+    guides(size = guide_legend(title="Salmon Revenue\n(Millions USD)", override.aes = list(shape = 1)),
+           nrow=1) +
     theme(legend.position = "bottom")
 )
 
@@ -678,8 +738,27 @@ plot_grid(p_row_all,
           rel_heights = c(1, .1)
           )
 
-ggsave(paste0(figdir,'/allbut4ca_sv_part_rev.png'), height=6, width=14, units="in")
+ggsave(paste0(figdir,'/allbut4ca_facet_sv_part_rev.png'), height=6, width=14, units="in")
 
+```
+
+```{r allbutca4_stats}
+
+sv_bulk_noncon_allbut4ca %>%
+  dplyr::select(
+    IOPAC, crab_year, num_vessels, total_rev, total_pounds
+  ) %>%
+  pivot_wider(
+    names_from = crab_year, values_from = c(num_vessels, total_rev, total_pounds)
+  ) %>%
+  group_by(IOPAC) %>%
+  summarise(
+    percent_change_num_vessels = 100*(`num_vessels_2017-2021` - num_vessels_2022)/`num_vessels_2017-2021`,
+    percent_change_total_rev = 100*(`total_rev_2017-2021` - total_rev_2022)/`total_rev_2017-2021`,
+    percent_change_total_pounds = 100*(`total_pounds_2017-2021` - total_pounds_2022)/`total_pounds_2017-2021`
+  ) %>%
+  kable()
+  
 ```
 
 <!-- By CA port -->
