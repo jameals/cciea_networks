@@ -386,17 +386,6 @@ crab_year,IOPAC,species_group_2_label2,SPGRPN2,num_vessels,total_rev,total_pound
 2022,Fort Bragg,Skate/dogfish/shark,19,7,4384.13,19410.5
 2022,Fort Bragg,Tuna,35,8,54314.65,20594.4
 2022,Fort Bragg,Whiting,2,4,1.2,151
-2017,Los Angeles,Coastal pelagics,45,3,15132.95,54105
-2017,Los Angeles,Squid,70,5,608510,1217020
-2018,Los Angeles,Coastal pelagics,45,3,36428.85,242859
-2018,Los Angeles,Other,80,3,28538.6,18038
-2018,Los Angeles,Squid,70,6,673824,1353828
-2018,Los Angeles,Tuna,35,3,38108.6,80400
-2019,Los Angeles,Squid,70,4,337815.5,675631
-2020,Los Angeles,Coastal pelagics,45,3,2255.2506,6498
-2020,Los Angeles,Squid,70,6,179286.6,298811
-2021,Los Angeles,Squid,70,6,762450.225,1270199
-2022,Los Angeles,Squid,70,6,1517884.2,2529807
 2017,Monterey,CA halibut/croaker,55,52,134361.3,23047.74
 2017,Monterey,Coastal pelagics,45,6,157467.15,3130159.8
 2017,Monterey,Crab,25,26,824844.714,205621.34
@@ -654,12 +643,6 @@ crab_year,IOPAC,species_group_2_label2,SPGRPN2,num_vessels,total_rev,total_pound
 2021,Puget Sound,Salmon,30,138,NA,3346151
 2022,Puget Sound,Crab,25,23,2042111.05,488225
 2022,Puget Sound,Salmon,30,97,485630.35,668923
-2019,San Diego,Other,80,3,19809.2,12775.2
-2019,San Diego,Tuna,35,4,15952,4477
-2020,San Diego,Other,80,3,4306.6,1703
-2020,San Diego,Tuna,35,4,9943.5,3845.5
-2022,San Diego,Other,80,3,74138.75,9834
-2022,San Diego,Tuna,35,3,231628.075,40863.15
 2017,San Francisco,CA halibut/croaker,55,59,410379.82907,64930.01098
 2017,San Francisco,Coastal pelagics,45,6,75659.752,1511099.4
 2017,San Francisco,Crab,25,100,7410318.56689,1789301.82
