@@ -407,7 +407,7 @@ p_vessels <- ggplot(sv_bulk_noncon_ca,
   theme_pubr(legend='bottom') + #c(0.8,0.8)
   theme(
     axis.text.x=element_text(size=10),
-    axis.text.y=element_text(size=10),
+    axis.text.y=element_text(size=12),
     axis.title = element_text(size = 14),
     strip.background = element_rect(fill='white'),
     strip.text = element_text(size = 16)#,
@@ -452,12 +452,12 @@ p_rev <- ggplot(sv_bulk_noncon_ca,
   theme_pubr(legend='bottom') + #c(0.8,0.8)
   theme(
     axis.text.x=element_text(size=10),
-    axis.text.y=element_text(size=10),
+    axis.text.y=element_text(size=12),
     axis.title = element_text(size = 14),
     strip.background = element_rect(fill='white'),
-    strip.text = element_text(size = 16)#,
+    #strip.text = element_text(size = 16)#,
     #strip.text.x = element_text(colour=rev(ca_focal_pal))
-    #strip.text.x = element_blank()
+    strip.text = element_blank()
   )
   
 p_rev
@@ -511,7 +511,7 @@ p_row_ca <- plot_grid(
   align = 'vh',
   labels = "auto", 
   hjust = -1,
-  nrow = 1
+  nrow = 2
 )
 
 legend_b <- get_legend(
@@ -529,7 +529,7 @@ plot_grid(p_row_ca,
           )
 
 # ggsave(paste0(figdir,'/ca_sv_part_rev.png'), height=6, width=14, units="in")
-ggsave(paste0(figdir,'/ca_sv_part_rev_facet.png'), height=10, width=16, units="in")
+ggsave(paste0(figdir,'/ca_sv_part_rev_facet.png'), height=8, width=10, units="in")
 
 ```
 
