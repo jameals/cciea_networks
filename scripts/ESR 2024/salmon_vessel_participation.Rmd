@@ -572,7 +572,7 @@ Subset to state-specific ports
 ```{r subset_bystate}
 sv_bulk_noncon_allbut4ca <- sv_bulk_noncon %>%
   filter(!(IOPAC %in% ca_focal)) %>%
-  filter(stat != 'None')
+  filter(state != 'None')
 
 sv_bulk_noncon_canotfocal <- sv_bulk_noncon %>%
   filter(!(IOPAC %in% ca_focal)) %>%
