@@ -724,12 +724,14 @@ title_canotfocal <- ggdraw() +
   #   plot.margin = margin(0, 7, 0, 7)
   # )
 
-plot_grid(
+p_canotfocal2_final <- plot_grid(
   title_canotfocal, p_row_canotfocal2,
   ncol = 1,
   # rel_heights values control vertical title margins
   rel_heights = c(0.1, 1)
 )
+
+p_canotfocal2_final
 
 ggsave(paste0(figdir,'/canotfocal_sv_part_rev_facet.png'), height=8, width=10, units="in")
 
@@ -864,12 +866,14 @@ title_or <- ggdraw() +
   #   plot.margin = margin(0, 7, 0, 7)
   # )
 
-plot_grid(
+p_or_final <- plot_grid(
   title_or, p_row_or2,
   ncol = 1,
   # rel_heights values control vertical title margins
   rel_heights = c(0.1, 1)
 )
+
+p_or_final
 
 ggsave(paste0(figdir,'/or_sv_part_rev_facet.png'), height=8, width=14, units="in")
 
@@ -1004,16 +1008,64 @@ title_wa <- ggdraw() +
   #   plot.margin = margin(0, 7, 0, 7)
   # )
 
-plot_grid(
+p_wa_final <- plot_grid(
   title_wa, p_row_wa2,
   ncol = 1,
   # rel_heights values control vertical title margins
   rel_heights = c(0.1, 1)
 )
 
+p_wa_final
+
 ggsave(paste0(figdir,'/wa_sv_part_rev_facet.png'), height=8, width=10, units="in")
 
 ```
+
+### Combine CA not focal, OR, and WA
+
+```{r combine_plots_all}
+p_row_all <- plot_grid(
+  p_vessels_wa + theme(legend.position="none"),
+  p_rev_wa + theme(legend.position="none"),
+  p_vessels_or + theme(legend.position="none"),
+  p_rev_or + theme(legend.position="none"),
+  p_vessels_canotfocal + theme(legend.position="none"),
+  p_rev_canotfocal + theme(legend.position="none"),
+  align = 'vh',
+  labels = "auto", 
+  hjust = -1,
+  nrow = 6
+)
+
+legend_b_all <- get_legend(
+  p_vessels_canotfocal + 
+    #guides(colour = guide_legend(nrow = 1)) +
+    theme(legend.position = "bottom")
+)
+
+# add the legend underneath the row we made earlier. Give it 10%
+# of the height of one plot (via rel_heights).
+p_row_all2 <- plot_grid(p_row_all,
+          legend_b_all, 
+          ncol = 1, 
+          rel_heights = c(1, .1)
+          )
+
+p_row_all2
+
+ggsave(paste0(figdir,'/all_sv_part_rev_facet_commonlegend.png'), height=11, width=8, units="in")
+
+p_row_all_glue <- plot_grid(p_wa_final,
+          p_or_final,
+          p_canotfocal2_final,
+          nrow=3
+          )
+p_row_all_glue
+
+ggsave(paste0(figdir,'/all_sv_part_rev_facet_glue.png'), height=11, width=8, units="in")
+
+```
+
 
 <!-- Old way of plotting -->
 <!-- ```{r plot_bulk_sv_participation_all} -->
