@@ -66,21 +66,21 @@ source("R/calc_network_stats.R")
 Select your directories.
 ```{r}
 ## location of fish ticket with metiers assigned, metier key for each port group
-indir = '/Users/jameal.samhouri/Documents/CCIEA Networks/processed'
+indir = here('../cciea_networks-CONFIDENTIAL/data/input')
 
 ## output directory for igraph objects
-outdir_ports = 'data/networks/participation_vessel_ports'
+outdir_ports = here('../cciea_networks-CONFIDENTIAL/participation_vessel_ports')
 # outdir_states = 'data/networks/participation_vessel_states'
 
 ## output directory for network viz
-pngdir_ports = 'data/networks/participation_vessel_ports/plots'
+pngdir_ports = here('../cciea_networks-CONFIDENTIAL/participation_vessel_ports/plots')
 # pngdir_states = 'data/networks/participation_vessel_states/plots'
 
 ## output file (including directory) for stat summaries
-statdir = 'results/statistics'
+statdir = here('../cciea_networks-CONFIDENTIAL/results/statistics')
 
 ## directory for species group key. not confidential
-processdir <- "data/input"
+processdir <- here("data/input")
 ```
 <br>
 
@@ -204,7 +204,7 @@ node_names <- read_csv(here::here(processdir,myfile5),
 ### 01-18-2022 NOTE COME BACK HERE TO ADD IN COLUMN NEEDED TO DETERMINE PROP WA TIX WITH ACTUAL PORT OF LANDING
 
 Tabulate WA fish tix to report the percentage of fish tickets for which the port assigned is derived from the license database versus the actual landing port for each year in WA. There is a “isPortDerived” field in PacFIN database. If the value is False, the port is the actual port of landing. If the value is True, the port is derived from license database. most of WA port data were derived before 2018
-```{r}
+```{r eval=FALSE}
 
 fishtix %>% filter(agid == 'W') %>%
   group_by(year) %>%
@@ -217,7 +217,10 @@ fishtix %>% filter(agid == 'W') %>%
   )
 
 ```
-
+```{r}
+fishtix <- fishtix %>% filter(IOPAC %in% c("Puget Sound","North WA Coast","WA Coast","Other Coastal Washington"))
+```
+<br>
 
 ## Make Participation Networks
 
@@ -237,6 +240,7 @@ We only include vessels that generate >=`$5,000` in total fisheries revenue each
 total_rev_cutoff <- 5000
 indiv_rev_cutoff <- 500
 edgetype <- "connectivity"
+myports <- c("Puget Sound","North WA Coast","WA Coast","Other Coastal Washington")
 
 ```
 <br>
@@ -317,7 +321,7 @@ for(y in years){
       mystats4 <- g_nodestats
     }
     
-    } #end 'else' tmpg has > 0 vertex (e.g., there was fishing at the port group in the given year)
+    } #end 'else' close-g has > 0 vertex
     
     
   } #end (p in myports)
@@ -326,20 +330,14 @@ for(y in years){
 ```
 <br>
 
-Write stats out to file. 2008_2015_CA_CrabPorts_NoSubgraph_01contribution.csv
-```{r eval=TRUE}
-# ran first for network level stats 12-29-2021
-filename <- paste0("VesselLevelNetworkStats_", min(years), "_", max(years), "_", length(myports), "pcgroups_", "totalrev", total_rev_cutoff,"_indivrev", indiv_rev_cutoff,"_", edgetype, "_", ifelse(rm_crab, 'rmCrab_','_'), contr_cutoff*100, "pContribution.csv")
 
-write.csv(mystats3,here::here(statdir, filename), row.names=FALSE)
-
-# ran second for node level stats 12-29-2021
-filename <- paste0("VesselLevelNodeStats_", min(years), "_", max(years), "_", length(myports), "pcgroups_", "totalrev", total_rev_cutoff,"_indivrev", indiv_rev_cutoff,"_", edgetype, "_", ifelse(rm_crab, 'rmCrab_','_'), contr_cutoff*100, "pContribution.csv")
-# 
-write.csv(mystats4,here::here(statdir, filename), row.names=FALSE)
+Check stats file:
+```{r}
+mystats3 %>%
+  group_by(y,pcgroup) %>%
+  summarise(n_rows=n())
 ```
 <br>
-
 
 
 ---
