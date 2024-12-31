@@ -140,7 +140,7 @@ plot_comparable_networks <- function(glist, color_labels=FALSE, outdir, file_suf
       
       
       # plot & save to file
-      png(here::here(outdir, paste0(port_group,"_", y,"_circular",file_suffix,".png")),bg="transparent")  # if this resolution isn't good enough, add: width = 2000, height = 1500,res=300
+      png(here::here(outdir, paste0(port_group,"_", y,"_circular",file_suffix,"_",Sys.Date(),".png")),bg="transparent")  # if this resolution isn't good enough, add: width = 2000, height = 1500,res=300
       if(vcount(g) == 1 | ecount(g) == 0){
         plot(g, vertex.size = V(g)$importance/(max(V(g)$importance)*0.02), 
              layout = l, #where to put the nodes on the plot
@@ -189,7 +189,7 @@ plot_comparable_networks <- function(glist, color_labels=FALSE, outdir, file_suf
   # plot all of the graphs in one png, 
   if(grid){
     # start png
-    png(here::here(outdir, paste0("MultiNetwork_",file_suffix,".png")), res=200, height=1800, width=1800,bg="transparent")  # if this resolution isn't good enough, add: width = 2000, height = 1500,res=300
+    png(here::here(outdir, paste0("MultiNetwork_",file_suffix,"_",Sys.Date(),".png")), res=200, height=1800, width=1800,bg="transparent")  # if this resolution isn't good enough, add: width = 2000, height = 1500,res=300
     # grid layout for png, with adjusted margins (mai)
     par(mfrow=grid_layout, mai = c(b=0.25, l=0, t=0.25, r=0)) 
     # plot each network
