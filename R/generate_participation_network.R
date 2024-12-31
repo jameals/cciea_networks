@@ -49,7 +49,7 @@ participation_network_crabyear <- function(tickets, edge_type="connectivity", pc
   # create a df where each column is a SPGRPN2, and values represent the total revenue for a boat in a crab year from that SPGRPN2
   boats <- tickets %>% filter(drvid != 'NONE') %>%
     group_by(drvid, SPGRPN2, crab_year) %>% #removed mutate; changed year to crab_year MF 2/26/2019
-    summarise(revenue = sum(adj_revenue), .groups = "drop") %>% #changed summarize to summarise, JS 11092018; added , .groups = "drop" JS 01-13-2022
+    summarise(revenue = sum(adj_afi_revenue), .groups = "drop") %>% #changed summarize to summarise, JS 11092018; added , .groups = "drop" JS 01-13-2022; 12-31-2024 adj_revenue changed to adj_afi_revenue
     pivot_wider(names_from=SPGRPN2, values_from=revenue, values_fill = NA)
   boats <- as.data.frame(boats)
   rownames(boats) <- paste(boats$drvid, boats$crab_year, sep="_")
@@ -199,22 +199,22 @@ participation_network_crabyear <- function(tickets, edge_type="connectivity", pc
   
   if(write_out & !is.na(pcid_choose)){ # added "& !is.na(pcid_choose)" 08202021
     if(edge_type=="connectivity"){
-      write.csv(A, here::here(out_dir,paste0("A_",pcid_choose, "_", year_choose,"_connectivity.csv")), row.names=FALSE)
+      write.csv(A, here::here(out_dir,paste0("A_",pcid_choose, "_", year_choose,"_connectivity_",Sys.Date(),".csv")), row.names=FALSE)
     } else if(edge_type=="vessels"){
       # write out both confidential and non-confidential versions of the A matrix.
-      write.csv(A, here::here(out_dir,paste0("A_",pcid_choose, "_", year_choose,"_vessels.csv")), row.names=TRUE)
-      write.csv(A_confidential, here::here(out_dir,paste0("A_",pcid_choose, "_", year_choose,"_confidential_vessels.csv")), row.names=TRUE)
+      write.csv(A, here::here(out_dir,paste0("A_",pcid_choose, "_", year_choose,"_vessels_",Sys.Date(),".csv")), row.names=TRUE)
+      write.csv(A_confidential, here::here(out_dir,paste0("A_",pcid_choose, "_", year_choose,"_confidential_vessels_",Sys.Date(),".csv")), row.names=TRUE)
     }
   }
 
   # added 08202021  
   if(write_out & !is.na(state_choose)){
     if(edge_type=="connectivity"){
-      write.csv(A, here::here(out_dir,paste0("A_",state_choose, "_", year_choose,".csv")), row.names=FALSE)
+      write.csv(A, here::here(out_dir,paste0("A_",state_choose, "_", year_choose,"_",Sys.Date(),".csv")), row.names=FALSE)
     } else if(edge_type=="vessels"){
       # write out both confidential and non-confidential versions of the A matrix.
-      write.csv(A, here::here(out_dir,paste0("A_",state_choose, "_", year_choose,".csv")), row.names=TRUE)
-      write.csv(A_confidential, here::here(out_dir,paste0("A_",state_choose, "_", year_choose,"_confidential.csv")), row.names=TRUE)
+      write.csv(A, here::here(out_dir,paste0("A_",state_choose, "_", year_choose,"_",Sys.Date(),".csv")), row.names=TRUE)
+      write.csv(A_confidential, here::here(out_dir,paste0("A_",state_choose, "_", year_choose,"_confidential_",Sys.Date(),".csv")), row.names=TRUE)
     }
   }
   
