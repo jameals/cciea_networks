@@ -1,0 +1,496 @@
+---
+title: "Compare Timeseries of Network Stats Across Port Groups and to Other ESR Indicators"
+author: "M. Fisher, J. Samhouri"
+date: "Written Dec 30, 2021. Last Run `r Sys.Date()`"
+output:
+  html_document:
+    df_print: paged
+    toc: yes
+    toc_depth: '3'
+  pdf_document:
+    highlight: haddock
+    number_sections: yes
+    toc: yes
+    toc_depth: '3'
+geometry: margin=1in
+subtitle: Preparation for network analysis in CCIEA ESR
+fontsize: 11pt
+---
+
+# Description
+
+This document graphs network metrics over time for the US West Coast, and compares metrics across port groups and to other indicators in the ESR.
+
+
+The core network metric of interest on its own is Edge Density (alt: Mean Degree).
+
+The two core network metrics of interest for comparison to the Habitat Compression Index are: 
+
+1. Node Strength
+
+2. Eigen Vector Centrality.
+
+Initially, we consider the above 2 metrics for tuna in ports in WA and OR.
+
+**Note that many network metrics are sensitive to network size, which will vary over the time series.** Network size has been incorporated into each graph as ___. Use the timeseries graphs for visual comparison of different network forms, but not for drawing major conclusions around network change / sensitivity. 
+
+
+
+# Setup
+
+<br>
+```{r "setup", include=FALSE}
+if(!require("here")) {install.packages("here")}
+library(here)
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = here::here())
+
+## start time for full script
+script_start_time <- Sys.time()
+```
+<br>
+
+This script requires the following packages. 
+```{r packages, message=FALSE, warning=FALSE}
+if(!require("tidyverse")) {install.packages("tidyverse")}
+if(!require("foreign")) {install.packages("foreign")}
+if(!require("lubridate")) {install.packages("lubridate")}
+if(!require("facetscales")) {devtools::install_github("zeehio/facetscales"); library(facetscales)}
+if(!require("ggplot2")) {install.packages("ggplot2")}
+if(!require("grid")) {install.packages("grid")}
+if(!require("gridExtra")) {install.packages("gridExtra")}
+if(!require("ggpubr")) {install.packages("ggpubr")}
+if(!require("cowplot")) {install.packages("cowplot")}
+if(!require("viridis")) {install.packages("viridis")}
+if(!require("PNWColors")) {devtools::install_github("jakelawler/PNWColors"); library(PNWColors)}
+```
+<br>
+
+Select your directories.
+```{r}
+## directory with network statistics 
+indir <- 'results/statistics'
+
+## directory with other input data
+other_indir <- 'data/input'
+
+## directory to save figures
+pngdir <- 'results/figures'
+```
+<br>
+
+What are the names of the `.csv` files with the network statistics that you want to compare? Would not suggest listing more than 4. Files should all be in the input directory (`indir`) specified above.
+```{r}
+filenames <- c("VesselLevelNodeStats_2004_2023_21pcgroups_totalrev5000_indivrev500_connectivity_rmCrab_10pContribution.csv")
+networkstats_filename <- "VesselLevelNetworkStats_2004_2023_21pcgroups_totalrev5000_indivrev500_connectivity_rmCrab_10pContribution.csv"
+# hci_filename <- 'ei_hci_rgn1_M.csv'
+port_filename <- 'iopac_conversion_table.csv'
+```
+<br>
+
+Provide descriptive names to differentiate the datasets drawn from the files listed above. 
+```{r}
+dataset_names <- c("Node_Stats")
+dataset_names2 <- c("Network_Stats")
+```
+<br>
+
+Specify which network metrics to retain from the full data set.
+```{r}
+node_metrics <- c('node_strength','eigen')
+network_metrics <- c('ed') # ,'ed_weighted'
+```
+<br>
+
+Specify which fisheries to retain from the full data set.
+```{r}
+myfisheries <- c('Salmon','Non-DTS groundfish')
+```
+<br>
+
+Specify which port groups to retain from the full data set.
+```{r}
+myports <- c("North WA Coast", "Puget Sound", "WA Coast", "Astoria", "Tillamook", "Newport", "Coos Bay") # drop "Brookings" for now to correspond with HCI Region 4 and because 7 colors kind of max things out?
+```
+<br>
+
+
+
+# Read in Data
+
+
+Network metrics from different datasets. 
+```{r}
+for(i in seq(1,length(filenames))){
+  tmpdat <- read.csv(here::here(indir, filenames[i])) %>%
+    dplyr::select(pcgroup, year, metier.cm, all_of(node_metrics)) %>%
+    filter(pcgroup %in% myports) %>%
+    filter(metier.cm %in% myfisheries) %>%
+    mutate(dataset=dataset_names[i])
+  if(i==1){
+    dat <- tmpdat
+  } else{ dat <- bind_rows(dat,tmpdat)}
+}
+
+glimpse(dat)
+
+for(i in seq(1,length(networkstats_filename))){
+  tmpdat2 <- read.csv(here::here(indir, networkstats_filename[i])) %>%
+    dplyr::select(pcgroup, y, all_of(network_metrics)) %>%
+    #filter(pcgroup %in% myports) %>%
+    #filter(metier.cm %in% myfisheries) %>%
+    mutate(dataset=dataset_names2[i])
+  if(i==1){
+    dat2 <- tmpdat2
+  } else{ dat2 <- bind_rows(dat2,tmpdat2)}
+}
+
+glimpse(dat2)
+
+# remove duplicates (added 01-07-2025)
+
+dat <- dat %>% distinct()
+dat2 <- dat2 %>% distinct()
+
+write.csv(dat,here::here(statdir, paste0('VesselLevelNodeStats_2004_2023_21pcgroups_totalrev5000_indivrev500_connectivity_rmCrab_10pContribution_rmdupes.csv')), row.names=FALSE)
+
+write.csv(dat2,here::here(statdir, paste0('VesselLevelNetworkStats_2004_2023_21pcgroups_totalrev5000_indivrev500_connectivity_rmCrab_10pContribution_rmdupes.csv')), row.names=FALSE)
+
+
+
+
+# 01-06-22: note jameal updated OSD, SD, and SDA ports to have the same lat long as OCN. Amanda P has made the same fix. Also reassigned MCR to the Eureka IOPAC port group,  Amanda P agreed with this change
+iopac_lookup <- read_csv(here::here(other_indir, port_filename))
+
+```
+<br>
+
+Check to make sure that all of the datasets were read in. 
+```{r echo=FALSE}
+with(dat,table(dataset,pcgroup))
+```
+<br>
+
+Pivot longer to graph multiple metrics at once.
+```{r}
+dat_long <- dat %>%
+  pivot_longer(cols=c(all_of(node_metrics)), names_to = "metric", values_to = "value")
+```
+<br>
+
+Clean up metric names.
+```{r}
+dat_long$metric <- recode(dat_long$metric, 
+                          node_strength = "Node Strength",
+                          eigen = "Importance")
+#dat_long$metric <- factor(dat_long$metric, levels=c("Size", "Edge Density","Mean Degree", "Central.", "Central. (UnW)", "Mod.", "Mod. (UnW)"))
+
+dat_long$pcgroup <- factor(dat_long$pcgroup, levels=myports)
+
+colnames(dat2) <- c(
+  'Port Group','Year','Edge Density','dataset'
+)
+
+```
+<br>
+
+<!-- Monthly Habitat Compression Index over 43.5-48N (Region 1). Summarize for spring months only (Apr-Jun). -->
+<!-- ```{r} -->
+<!-- spring_months <- c(4,5,6) -->
+
+<!-- hci <- read_csv(here::here(other_indir,hci_filename)) %>% -->
+<!--   dplyr::select(year, month, data) %>% -->
+<!--   filter(year >= 2005) %>% -->
+<!--   filter(month %in% spring_months) %>% -->
+<!--   group_by(year) %>% -->
+<!--   summarise( -->
+<!--     annual_mean = mean(data), -->
+<!--     .groups = 'drop' -->
+<!--   ) -->
+
+<!-- glimpse(hci) -->
+
+<!-- ``` -->
+<!-- <br> -->
+
+# 2. Graph Timeseries
+
+## Figure x.Time series of node strength 
+
+... at WA and OR ports from 2004-2024. Node strength was derived from vessel-level networks summarized at the port level. Nodes (fisheries) are included in each network with a minimum total fisheries revenue cutoff for vessels of `$5,000` and a minimum revenue cutoff for individual fisheries of `$500`.
+
+```{r}
+plot_metric="Node Strength"
+metric_label="Node Strength"
+```
+<br>
+
+```{r echo=FALSE, fig.width=10}
+# filter and re-arrange data for plotting
+plotdat_gfish <- dat_long %>% filter(metric==plot_metric) %>% filter(metier.cm == 'Non-DTS groundfish')
+plotdat_salmon <- dat_long %>% filter(metric==plot_metric) %>% filter(metier.cm == 'Salmon')
+
+# color palette
+pal=pnw_palette("Starfish",length(unique(plotdat_gfish$pcgroup))) # or choose a different PNWColors palette
+
+# main metric plot - gfish
+figx_gfish <- ggplot(plotdat_gfish, aes(x=year, y=value, color=pcgroup)) + 
+  geom_point(size=2) + geom_line() +
+  facet_wrap(nrow = 2, vars(pcgroup), scales="free_y") +
+  scale_color_manual(values=pal) +
+  scale_x_continuous(breaks=seq(min(plotdat_gfish$year), max(plotdat_gfish$year), by=2), labels=seq(min(plotdat_gfish$year), max(plotdat_gfish$year), by=2)) +
+  ylim(c(0,1)) +
+  labs(title='Node Strength of Non-DTS Groundfish in Fisheries Participation Networks',
+       subtitle = '2004-2024',
+       x = "Year",
+       y = metric_label
+       ) +
+  theme_bw() + theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5),
+                     axis.title.x=element_text(size=13),
+                     axis.title.y=element_text(size=13),
+                     strip.text=element_text(size=13),
+                     legend.title=element_text(size=13),legend.text=element_text(size=13),
+                     panel.grid.major=element_blank(),
+                     panel.grid.minor=element_blank()) + 
+  theme(legend.position = 'none')
+figx_gfish
+
+# color palette
+pal=pnw_palette("Starfish",length(unique(plotdat_salmon$pcgroup))) # or choose a different PNWColors palette
+
+# main metric plot - salmon
+figx_salmon <- ggplot(plotdat_salmon, aes(x=year, y=value, color=pcgroup)) + 
+  geom_point(size=2) + geom_line() +
+  facet_wrap(nrow = 2, vars(pcgroup), scales="free_y") +
+  scale_color_manual(values=pal) +
+  scale_x_continuous(breaks=seq(min(plotdat_salmon$year), max(plotdat_salmon$year), by=2), labels=seq(min(plotdat_salmon$year), max(plotdat_salmon$year), by=2)) +
+  ylim(c(0,1)) +
+  labs(title='Node Strength of Salmon in Fisheries Participation Networks',
+       subtitle = '2004-2024',
+       x = "Year",
+       y = metric_label
+       ) +
+  theme_bw() + theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5),
+                     axis.title.x=element_text(size=13),
+                     axis.title.y=element_text(size=13),
+                     strip.text=element_text(size=13),
+                     legend.title=element_text(size=13),legend.text=element_text(size=13),
+                     panel.grid.major=element_blank(),
+                     panel.grid.minor=element_blank()) + 
+  theme(legend.position = 'none')
+figx_salmon
+
+```
+<br>
+<br>
+<br>
+
+Save plot as a png, with filename: Node Strength of Non-DTS Groundfish in Fisheries Participation Networks 2004-2024
+```{r echo=FALSE}
+png(here::here(pngdir, "Node Strength of Non-DTS Groundfish in Fisheries Participation Networks 2004-2024.png"),
+    res=200,height=800,width=1700)
+figx_gfish
+dev.off()
+```
+<br>
+
+Save plot as a png, with filename: Node Strength of Salmon in Fisheries Participation Networks 2004-2024
+```{r echo=FALSE}
+png(here::here(pngdir, "Node Strength of Salmon in Fisheries Participation Networks 2004-2024.png"),
+    res=200,height=800,width=1700)
+figx_salmon
+dev.off()
+```
+<br>
+
+## Figure y.Time series of importance
+
+... at WA and OR ports from 2004-2024. Importance (eigenvalue centrality) was derived from vessel-level networks summarized at the port level. Nodes (fisheries) are included in each network with a minimum total fisheries revenue cutoff for vessels of `$5,000` and a minimum revenue cutoff for individual fisheries of `$500`.
+
+```{r}
+plot_metric="Importance"
+metric_label="Importance"
+```
+<br>
+
+```{r echo=FALSE, fig.width=10}
+# filter and re-arrange data for plotting
+plotdat_gfish <- dat_long %>% filter(metric==plot_metric) %>% filter(metier.cm == 'Non-DTS groundfish')
+
+plotdat_salmon <- dat_long %>% filter(metric==plot_metric) %>% filter(metier.cm == 'Salmon')
+
+# color palette
+pal=pnw_palette("Starfish",length(unique(plotdat_gfish$pcgroup))) # or choose a different PNWColors palette
+
+# main metric plot - gfish
+figy_gfish <- ggplot(plotdat_gfish, aes(x=year, y=value, color=pcgroup)) + 
+  geom_point(size=2) + geom_line() +
+  facet_wrap(nrow = 2, vars(pcgroup), scales="free_y") +
+  scale_color_manual(values=pal) +
+  scale_x_continuous(breaks=seq(min(plotdat_gfish$year), max(plotdat_gfish$year), by=2), labels=seq(min(plotdat_gfish$year), max(plotdat_gfish$year), by=2)) +
+  ylim(c(0,1)) +
+  labs(title='Importance of Non-DTS Groundfish in Fisheries Participation Networks',
+       subtitle = '2004-2024',
+       x = "Year",
+       y = metric_label
+       ) +
+  theme_bw() + theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5),
+                     axis.title.x=element_text(size=13),
+                     axis.title.y=element_text(size=13),
+                     strip.text=element_text(size=13),
+                     legend.title=element_text(size=13),legend.text=element_text(size=13),
+                     panel.grid.major=element_blank(),
+                     panel.grid.minor=element_blank()) + 
+  theme(legend.position = 'none')
+figy_gfish
+
+# color palette
+pal=pnw_palette("Starfish",length(unique(plotdat_salmon$pcgroup))) # or choose a different PNWColors palette
+
+# main metric plot - salmon
+figy_salmon <- ggplot(plotdat_salmon, aes(x=year, y=value, color=pcgroup)) + 
+  geom_point(size=2) + geom_line() +
+  facet_wrap(nrow = 2, vars(pcgroup), scales="free_y") +
+  scale_color_manual(values=pal) +
+  scale_x_continuous(breaks=seq(min(plotdat_salmon$year), max(plotdat_salmon$year), by=2), labels=seq(min(plotdat_salmon$year), max(plotdat_salmon$year), by=2)) +
+  ylim(c(0,1)) +
+  labs(title='Importance of Salmon in Fisheries Participation Networks',
+       subtitle = '2004-2024',
+       x = "Year",
+       y = metric_label
+       ) +
+  theme_bw() + theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5),
+                     axis.title.x=element_text(size=13),
+                     axis.title.y=element_text(size=13),
+                     strip.text=element_text(size=13),
+                     legend.title=element_text(size=13),legend.text=element_text(size=13),
+                     panel.grid.major=element_blank(),
+                     panel.grid.minor=element_blank()) + 
+  theme(legend.position = 'none')
+figy_salmon
+```
+<br>
+<br>
+<br>
+
+Save plot as a png, with filename: Importance of Non-DTS Groundfish in Fisheries Participation Networks 2004-2024
+```{r echo=FALSE}
+png(here::here(pngdir, "Importance of Non-DTS Groundfish in Fisheries Participation Networks 2004-2024.png"),
+    res=200,height=800,width=1700)
+figy_gfish
+dev.off()
+```
+<br>
+
+Save plot as a png, with filename: Importance of Salmon in Fisheries Participation Networks 2004-2024
+```{r echo=FALSE}
+png(here::here(pngdir, "Importance of Salmon in Fisheries Participation Networks 2004-2024.png"),
+    res=200,height=800,width=1700)
+figy_salmon
+dev.off()
+```
+<br>
+
+
+
+<!-- ## Figure z.Time series of HCI for Region 1  -->
+
+<!-- ```{r echo=FALSE, fig.width=10} -->
+
+<!-- # main metric plot -->
+<!-- figz <- ggplot(hci, aes(x=year, y=annual_mean)) +  -->
+<!--   geom_point(size=2) + geom_line() + -->
+<!--   scale_x_continuous(breaks=seq(min(plotdat$year), max(plotdat$year), by=2), labels=seq(min(plotdat$year), max(plotdat$year), by=2)) + -->
+<!--   ylim(c(0,1)) + -->
+<!--   labs(title='Habitat Compression Index for Region 1, 43.5-48N', -->
+<!--        subtitle = 'Apr-Jun 2005-2021', -->
+<!--        x = "Year", -->
+<!--        y = 'Habitat Area\n(fraction below monthly threshold)' -->
+<!--        ) + -->
+<!--   theme_bw() + theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5), -->
+<!--                      axis.title.x=element_text(size=13), -->
+<!--                      axis.title.y=element_text(size=13), -->
+<!--                      strip.text=element_text(size=13), -->
+<!--                      legend.title=element_text(size=13),legend.text=element_text(size=13), -->
+<!--                      panel.grid.major=element_blank(), -->
+<!--                      panel.grid.minor=element_blank()) +  -->
+<!--   theme(legend.position = 'none') -->
+<!-- figz -->
+<!-- ``` -->
+<!-- <br> -->
+<!-- <br> -->
+<!-- <br> -->
+
+<!-- Save plot as a png, with filename: Spring Habitat Compression Index for Region 1, 43.5-48N, 2005-2021 -->
+<!-- ```{r echo=FALSE} -->
+<!-- png(here::here(pngdir, "Spring Habitat Compression Index for Region 1, 43.5-48N, 2005-2021.png"), -->
+<!--     res=200,height=800,width=1700) -->
+<!-- figz -->
+<!-- dev.off() -->
+<!-- ``` -->
+<!-- <br> -->
+
+
+
+## Figure aa. Time series of edge density
+
+... at all ports from 2005-2024. Edge density was derived from vessel-level networks summarized at the port level. Nodes (fisheries) are included in each network with a minimum total fisheries revenue cutoff for vessels of `$5,000` and a minimum revenue cutoff for individual fisheries of `$500`.
+
+(Drop Other Coastal Washington & Unknown Ports & Columbia River)
+
+```{r}
+plot_metric="Edge Density"
+metric_label="Edge Density"
+```
+<br>
+
+```{r echo=FALSE, fig.width=10}
+
+iopac_mean_lat <- iopac_lookup %>% dplyr::select(IOPAC, PACFIN_LAT) %>% group_by(IOPAC) %>% summarise(mean_lat = mean(PACFIN_LAT, na.rm=TRUE)) %>% ungroup() %>% arrange(-mean_lat) %>% dplyr::select(IOPAC) %>% pull() 
+
+# allports_sorted <- dat2 %>% left_join(iopac_mean_lat, by = c('Port Group' = 'IOPAC')) %>% dplyr::select(`Port Group`, mean_lat) %>% arrange(-mean_lat) %>% select(`Port Group`) %>% pull() # use arrange(-lat) if coord_flip() is NOT used
+
+dat2$`Port Group` <- factor(dat2$`Port Group`, levels=iopac_mean_lat)
+
+# main metric plot
+fig_ed <- ggplot(dat2 %>% filter( `Port Group` != "Other Coastal Washington" & `Port Group` != "Unknown Ports" & `Port Group` != "Columbia River"), 
+                 aes(x=Year+1, y=`Edge Density`, colour=`Port Group`)) + 
+  geom_point(size=2) + geom_line() +
+  facet_wrap(vars(`Port Group`),labeller = label_wrap_gen(16)) +
+  scale_colour_viridis(discrete = TRUE) +
+  scale_x_continuous(breaks=seq(min(dat2$Year)+1, max(dat2$Year)+1, by=2), labels=seq(min(dat2$Year)+1, max(dat2$Year)+1, by=2)) +
+  ylim(c(0,1)) +
+  labs(title='Edge Density in Fisheries Participation Networks',
+       subtitle = '2005-2024',
+       x = "Year",
+       y = metric_label
+       ) +
+  theme_bw() + theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5),
+                     axis.title.x=element_text(size=13),
+                     axis.title.y=element_text(size=13),
+                     strip.text=element_text(size=13),
+                     legend.title=element_text(size=13),legend.text=element_text(size=13),
+                     panel.grid.major=element_blank(),
+                     panel.grid.minor=element_blank()) + 
+  theme(legend.position = 'none')
+fig_ed
+```
+<br>
+<br>
+<br>
+
+Save plot as a png, with filename: Edge Density in Fisheries Participation Networks 2005-2024
+```{r echo=FALSE}
+png(here::here(pngdir, "Edge Density in Fisheries Participation Networks 2005-2024.png"),
+    res=200,height=1500,width=1700)
+fig_ed
+dev.off()
+```
+<br>
+
+
+
+
+
+
+
