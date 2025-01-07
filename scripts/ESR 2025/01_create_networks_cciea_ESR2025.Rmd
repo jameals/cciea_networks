@@ -329,6 +329,8 @@ Write stats out to file. 2008_2015_CA_CrabPorts_NoSubgraph_01contribution.csv
 # ran first for network level stats 12-29-2021
 filename <- paste0("VesselLevelNetworkStats_", min(years), "_", max(years), "_", length(myports), "pcgroups_", "totalrev", total_rev_cutoff,"_indivrev", indiv_rev_cutoff,"_", edgetype, "_", ifelse(rm_crab, 'rmCrab_','_'), contr_cutoff*100, "pContribution.csv")
 
+# Note: 01-07-2025 need to add check to remove duplicated "WA Coast" rows. 
+
 write.csv(mystats3,here::here(statdir, filename), row.names=FALSE)
 
 # ran second for node level stats 12-29-2021
