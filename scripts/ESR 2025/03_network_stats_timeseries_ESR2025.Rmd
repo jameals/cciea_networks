@@ -28,9 +28,9 @@ The two core network metrics of interest for comparison to the Habitat Compressi
 
 1. Node Strength
 
-2. Eigen Vector Centrality.
+2. Eigen Vector Centrality (aka Importance).
 
-Initially, we consider the above 2 metrics for tuna in ports in WA and OR.
+Initially, we consider the above 2 metrics for salmon and non-DTS groundfish for all ports.
 
 **Note that many network metrics are sensitive to network size, which will vary over the time series.** Network size has been incorporated into each graph as ___. Use the timeseries graphs for visual comparison of different network forms, but not for drawing major conclusions around network change / sensitivity. 
 
@@ -108,11 +108,11 @@ myfisheries <- c('Salmon','Non-DTS groundfish')
 ```
 <br>
 
-Specify which port groups to retain from the full data set.
-```{r}
-myports <- c("North WA Coast", "Puget Sound", "WA Coast", "Astoria", "Tillamook", "Newport", "Coos Bay") # drop "Brookings" for now to correspond with HCI Region 4 and because 7 colors kind of max things out?
-```
-<br>
+<!-- Specify which port groups to retain from the full data set. -->
+<!-- ```{r} -->
+<!-- myports <- c("North WA Coast", "Puget Sound", "WA Coast", "Astoria", "Tillamook", "Newport", "Coos Bay") # drop "Brookings" for now to correspond with HCI Region 4 and because 7 colors kind of max things out? -->
+<!-- ``` -->
+<!-- <br> -->
 
 
 
@@ -124,7 +124,7 @@ Network metrics from different datasets.
 for(i in seq(1,length(filenames))){
   tmpdat <- read.csv(here::here(indir, filenames[i])) %>%
     dplyr::select(pcgroup, year, metier.cm, all_of(node_metrics)) %>%
-    filter(pcgroup %in% myports) %>%
+    #filter(pcgroup %in% myports) %>%
     filter(metier.cm %in% myfisheries) %>%
     mutate(dataset=dataset_names[i])
   if(i==1){
@@ -147,23 +147,28 @@ for(i in seq(1,length(networkstats_filename))){
 
 glimpse(dat2)
 
-# remove duplicates (added 01-07-2025)
-
-dat <- dat %>% distinct()
-dat2 <- dat2 %>% distinct()
-
-write.csv(dat,here::here(statdir, paste0('VesselLevelNodeStats_2004_2023_21pcgroups_totalrev5000_indivrev500_connectivity_rmCrab_10pContribution_rmdupes.csv')), row.names=FALSE)
-
-write.csv(dat2,here::here(statdir, paste0('VesselLevelNetworkStats_2004_2023_21pcgroups_totalrev5000_indivrev500_connectivity_rmCrab_10pContribution_rmdupes.csv')), row.names=FALSE)
-
-
-
-
 # 01-06-22: note jameal updated OSD, SD, and SDA ports to have the same lat long as OCN. Amanda P has made the same fix. Also reassigned MCR to the Eureka IOPAC port group,  Amanda P agreed with this change
 iopac_lookup <- read_csv(here::here(other_indir, port_filename))
 
 ```
 <br>
+
+remove duplicates, write out csv without duplicates (added 01-07-2025)
+```{r}
+
+# 
+
+dat <- dat %>% distinct()
+dat2 <- dat2 %>% distinct()
+
+write.csv(dat,here::here(indir, paste0('VesselLevelNodeStats_2004_2023_21pcgroups_totalrev5000_indivrev500_connectivity_rmCrab_10pContribution_rmdupes.csv')), row.names=FALSE)
+
+write.csv(dat2,here::here(indir, paste0('VesselLevelNetworkStats_2004_2023_21pcgroups_totalrev5000_indivrev500_connectivity_rmCrab_10pContribution_rmdupes.csv')), row.names=FALSE)
+
+
+```
+<br>
+
 
 Check to make sure that all of the datasets were read in. 
 ```{r echo=FALSE}
@@ -185,11 +190,51 @@ dat_long$metric <- recode(dat_long$metric,
                           eigen = "Importance")
 #dat_long$metric <- factor(dat_long$metric, levels=c("Size", "Edge Density","Mean Degree", "Central.", "Central. (UnW)", "Mod.", "Mod. (UnW)"))
 
-dat_long$pcgroup <- factor(dat_long$pcgroup, levels=myports)
+#dat_long$pcgroup <- factor(dat_long$pcgroup, levels=myports)
 
 colnames(dat2) <- c(
   'Port Group','Year','Edge Density','dataset'
 )
+
+```
+<br>
+
+convert to ESR format
+```{r}
+
+# format for ESR with the following columns:  
+# (1) year - this can be just year or a date, preferably in yyyy or yyyy-mm-dd format. 
+# (2) index - this column contains the data you want to plot
+# (3) timeseries - title for the time series plot.  
+# (4) metric - how the data were measured; essentially the label for the y-axis
+# (5) SE or SD if you have it
+# 
+# NAs or blanks will not be plotted
+# Zeros will be plotted
+# You don't have to fill in missing years
+
+# note that for each year, it reflects november of (year) through november of (year + 1). specifically week 46 of year 1 through week 45 of year 2
+
+dat_esr1 <- dat2 %>%
+  mutate(metric = 'edge density') %>%
+  dplyr:: select(Year, `Edge Density`, metric, `Port Group`) %>%
+  rename(
+    year = Year,
+    index = `Edge Density`,
+    timeseries = `Port Group` 
+  )
+
+dat_esr2 <- dat_long %>%
+  mutate(metric = paste(metier.cm, metric)) %>%
+  dplyr:: select(year, value, metric, pcgroup) %>%
+  rename(
+    index = value,
+    timeseries = pcgroup 
+  )
+
+dat_esr <- dat_esr1 %>% bind_rows(dat_esr2)
+
+write.csv(dat_esr,here::here(indir, paste0('FPN_ed_ns_ec_salmon_nondts_FY2025.csv')), row.names=FALSE)
 
 ```
 <br>
