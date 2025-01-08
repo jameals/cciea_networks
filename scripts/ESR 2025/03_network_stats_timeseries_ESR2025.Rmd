@@ -200,6 +200,7 @@ colnames(dat2) <- c(
 <br>
 
 convert to ESR format
+(Drop Other Coastal Washington & Unknown Ports & Columbia River)
 ```{r}
 
 # format for ESR with the following columns:  
@@ -232,7 +233,9 @@ dat_esr2 <- dat_long %>%
     timeseries = pcgroup 
   )
 
-dat_esr <- dat_esr1 %>% bind_rows(dat_esr2)
+# Bind and (Drop Other Coastal Washington & Unknown Ports & Columbia River)
+dat_esr <- dat_esr1 %>% bind_rows(dat_esr2) %>% 
+  filter( timeseries != "Other Coastal Washington" & timeseries != "Unknown Ports" & timeseries != "Columbia River")
 
 write.csv(dat_esr,here::here(indir, paste0('FPN_ed_ns_ec_salmon_nondts_FY2025.csv')), row.names=FALSE)
 
