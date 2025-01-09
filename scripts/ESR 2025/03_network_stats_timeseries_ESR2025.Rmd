@@ -153,23 +153,6 @@ iopac_lookup <- read_csv(here::here(other_indir, port_filename))
 ```
 <br>
 
-remove duplicates, write out csv without duplicates (added 01-07-2025)
-```{r}
-
-# 
-
-dat <- dat %>% distinct()
-dat2 <- dat2 %>% distinct()
-
-write.csv(dat,here::here(indir, paste0('VesselLevelNodeStats_2004_2023_21pcgroups_totalrev5000_indivrev500_connectivity_rmCrab_10pContribution_rmdupes.csv')), row.names=FALSE)
-
-write.csv(dat2,here::here(indir, paste0('VesselLevelNetworkStats_2004_2023_21pcgroups_totalrev5000_indivrev500_connectivity_rmCrab_10pContribution_rmdupes.csv')), row.names=FALSE)
-
-
-```
-<br>
-
-
 Check to make sure that all of the datasets were read in. 
 ```{r echo=FALSE}
 with(dat,table(dataset,pcgroup))
