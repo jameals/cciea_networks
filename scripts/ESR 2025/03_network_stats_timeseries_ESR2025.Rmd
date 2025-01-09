@@ -98,7 +98,7 @@ dataset_names2 <- c("Network_Stats")
 Specify which network metrics to retain from the full data set.
 ```{r}
 node_metrics <- c('node_strength','eigen')
-network_metrics <- c('ed') # ,'ed_weighted'
+network_metrics <- c('ed', 'N') # ,'ed_weighted'
 ```
 <br>
 
@@ -163,6 +163,9 @@ Pivot longer to graph multiple metrics at once.
 ```{r}
 dat_long <- dat %>%
   pivot_longer(cols=c(all_of(node_metrics)), names_to = "metric", values_to = "value")
+
+dat2_long <- dat2 %>%
+  pivot_longer(cols=c(all_of(network_metrics)), names_to = "metric", values_to = "value")
 ```
 <br>
 
@@ -176,8 +179,12 @@ dat_long$metric <- recode(dat_long$metric,
 #dat_long$pcgroup <- factor(dat_long$pcgroup, levels=myports)
 
 colnames(dat2) <- c(
-  'Port Group','Year','Edge Density','dataset'
+  'Port Group','Year','Edge Density','N','dataset'
 )
+
+dat2_long$metric <- recode(dat2_long$metric, 
+                          'ed' = 'edge density',
+                          'N' = 'number of fisheries')
 
 ```
 <br>
@@ -199,16 +206,7 @@ convert to ESR format
 
 # note that for each year, it reflects november of (year) through november of (year + 1). specifically week 46 of year 1 through week 45 of year 2
 
-dat_esr1 <- dat2 %>%
-  mutate(metric = 'edge density') %>%
-  dplyr:: select(Year, `Edge Density`, metric, `Port Group`) %>%
-  rename(
-    year = Year,
-    index = `Edge Density`,
-    timeseries = `Port Group` 
-  )
-
-dat_esr2 <- dat_long %>%
+dat_esr1 <- dat_long %>%
   mutate(metric = paste(metier.cm, metric)) %>%
   dplyr:: select(year, value, metric, pcgroup) %>%
   rename(
@@ -216,11 +214,20 @@ dat_esr2 <- dat_long %>%
     timeseries = pcgroup 
   )
 
+dat_esr2 <- dat2_long %>%
+  dplyr:: select(y, value, metric, pcgroup) %>%
+  rename(
+    year = y,
+    index = value,
+    timeseries = pcgroup 
+  )
+
+
 # Bind and (Drop Other Coastal Washington & Unknown Ports & Columbia River)
 dat_esr <- dat_esr1 %>% bind_rows(dat_esr2) %>% 
   filter( timeseries != "Other Coastal Washington" & timeseries != "Unknown Ports" & timeseries != "Columbia River")
 
-write.csv(dat_esr,here::here(indir, paste0('FPN_ed_ns_ec_salmon_nondts_FY2025.csv')), row.names=FALSE)
+write.csv(dat_esr,here::here(indir, paste0('FPN_ed_n_ns_ec_salmon_nondts_FY2025.csv')), row.names=FALSE)
 
 ```
 <br>
@@ -515,6 +522,62 @@ Save plot as a png, with filename: Edge Density in Fisheries Participation Netwo
 png(here::here(pngdir, "Edge Density in Fisheries Participation Networks 2005-2024.png"),
     res=200,height=1500,width=1700)
 fig_ed
+dev.off()
+```
+<br>
+
+## Figure bb. Time series of number of nodes
+
+... at all ports from 2004-2024. The number of nodes was derived from vessel-level networks summarized at the port level. Nodes (fisheries) are included in each network with a minimum total fisheries revenue cutoff for vessels of `$5,000` and a minimum revenue cutoff for individual fisheries of `$500`. To avoid inclusion of rare or minimal fishing activity, a given fishery must contribute to at least 10% of a vessel's annual revenue to be included in the network data.
+
+(Drop Other Coastal Washington & Unknown Ports & Columbia River)
+
+```{r}
+plot_metric="N"
+metric_label="Number of fisheries"
+```
+<br>
+
+```{r echo=FALSE, fig.width=10}
+
+# iopac_mean_lat <- iopac_lookup %>% dplyr::select(IOPAC, PACFIN_LAT) %>% group_by(IOPAC) %>% summarise(mean_lat = mean(PACFIN_LAT, na.rm=TRUE)) %>% ungroup() %>% arrange(-mean_lat) %>% dplyr::select(IOPAC) %>% pull() 
+
+# allports_sorted <- dat2 %>% left_join(iopac_mean_lat, by = c('Port Group' = 'IOPAC')) %>% dplyr::select(`Port Group`, mean_lat) %>% arrange(-mean_lat) %>% select(`Port Group`) %>% pull() # use arrange(-lat) if coord_flip() is NOT used
+
+# dat2$`Port Group` <- factor(dat2$`Port Group`, levels=iopac_mean_lat)
+
+# main metric plot
+fig_n <- ggplot(dat2 %>% filter( `Port Group` != "Other Coastal Washington" & `Port Group` != "Unknown Ports" & `Port Group` != "Columbia River"), 
+                 aes(x=Year+1, y=N, colour=`Port Group`)) + 
+  geom_point(size=2) + geom_line() +
+  facet_wrap(vars(`Port Group`),labeller = label_wrap_gen(16)) +
+  scale_colour_viridis(discrete = TRUE) +
+  scale_x_continuous(breaks=seq(min(dat2$Year), max(dat2$Year), by=2), labels=seq(min(dat2$Year), max(dat2$Year), by=2)) +
+  #ylim(c(0,1)) +
+  labs(title='Number of Fisheries in Fisheries Participation Networks',
+       subtitle = '2004-2024',
+       x = "Year",
+       y = metric_label
+       ) +
+  theme_bw() + theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5),
+                     axis.title.x=element_text(size=13),
+                     axis.title.y=element_text(size=13),
+                     strip.text=element_text(size=13),
+                     legend.title=element_text(size=13),legend.text=element_text(size=13),
+                     panel.grid.major=element_blank(),
+                     panel.grid.minor=element_blank()) + 
+  theme(legend.position = 'none')
+fig_n
+```
+<br>
+<br>
+<br>
+
+Save plot as a png, with filename: Nodes in Fisheries Participation Networks 2004-2024
+```{r echo=FALSE}
+png(here::here(pngdir, "Number of Nodes in Fisheries Participation Networks 2004-2024.png"),
+    res=200,height=1500,width=1700)
+fig_n
 dev.off()
 ```
 <br>
