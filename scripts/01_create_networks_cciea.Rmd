@@ -296,7 +296,7 @@ for(y in years){
     
     g_nodestats <- g_nodestats %>%
       mutate(pcgroup = rep(iopac, times=dim(g_nodestats)[1]))
-    } #end 'else' close-g has > 0 vertex
+  
     
     
     #### SAVE NETWORK STATS OUTPUT ####
@@ -317,6 +317,8 @@ for(y in years){
     } else{
       mystats4 <- g_nodestats
     }
+    
+    } #end 'else' close-g has > 0 vertex
   } #end (p in myports)
   cat("\nfinished with all port groups in crab year ", y, "\n-----\n")
 } #end (y in years)
