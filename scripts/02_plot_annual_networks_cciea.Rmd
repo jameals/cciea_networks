@@ -75,7 +75,7 @@ pngdir_ports = 'data/networks/participation_vessel_ports/plots/comparable'
 Identify the crab years and port groups that you would like to produce networks for. 
 ```{r}
 ## (crab) years
-years <- seq(2004,2020)
+years <- seq(2005,2023)
 # years <- 2008 # testing script, 1/6
 # years <- 2018 # testing script, 1/8
 # years <- 2014 # testing script, 1/27
@@ -118,6 +118,13 @@ Read the igraph objects into a list. This for loop will also apply the functions
 #palette(brewer.pal(n = 10, name = "Set3"))
 #pal3 <- brewer.pal(n = 10, name = "Set3")
 
+# iopac <- "Monterey"
+# y <- 2023
+
+rundate <- "2025-02-04"
+
+#years <- 2023
+
 graphs_list <- list()
 graph_names <- c()
 i=1
@@ -125,8 +132,8 @@ for(iopac in myports){
   for(y in years){
   #y=2013 # testing script for single node networks, 1/7
   # y=2014 # testing script for single node networks, 1/27
-    if(file.exists(here::here(indir_ports,paste0("igraph_", iopac, "_", y, "_totalrev", total_rev_cutoff,"_indivrev", indiv_rev_cutoff,"_", edgetype,"_rmCrab.rds")))){
-      tmpgraph <- readRDS(here::here(indir_ports,paste0("igraph_", iopac, "_", y, "_totalrev", total_rev_cutoff,"_indivrev", indiv_rev_cutoff,"_", edgetype,"_rmCrab.rds")))
+    if(file.exists(here::here(indir_ports,paste0("igraph_", iopac, "_", y, "_totalrev", total_rev_cutoff,"_indivrev", indiv_rev_cutoff,"_", edgetype,"_rmCrab_", rundate, ".rds")))){
+      tmpgraph <- readRDS(here::here(indir_ports,paste0("igraph_", iopac, "_", y, "_totalrev", total_rev_cutoff,"_indivrev", indiv_rev_cutoff,"_", edgetype,"_rmCrab_", rundate, ".rds")))
       V(tmpgraph)$p <- iopac
       V(tmpgraph)$year <- y
       V(tmpgraph)$colors <- vertex_color(tmpgraph)
@@ -160,6 +167,9 @@ file.copy(here::here(pngdir_ports,list.of.files_2019), here::here(pngdir_ports, 
 
 list.of.files_2020 <- list.files(here::here(pngdir_ports), "2020_circular_compare")
 file.copy(here::here(pngdir_ports,list.of.files_2020), here::here(pngdir_ports, "2020 only"), overwrite = TRUE)
+
+list.of.files_2023 <- list.files(here::here(pngdir_ports), "2023_circular_compare")
+file.copy(here::here(pngdir_ports,list.of.files_2023), here::here(pngdir_ports, "2023 only"), overwrite = TRUE)
 
 list.of.files_astoria <- intersect(list.files(here::here(pngdir_ports), pattern = "Astoria"), list.files(here::here(pngdir_ports), pattern = "circular")) 
 file.copy(here::here(pngdir_ports,list.of.files_astoria), here::here(pngdir_ports, "astoria"), overwrite = TRUE)
