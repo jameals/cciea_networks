@@ -156,9 +156,9 @@ box_filter <- function(region) {
 # function to create iopac map with boxes
 box_iopac <- function(basemap, box_filter, region) {
   iopac_rect <- basemap + 
-  geom_point(data = subset(box, map_version %in% region), aes(x=PRIMARY_LONGITUDE, y=PRIMARY_LATITUDE, fill = STATE), colour="black", pch=21, size = 2) +
-  geom_text_repel(aes(x=PRIMARY_LONGITUDE, y=PRIMARY_LATITUDE, label= IOPAC), data = subset(box, map_version %in% region), size = 2.15, 
-                  box.padding = 0, point.padding = 0.25, hjust = -.25) +
+  geom_point(data = subset(box, map_version %in% region), aes(x=PRIMARY_LONGITUDE, y=PRIMARY_LATITUDE, fill = STATE), colour="black", pch=21, size = 2.5) +
+  geom_text_repel(aes(x=PRIMARY_LONGITUDE, y=PRIMARY_LATITUDE, label= IOPAC), data = subset(box, map_version %in% region), size = 4.5, 
+                  box.padding = 0, point.padding = 0.3, hjust = -.25) +
   geom_rect(data = box_filter, aes(xmax = xmax, ymax = ymax, xmin = xmin, ymin=ymin), fill=NA, colour="darkgray") +
   geom_segment(data = subset(box_filter, segment_line == 'upper_right'), aes(x=PRIMARY_LONGITUDE, y=PRIMARY_LATITUDE, xend = xmax, yend = ymax), color = 'darkgray') +
   geom_segment(data = subset(box_filter, segment_line == 'lower_right'), aes(x=PRIMARY_LONGITUDE, y=PRIMARY_LATITUDE, xend = xmax, yend = ymin), color = 'darkgray') +
@@ -175,7 +175,7 @@ box_iopac <- function(basemap, box_filter, region) {
 
 
 ```{r iopac-node_full-coast_rect_font_m, fig.width=7, fig.height=9}
-CW_map <- ggdraw(box_iopac(base_map_iopac(c("washington", "oregon", "california"), c(-130, -117), c(NA, NA)), box_filter('CW'),c('WA', 'OR', 'NCA', 'SCA'))) + 
+CW_map <- ggdraw(box_iopac(base_map_iopac(c("washington", "oregon", "california"), c(-130, -115), c(NA, NA)), box_filter('CW'),c('WA', 'OR', 'NCA', 'SCA'))) + 
   draw_image(img_nwc, x = .06, y = .66, hjust = 0, vjust = 0, width = 0.31, height = 0.31) +
   draw_image(img_ast, x = .08, y = .43, hjust = 0, vjust = 0, width = 0.31, height = 0.31) +
   draw_image(img_fb, x = .08, y = .18, hjust = 0, vjust = 0, width = 0.31, height = 0.31) +
