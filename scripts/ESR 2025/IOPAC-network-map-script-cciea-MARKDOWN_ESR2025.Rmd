@@ -126,9 +126,6 @@ img_mb <- magick::image_read(
 #load spreadsheet with lat-long coordinates for boxes
 box <- read_csv(here::here('data','input','node_box_ref.csv'))
 
-
-
-
 ```
 
 
