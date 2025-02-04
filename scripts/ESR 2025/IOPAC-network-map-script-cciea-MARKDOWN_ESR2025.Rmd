@@ -176,10 +176,10 @@ box_iopac <- function(basemap, box_filter, region) {
 
 ```{r iopac-node_full-coast_rect_font_m, fig.width=7, fig.height=9}
 CW_map <- ggdraw(box_iopac(base_map_iopac(c("washington", "oregon", "california"), c(-130, -115), c(NA, NA)), box_filter('CW'),c('WA', 'OR', 'NCA', 'SCA'))) + 
-  draw_image(img_nwc, x = .06, y = .66, hjust = 0, vjust = 0, width = 0.31, height = 0.31) +
-  draw_image(img_ast, x = .08, y = .43, hjust = 0, vjust = 0, width = 0.31, height = 0.31) +
-  draw_image(img_fb, x = .08, y = .18, hjust = 0, vjust = 0, width = 0.31, height = 0.31) +
-  draw_image(img_mb, x = .27, y = .29, hjust = 0, vjust = 1, width = 0.31, height = 0.31) 
+  draw_image(img_nwc, x = .03, y = .59, hjust = 0, vjust = 0, width = 0.37, height = 0.37) +
+  draw_image(img_ast, x = .025, y = .4, hjust = 0, vjust = 0, width = 0.36, height = 0.36) +
+  draw_image(img_fb, x = .03, y = .18, hjust = 0, vjust = 0, width = 0.37, height = 0.37) +
+  draw_image(img_mb, x = .2, y = .35, hjust = 0, vjust = 1, width = 0.39, height = 0.39) 
 
 CW_map
 

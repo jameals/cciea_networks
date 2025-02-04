@@ -118,12 +118,13 @@ Read the igraph objects into a list. This for loop will also apply the functions
 #palette(brewer.pal(n = 10, name = "Set3"))
 #pal3 <- brewer.pal(n = 10, name = "Set3")
 
-# iopac <- "Monterey"
-# y <- 2023
+# to run the loop line by line
+iopac <- "Monterey"
+y <- 2023
 
 rundate <- "2025-02-04"
 
-#years <- 2023
+years <- 2023
 
 graphs_list <- list()
 graph_names <- c()
@@ -144,6 +145,7 @@ for(iopac in myports){
   }
 }
 names(graphs_list) <- graph_names
+
 ```
 <br>
 
@@ -155,6 +157,7 @@ Plots will be written out to .png files in the function. This is because the igr
 ```{r}
 #lapply(graphs_list,plot_network, my_layout, outdir=pngdir)
 plot_comparable_networks(graphs_list,outdir=pngdir_ports,color_labels=FALSE)
+
 ```
 <br>
 
