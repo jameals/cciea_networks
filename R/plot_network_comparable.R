@@ -153,7 +153,7 @@ plot_comparable_networks <- function(glist, color_labels=FALSE, outdir, file_suf
              vertex.color = adjustcolor(V(g)$colors, alpha.f=0.90),
              vertex.label.family = 'sans', 
              vertex.label.color = V(g)$label_colors,
-             vertex.label.cex= 2, # changed from 1.2, JS 01-29-21
+             vertex.label.cex= 2, # changed from 1.4, AG 01042025
              vertex.frame.color=NA,
              vertex.label.dist = 5,
              vertex.label.degree = lab.locs
@@ -173,7 +173,7 @@ plot_comparable_networks <- function(glist, color_labels=FALSE, outdir, file_suf
              vertex.color = adjustcolor(V(g)$colors, alpha.f=0.90),
              vertex.label.family = 'sans', 
              vertex.label.color = V(g)$label_colors,
-             vertex.label.cex= 2, # changed from 1.2, JS 01-29-21
+             vertex.label.cex= 2, # changed from 1.4, AG 01042025
              vertex.frame.color=NA,
              vertex.label.dist = 5,
              vertex.label.degree = lab.locs
@@ -226,7 +226,7 @@ plot_comparable_networks <- function(glist, color_labels=FALSE, outdir, file_suf
              vertex.color = adjustcolor(V(g)$colors, alpha.f=0.90),
              vertex.label.family = 'sans', 
              vertex.label.color = V(g)$label_colors,
-             vertex.label.cex= 2, # changed from 1.2, JS 01-29-21
+             vertex.label.cex= 2, # changed from 1.4, AG 01042025
              vertex.frame.color=NA,
              main = paste0(unique(V(g)$p), " ", unique(V(g)$year)),  # main title
              margin = c(b=0, l=-1, t=0, r=-1),   # adjust plot margins, to get rid of whitespace
@@ -247,7 +247,7 @@ plot_comparable_networks <- function(glist, color_labels=FALSE, outdir, file_suf
              vertex.color =adjustcolor(V(g)$colors, alpha.f=0.90),
              vertex.label.family = 'sans', 
              vertex.label.color = V(g)$label_colors,
-             vertex.label.cex= 2, # changed from 1.2, JS 01-29-21
+             vertex.label.cex= 2, # changed from 1.4, AG 01042025
              vertex.frame.color=NA,
              main = paste0(unique(V(g)$p), " ", unique(V(g)$year)),   # main title
              margin = c(b=0, l=-1, t=0, r=-1),     # adjust plot margins, to get rid of whitespace
