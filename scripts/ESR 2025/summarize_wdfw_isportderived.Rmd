@@ -1,0 +1,255 @@
+---
+title: "Summarize WDFW fish tickets isportderived"
+author: "Jameal Samhouri"
+date: "Written 2025-02-04 Last Run `r Sys.Date()`"
+output: 
+  html_document:
+    df_print: paged
+    toc: yes
+    toc_depth: '5'
+  pdf_document:
+    highlight: haddock
+    number_sections: yes
+    toc: yes
+    toc_depth: '3'
+geometry: margin=1in
+fontsize: 11pt
+---
+
+# PacFIN query
+<!-- select * -->
+
+<!-- from PACFIN_MARTS.COMPREHENSIVE_FT cft -->
+
+<!-- left join PACFIN_MARTS.WDFW_FT_PORT_DERIVED_V ftpd -->
+
+<!-- on cft.pacfin_year = ftpd.landing_year -->
+
+<!-- and cft.ftid = ftpd.ftid -->
+
+<!-- and cft.agency_code = ftpd.agency_code -->
+
+<!-- WHERE cft.pacfin_year between 2004 and 2024 -->
+
+<!-- and cft.agency_code='W' -->
+
+<!-- order by cft.landing_year desc; -->
+
+# Load libraries and set directories
+```{r setup}
+
+if(!require("here")) {install.packages("here")}
+if(!require("tidyverse")) {install.packages("tidyverse")}
+if(!require("lubridate")) {install.packages("lubridate")}
+if(!require("formattable")) {install.packages("formattable")}
+if(!require("kableExtra")) {install.packages("kableExtra")}
+if(!require("scales")) {install.packages("scales")}
+if(!require("dplyr")) {install.packages("dplyr")}
+
+library(here)
+library(tidyverse)
+library(lubridate)
+library(formattable)
+library(kableExtra)
+library(dplyr)
+library(scales)
+
+# raw PacFIN fish ticket data file location
+indir2 <- "/Users/jameal.samhouri/Documents/PacFIN Data/"
+
+# output directory for confidential data
+out_conf_dir <- "/Users/jameal.samhouri/Documents/CCIEA Networks/processed/"
+
+statdir = 'results/statistics'
+
+```
+
+# Read in csv or rds
+
+If you have a new download of fish ticket data and want to clean it up a bit and convert it to RDS, use this chunk.
+
+
+<!-- ```{r csv2rds} -->
+
+<!-- # NOTE: reading in PacFIN csv's for multiple years is SLOW, and took >1.5hrs on JS macbook -->
+
+<!-- tmpfile_name <- 'isportderived_2004_2024.csv' # latest pull from PacFIN 01-29-2025 -->
+<!-- tmpfile2 <- read.csv(paste0(indir2,tmpfile_name)) -->
+<!-- glimpse(tmpfile2) -->
+
+<!-- #as.Date(tmpfile2[1,]$LANDING_DATE, "%m/%d/%Y") -->
+
+<!-- # # LANDING_YEAR in more recent data pulls has a time associated with it. convert myfile2$LANDING_DATE to date formats that exclude time. added 12-29-2021 -->
+<!-- tmpfile2$LANDING_DATE <- as.Date(tmpfile2$LANDING_DATE, "%m/%d/%Y") -->
+<!-- write_rds(tmpfile2, paste0(out_conf_dir,'WDFW fish tickets 2004-2024_',Sys.Date(),'.rds')) -->
+<!-- rm(tmpfile2) -->
+
+<!-- ``` -->
+
+
+If you already have an rds, start here.
+```{r readinrds}
+
+wdfwtix_filename <- 'WDFW fish tickets 2004-2024_2025-02-04'
+wdfw_tix <- read_rds(paste0(out_conf_dir, wdfwtix_filename, '.rds'))
+
+#glimpse(wdfw_tix)
+
+```
+# Convert to crab years
+
+A crab year is defined as week 46 of year 1 through week 45 of year 2; for example, the Use crab year to split data frame, but remove the crab_year column from data set before writing out to file.
+
+```{r crab_year}
+
+wdfw_tix1 <- wdfw_tix %>%
+  mutate(tdate = ymd(LANDING_DATE)) %>%
+  ## create 'calendar week of landing' variable
+  mutate(tweek=week(tdate)) %>%
+  ## create crab year variable 
+  mutate(crab_year = ifelse(tweek > 45, LANDING_YEAR, LANDING_YEAR - 1))
+rm(wdfw_tix)
+
+```
+
+# Summarize
+
+For the ISDERIVED column: 0 means it is not derived, 
+1 means it is derived, Null means we do not know
+
+```{r sum_isportderived}
+
+portderivedsum <- wdfw_tix1 %>%
+  group_by(crab_year, IS_PORT_DERIVED) %>%
+  summarise(
+    num_tix = n(),
+    total_landings = sum(LANDED_WEIGHT_MTONS),
+    total_afi_revenue = sum(AFI_EXVESSEL_REVENUE),
+    .groups = 'drop_last'
+  ) %>%
+  mutate(
+    percent_tix = scales::percent(num_tix/sum(num_tix), accuracy = 0.1),
+    percent_landings = scales::percent(total_landings/sum(total_landings), accuracy = 0.1),
+    percent_revenue = scales::percent(total_afi_revenue/sum(total_afi_revenue), accuracy = 0.1)
+  )
+
+portderivedsumpercent <- portderivedsum %>%
+  dplyr::select(crab_year, IS_PORT_DERIVED, percent_tix, percent_landings, percent_revenue) %>%
+  pivot_wider(names_from = IS_PORT_DERIVED, values_from = c(percent_tix, percent_landings, percent_revenue)) %>%
+  dplyr::select(crab_year,
+          percent_tix_0,
+          percent_landings_0,
+          percent_revenue_0,
+          percent_tix_1,
+          percent_landings_1,
+          percent_revenue_1,
+          percent_tix_NA,
+          percent_landings_NA,
+          percent_revenue_NA
+          )
+
+
+```
+
+# Make 3 pretty tables and combine
+
+```{r pretty_table}
+
+portNOTderived_out <- portderivedsumpercent %>%
+  dplyr::select(
+    crab_year,
+    percent_tix_0,
+    percent_landings_0,
+    percent_revenue_0) %>%
+  rename(
+    Year = 'crab_year',
+    `% of Landings Receipts` = percent_tix_0,
+    `% of Landings` = percent_landings_0,
+    `% of Revenue` = percent_revenue_0)
+
+portderived_out <- portderivedsumpercent %>%
+  dplyr::select(
+    crab_year,
+    percent_tix_1,
+    percent_landings_1,
+    percent_revenue_1) %>%
+  rename(
+    Year = 'crab_year',
+    `% of Landings Receipts` = percent_tix_1,
+    `% of Landings` = percent_landings_1,
+    `% of Revenue` = percent_revenue_1)
+
+portderivedUNKNOWN_out <- portderivedsumpercent %>%
+  dplyr::select(
+    crab_year,
+    percent_tix_NA,
+    percent_landings_NA,
+    percent_revenue_NA) %>%
+  rename(
+    Year = 'crab_year',
+    `% of Landings Receipts` = percent_tix_NA,
+    `% of Landings` = percent_landings_NA,
+    `% of Revenue` = percent_revenue_NA)
+
+
+
+
+
+# knitr::kable(
+#   portderivedsumprecent,
+#   col.names = c(
+#     'Year',
+#     '% of Landings Receipts',
+#     '% of Landings',
+#     '% of Revenue'
+#   )
+# ) %>%
+#   add_header_above(
+#     c(""=""," " = '% of Landings Receipts', "Port Reported" = 2, " " = '% of Revenue')
+#     ) #"Group 2" = 2, "Group 3" = 2))
+
+```
+
+## Port not derived by year: percentages of landings receipts, landings, and revenue 
+
+```{r portNOTderived_out}
+
+portNOTderived_out
+
+```
+
+## Port derived by year: percentages of landings receipts, landings, and revenue 
+
+```{r portderived_out}
+
+portderived_out
+
+```
+
+## Port unknown if derived by year: percentages of landings receipts, landings, and revenue 
+
+```{r portderivedUNKNOWN_out}
+
+portderivedUNKNOWN_out
+
+```
+
+## Write to csv
+
+```{r write}
+
+write_csv(portNOTderived_out,
+          paste0(statdir, 'portNOTderived_out.csv')
+          )
+
+write_csv(portderived_out,
+          paste0(statdir, 'portderived_out.csv')
+          )
+
+write_csv(portderivedUNKNOWN_out,
+          paste0(statdir, 'portderivedUNKNOWN_out.csv')
+          )
+
+```
+
+
