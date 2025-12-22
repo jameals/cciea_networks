@@ -430,7 +430,7 @@ if(crab_year){
                        grgroup, grid, removal_type,removal_type_code,
                        drvid, drvid_year,proc, fleet, participation_group, pounds, afi_ppp, adj_afi_ppp, revenue, afi_revenue, adj_afi_revenue)) # removed adj_ppp and adj_revenue 01-18-2024
     ## write out
-    write.csv(tmp_out, paste0(out_conf_dir, paste0("fish_tickets_crab", y, "_processed_for_networks_",Sys.Date(),".csv")), row.names=FALSE)
+    write.csv(tmp_out, paste0(out_conf_dir, paste0("fish_tickets_crab", y+1, "_processed_for_networks_",Sys.Date(),".csv")), row.names=FALSE)
   }
 }
 ```
