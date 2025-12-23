@@ -1,10 +1,16 @@
 ---
 title: "IOPAC-network-map-script-cciea-MARKDOWN"
-author: "Amanda Phillips"
+author: "Amanda Phillips, with modifications by J.F. Samhouri"
 date: "Written Jan. 19, 2022. Last Run `r Sys.Date()`"
 output: html_document
-subtitle: Preparation for network analysis in CCIEA ESR 2025
+subtitle: Preparation for network analysis in CCIEA ESR 2026
 ---
+
+Clear the environment
+```{r}
+rm(list=ls())
+```
+
 
 ```{r setup, include=FALSE}
 library(tidyverse)
@@ -17,15 +23,15 @@ library(cowplot)
 library(here)
 
 ## output directory for network viz
-pngdir_ports = 'data/networks/participation_vessel_ports/plots/comparable/2023 only/.'
+pngdir_ports = 'data/networks/participation_vessel_ports/plots/comparable/2025 only/.'
 fig_path = here::here(pngdir_ports)
 
 #load network node images
 
-thisyear <- 2023
+thisyear <- 2025
 
-fig_path
-thisyearsESRimages <- list.files(here::here(pngdir_ports), "2023_circular_compare")
+#fig_path
+thisyearsESRimages <- list.files(here::here(pngdir_ports), "2025_circular_compare")
 
 wa_fig_path <- here::here('data/networks/participation_vessel_ports/plots/comparable/')
 
@@ -269,7 +275,7 @@ ggsave(here::here(pngdir_ports,
 ```
 
 
-```{r All Fisheries Participation Networks 2023-2024, by IOPAC Port Group, fig.width = 16, fig.height = 16}
+```{r All Fisheries Participation Networks 2024-2025, by IOPAC Port Group, fig.width = 16, fig.height = 16}
 # png(here::here(pngdir_ports, paste0("All Fisheries Participation Networks 2020-2021, by IOPAC Port Group.png")),
 #     res=200, height=1600,width=1600)  # ,height=1400,width=1600
 
@@ -299,7 +305,7 @@ p_all <- ggplot(data.frame(x = 1:10, y = 1:10), aes(x, y)) +
 p_all
 
 ggsave(here::here(pngdir_ports,
-                  paste0('All Fisheries Participation Networks ', thisyear,'-', thisyear + 1, 'by IOPAC Port Group.png')
+                  paste0('All Fisheries Participation Networks ', thisyear, ' by IOPAC Port Group.png')
                   ), p_all, width = 6, height = 6, dpi =600)
 
 ```
