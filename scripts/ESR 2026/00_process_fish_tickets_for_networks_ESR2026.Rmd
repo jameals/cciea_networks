@@ -176,11 +176,11 @@ Sys.time()-script_start_time_readtix
 ```
 <br>
 
-Drop fish tix from any years not used for this analysis.
+If needed, drop fish tix from any years not used for this analysis.
 ```{r smaller}
 
-rawdat.sub0 <- rawdat %>%
-  filter(LANDING_YEAR %in% years)
+rawdat.sub0 <- rawdat #%>%
+  #filter(LANDING_YEAR %in% years)
 
 ```
 
