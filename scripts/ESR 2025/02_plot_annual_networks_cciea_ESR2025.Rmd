@@ -75,7 +75,7 @@ pngdir_ports = 'data/networks/participation_vessel_ports/plots/comparable'
 Identify the crab years and port groups that you would like to produce networks for. 
 ```{r}
 ## (crab) years
-years <- seq(2004,2025)
+years <- seq(2004,2023)
 # years <- 2008 # testing script, 1/6
 # years <- 2018 # testing script, 1/8
 # years <- 2014 # testing script, 1/27
@@ -118,7 +118,7 @@ Read the igraph objects into a list. This for loop will also apply the functions
 #palette(brewer.pal(n = 10, name = "Set3"))
 #pal3 <- brewer.pal(n = 10, name = "Set3")
 
-most_recent_igraph <- '2025-12-23' # set date associated with igraph files
+most_recent_igraph <- '2024-12-31' # set date associated with igraph files
 
 graphs_list <- list()
 graph_names <- c()
@@ -154,14 +154,14 @@ plot_comparable_networks(graphs_list,outdir=pngdir_ports,color_labels=FALSE)
 <br>
 
 
-Put the 2025, 2024, and all Astoria and all Morro Bay circular graphs in their own directories
+Put the 2023 (file is labeled for crab year 2022), 2024 (file is labeled for crab year 2023), and all Astoria and all Morro Bay circular graphs in their own directories
 ```{r}
 
-list.of.files_2025 <- list.files(here::here(pngdir_ports), "2025_circular_compare")
-file.copy(here::here(pngdir_ports,list.of.files_2025), here::here(pngdir_ports, "2025 only"), overwrite = TRUE)
+list.of.files_2023 <- list.files(here::here(pngdir_ports), "2023_circular_compare")
+file.copy(here::here(pngdir_ports,list.of.files_2023), here::here(pngdir_ports, "2023 only"), overwrite = TRUE)
 
-list.of.files_2024 <- list.files(here::here(pngdir_ports), "2024_circular_compare")
-file.copy(here::here(pngdir_ports,list.of.files_2024), here::here(pngdir_ports, "2024 only"), overwrite = TRUE)
+list.of.files_2022 <- list.files(here::here(pngdir_ports), "2022_circular_compare")
+file.copy(here::here(pngdir_ports,list.of.files_2022), here::here(pngdir_ports, "2022 only"), overwrite = TRUE)
 
 list.of.files_astoria <- intersect(list.files(here::here(pngdir_ports), pattern = "Astoria"), list.files(here::here(pngdir_ports), pattern = "circular")) 
 file.copy(here::here(pngdir_ports,list.of.files_astoria), here::here(pngdir_ports, "astoria"), overwrite = TRUE)
