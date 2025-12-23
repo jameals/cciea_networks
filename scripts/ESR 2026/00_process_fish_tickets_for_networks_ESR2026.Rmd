@@ -123,7 +123,7 @@ Specify file name of the raw fish ticket data file and supporting files with spe
 # myfile2 <- "pacfin_compiled_2004thru2021.rds" # latest pull from PacFIN: 12-29-21.
 # myfile2 <- 'fish tickets 2004-2024 121724.rds' # latest pull from PacFIN 12-17-2024, shared by Abigail Golden
 
-myfile2 <- 'fish tickets 2003-2025 12152025.rds' # latest pull from PacFIN 12-15-2024, shared by Abigail Golden
+myfile2 <- 'fish tickets 2003-2025 12152025.rds' # latest pull from PacFIN 12-15-2025, shared by Abigail Golden
 
 myfile3 <- "iopac_conversion_table.csv"
 myfile4 <- "species_groupings_spgrpn2_iea.csv" # originally from first tab of species_groupings IEA.xlsx from Dan Holland. see email of 121520
@@ -138,13 +138,13 @@ Set a few more user inputs to process the fish tickets
 *If you decide to write out the processed fish ticket data using crab years as time increments (`crab_year=TRUE`), be sure to supply all of the necessary calendar years. For example, if you are processing fish tickets for the 2014 crab year, you will need to read in raw PacFIN fish ticket data for the calendar years 2013 and 2014; if you are processing fish tickets for the 2014 and 2015 crab years, you will need to read in raw PacFIN fish ticket data for calendar years 2014,2015,2016.*
 ```{r inputs}
 ## do you want to write out the fish ticket data as crab years? [TRUE/FALSE]
-crab_year = TRUE
+crab_year_write_out_trigger = TRUE
 
 ## if crab_year = TRUE, which crab years of fish tickets are you processing? [numeric vector]
-crab_years <- seq(2004,2024) #seq(begin,end)
+crab_years <- seq(2004,2025)
 
 ## which years of fish tickets are you processing? [numeric vector]
-years <- seq(2004,2025) #seq(begin,end + 1)
+years <- seq(2004,2025) 
 
 ## do you want to write out the average price per pounds calculated from the data? [TRUE/FALSE]
 write_ppp = FALSE
@@ -165,7 +165,7 @@ This should be a `.rds` or a `.csv` file containing raw PacFIN data.
 script_start_time_readtix <- Sys.time()
 
 rawdat <- read_rds(paste0(indir2,myfile2)) # 2004-2025 fish tix take ~1.2min to read on jameal's macbook pro
-glimpse(rawdat)
+#glimpse(rawdat) # commented out to avoid showing confidential data
 colnames(rawdat)
 
 port_grps <- read_csv(here::here(processdir,myfile3))
@@ -176,9 +176,17 @@ Sys.time()-script_start_time_readtix
 ```
 <br>
 
+Drop fish tix from any years not used for this analysis.
+```{r smaller}
+
+rawdat.sub0 <- rawdat %>%
+  filter(LANDING_YEAR %in% years)
+
+```
+
 Subset the raw data to include only the columns that are needed. Then rename the columns that will be retained in the final processed data. The last three columns are used to calculate per-species / total revenue and landed weight, but will not ultimately be retained.
 ```{r subset}
-rawdat.sub <- select(rawdat, c(FISH_TICKET_ID, PACFIN_PORT_CODE, PACFIN_GROUP_PORT_CODE, VESSEL_NUM, AGENCY_CODE, COUNCIL_CODE, 
+rawdat.sub <- select(rawdat.sub0, c(FISH_TICKET_ID, PACFIN_PORT_CODE, PACFIN_GROUP_PORT_CODE, VESSEL_NUM, AGENCY_CODE, COUNCIL_CODE, 
                                GEAR_CODE, PACFIN_GROUP_GEAR_CODE, REMOVAL_TYPE_NAME, REMOVAL_TYPE_CODE, DEALER_NUM, FLEET_CODE, PARTICIPATION_GROUP_CODE,
                                LANDING_DATE, LANDING_YEAR, 
                                PACFIN_SPECIES_CODE, LANDED_WEIGHT_LBS, PRICE_PER_POUND, AFI_PRICE_PER_POUND, EXVESSEL_REVENUE, AFI_EXVESSEL_REVENUE))
@@ -188,7 +196,7 @@ colnames(rawdat.sub) <- c("trip_id","pcid", "pcgroup","drvid", "agid", "council"
                           "tdate", "year", 
                           "spid", "pounds", "ppp", "afi_ppp","revenue", "afi_revenue")
 
-glimpse(rawdat.sub)
+#glimpse(rawdat.sub) # commented out to avoid showing confidential data
 
 ```
 <br>
@@ -202,7 +210,7 @@ rm(rawdat)
 
 Remove fish tickets with an unknown (`UNKNOWN`) OR MISSING (`""` / `MISSING`) vessel identifier,  tickets where `COUNCIL_CODE == N` (fish landed in AK and sold on the West Coast), tickets where `PARTICIPATION_GROUP_CODE != "A"` (aquaculture), and tickets where `FLEET_CODE != "TI"` (tribal vessels, where many vessels do not have IDs and are assigned random numbers beginning `ZZ` (`council == "*"`)). Recommended by Erin Steiner 12/19/2024. 
 
-As of December 2025, this results in dropping about 2.3M records. About 7.1M records remain.
+As of December 2025, this results in dropping about 2.2M records. About 6.75M records remain.
 ```{r filter}
 nrows_pre <- dim(rawdat.sub)
 rawdat.sub <- rawdat.sub %>%
@@ -214,6 +222,7 @@ rawdat.sub <- rawdat.sub %>%
   filter(fleet != 'TI') # tribal
 nrows_post <- dim(rawdat.sub)
 nrows_pre - nrows_post
+nrows_post
 ```
 <br>
 
@@ -354,6 +363,12 @@ rawdat.sub4 <- rawdat.sub3 %>%
 
 ```
 
+```{r include=FALSE}
+## clean up space
+rm(rawdat.sub3)
+```
+<br>
+
 <br>
 
 Next, add in an estimated exvessel revenue for commercial fish tickets which have no revenue recorded. To do so, we calculate an average price per pound for each species, for every year / week / port group. Then we create an adjusted `ppp` column for trips without revenue, and calculate the `adj_revenue` by multiplying `adj_ppp * pounds`. 
@@ -415,7 +430,7 @@ for(y in years){
 
 A crab year is defined as week 46 of year 1 through week 45 of year 2; for example, the 2025 crab year refers to Nov 2024 thru Nov 2025. We use crab year to split data frame, but remove the crab_year column from data set before writing out to file.
 ```{r write_crab, eval=TRUE}
-if(crab_year){
+if(crab_year_write_out_trigger){
   ## create "crab_year" column
   rawdat.sub6 <- rawdat.sub5 %>%
     mutate(crab_year = ifelse(tweek < 46, year, year + 1))
@@ -430,7 +445,7 @@ if(crab_year){
                        grgroup, grid, removal_type,removal_type_code,
                        drvid, drvid_year,proc, fleet, participation_group, pounds, afi_ppp, adj_afi_ppp, revenue, afi_revenue, adj_afi_revenue)) # removed adj_ppp and adj_revenue 01-18-2024
     ## write out
-    write.csv(tmp_out, paste0(out_conf_dir, paste0("fish_tickets_crab", y+1, "_processed_for_networks_",Sys.Date(),".csv")), row.names=FALSE)
+    write.csv(tmp_out, paste0(out_conf_dir, paste0("fish_tickets_crab", y, "_processed_for_networks_",Sys.Date(),".csv")), row.names=FALSE)
   }
 }
 ```
