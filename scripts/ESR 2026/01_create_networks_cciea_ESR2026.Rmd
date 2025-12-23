@@ -1,5 +1,5 @@
 ---
-title: "Create fisheries participation networks for CCIEA Ecosystem Status Report to the Pacific Fisheries Management Council"
+title: "Create fisheries participation networks for CCIEA Ecosystem Status Report to the Pacific Fishery Management Council"
 author: "Jameal Samhouri, Mary Fisher"
 date: "Written 12/29/2021. Last Run `r Sys.Date()`"
 output: 
@@ -27,7 +27,7 @@ This document generates fisheries participation networks for US West Coast port 
 
 The code makes network graphs and calculates network statistics.
 
-A related file "plot_annual_networks_cciea.Rmd" visually summarizes a subset of these networks for presentation to the SSC-ES in September 2021.
+A related file "02_plot_annual_networks_cciea.Rmd" visually summarizes a subset of these networks for presentation.
 
 # Setup
 
@@ -63,11 +63,16 @@ source("R/calc_network_stats.R")
 
 # User Inputs 
 
+Clear the environment
+```{r}
+rm(list=ls())
+```
+
 Select your directories.
 ```{r}
 ## location of fish ticket with metiers assigned, metier key for each port group
-# indir = '/Users/jameal.samhouri/Documents/CCIEA Networks/processed'
-indir = "/Users/abigail.golden/Desktop/Research/24 - CEFI/data/fish_tickets/processed" # Abigail's fish ticket directory
+indir = '/Users/jameal.samhouri/Documents/Github repos/CCIEA Networks/processed'
+# indir = "/Users/abigail.golden/Desktop/Research/24 - CEFI/data/fish_tickets/processed" # Abigail's fish ticket directory
 
 ## output directory for igraph objects
 outdir_ports = 'data/networks/participation_vessel_ports'
@@ -97,7 +102,7 @@ myfile5 <- "spgrpn2_iea_key.csv"
 Identify the crab years, port groups, and states that you would like to produce networks for. The port groups vector should include only those port groups which are present in the single data file produced with script 00. The states vector should include only those states which are present in the agid column of the fishtix data produced with script 00. 
 ```{r}
 ## (crab) years
-years <- seq(2005,2023)
+years <- seq(2004,2025)
 
 ## IOPAC port groups
 myports <- c("Puget Sound","North WA Coast","WA Coast","Other Coastal Washington","Astoria","Tillamook","Columbia River","Newport","Coos Bay","Brookings","Crescent City","Eureka","Morro Bay","Fort Bragg","Bodega Bay","San Francisco","San Diego","Monterey","Santa Barbara","Los Angeles","Unknown Ports" )
@@ -146,7 +151,7 @@ ref_years <- c(2005,2006)
 
 Develop vessel-level networks summarized by port group (n=21).
 
-We will make these network graphs for 2004-2024. 
+We will make these network graphs for crab years 2005-2025. 
 
 
 ## Read in data
@@ -161,14 +166,15 @@ NOTES FOR JAMEAL:
 ```{r}
 
 # date of last fish ticket processing
-rundate <- "2025-01-08" # Abigail's last fish ticket processing
+# rundate <- "2025-01-08" # Abigail's last fish ticket processing
+rundate <- "2025-12-23" # Jameal's last fish ticket processing
 
 for(y in years){
   if(y %in% ref_years){
-    tmptix <- read.csv(paste0(indir,"/fish_tickets_crab_", y, "_processed_for_networks_", rundate, ".csv"), stringsAsFactors = FALSE) %>%
+    tmptix <- read.csv(paste0(indir,"/fish_tickets_crab", y, "_processed_for_networks_", rundate, ".csv"), stringsAsFactors = FALSE) %>%
     filter(IOPAC %in% myports)
   } else{
-    tmptix <- read.csv(paste0(indir,"/fish_tickets_crab_", y, "_processed_for_networks_" , rundate, ".csv"), stringsAsFactors = FALSE) %>%
+    tmptix <- read.csv(paste0(indir,"/fish_tickets_crab", y, "_processed_for_networks_" , rundate, ".csv"), stringsAsFactors = FALSE) %>%
     filter(IOPAC %in% myports)
   }
   if(exists('fishtix')){
@@ -184,6 +190,13 @@ unique(fishtix[which(is.na(fishtix$SPGRPN2)),]$spid)
 unique(fishtix[which(is.na(fishtix$SPGRPN2)),]$year)
 unique(fishtix[which(is.na(fishtix$SPGRPN2)),]$agid)
 unique(fishtix[which(is.na(fishtix$SPGRPN2)),]$pcid)
+
+min(fishtix$year)
+max(fishtix$year)
+min(fishtix$crab_year)
+max(fishtix$crab_year)
+
+#View(fishtix %>% filter(crab_year == 2004))
 
 ```
 <br>
@@ -255,7 +268,7 @@ for(y in years){
       write_out=TRUE, out_dir = outdir_ports) # changed write_out=FALSE 12-31-2024
     
     if(any(is.na(tmp_g))){
-      message("\n\n WARNING: No fishing at ", iopac, " in crab year ", y, "!\n\n") # updated to iopac 03-10-21, was No fishing at ", p, "
+      message("\n\n WARNING: No fishing at ", iopac, " in crab year ", y, "! \n\n") # updated to iopac 03-10-21, was No fishing at ", p, "
     } else if(vcount(tmp_g) > 0){
       ## add in the full metier names as vertex attribute
       filtered_metier_info <- as.data.frame(x = V(tmp_g)$name)
@@ -305,7 +318,7 @@ for(y in years){
       mystats4 <- g_nodestats
     }
   } #end (p in myports)
-  cat("\nfinished with all port groups in crab year ", y, "\n-----\n")
+  cat("\n finished with all port groups in crab year ", y, "\n-----\n")
 } #end (y in years)
 ```
 <br>
@@ -315,14 +328,14 @@ Write stats out to file. 2008_2015_CA_CrabPorts_NoSubgraph_01contribution.csv
 remove duplicates, write out csv without duplicates (added 01-07-2025)
 ```{r eval=TRUE}
 # ran first for network level stats 12-29-2021
-filename <- paste0("VesselLevelNetworkStats_", min(years), "_", max(years), "_", length(myports), "pcgroups_", "totalrev", total_rev_cutoff,"_indivrev", indiv_rev_cutoff,"_", edgetype, "_", ifelse(rm_crab, 'rmCrab_','_'), contr_cutoff*100, "pContribution.csv")
+filename <- paste0("VesselLevelNetworkStats_", min(years), "_", max(years), "_", length(myports), "pcgroups_", "totalrev", total_rev_cutoff,"_indivrev", indiv_rev_cutoff,"_", edgetype, "_", ifelse(rm_crab, 'rmCrab_','_'), contr_cutoff*100, "pContribution_",Sys.Date(),".csv")
 
 # Note: 01-07-2025 need to add check to remove duplicated "WA Coast" rows. 
 
 write.csv(mystats3 %>% distinct(),here::here(statdir, filename), row.names=FALSE)
 
 # ran second for node level stats 12-29-2021
-filename <- paste0("VesselLevelNodeStats_", min(years), "_", max(years), "_", length(myports), "pcgroups_", "totalrev", total_rev_cutoff,"_indivrev", indiv_rev_cutoff,"_", edgetype, "_", ifelse(rm_crab, 'rmCrab_','_'), contr_cutoff*100, "pContribution.csv")
+filename <- paste0("VesselLevelNodeStats_", min(years), "_", max(years), "_", length(myports), "pcgroups_", "totalrev", total_rev_cutoff,"_indivrev", indiv_rev_cutoff,"_", edgetype, "_", ifelse(rm_crab, 'rmCrab_','_'), contr_cutoff*100, "pContribution_",Sys.Date(),".csv")
 # 
 write.csv(mystats4 %>% distinct(),here::here(statdir, filename), row.names=FALSE)
 ```
