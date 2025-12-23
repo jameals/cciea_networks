@@ -31,6 +31,11 @@ A related file "02_plot_annual_networks_cciea.Rmd" visually summarizes a subset 
 
 # Setup
 
+Clear the environment
+```{r}
+rm(list=ls())
+```
+
 <br>
 ```{r "setup", include=FALSE}
 if(!require("here")) {install.packages("here")}
@@ -62,11 +67,6 @@ source("R/calc_network_stats.R")
 <br>
 
 # User Inputs 
-
-Clear the environment
-```{r}
-rm(list=ls())
-```
 
 Select your directories.
 ```{r}
