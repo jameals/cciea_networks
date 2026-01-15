@@ -27,6 +27,8 @@ Section 3 will generate simplified network graphs using a circular layout that h
  
 This code depends on the code "01_create_networks_cciea.Rmd", which makes network graphs and calculates network statistics.
 
+Make sure to define most_recent_igraph so that the date is associated with the most recent igraph files
+
 
 <br>
 ```{r "setup", include=FALSE}
@@ -69,8 +71,18 @@ indir_ports = 'data/networks/participation_vessel_ports'
 
 ## output directory for network viz
 pngdir_ports = 'data/networks/participation_vessel_ports/plots/comparable'
+
+processdir <- "data/input"
 ```
 <br>
+
+Specify file name for inflation adjustment factors.
+```{r get_AFIvalues}
+
+gdp_defl <- read.csv(file = paste(here(processdir), "inflation_adjustment.csv", sep = "/")) # generated in script 00_process
+
+```
+
 
 Identify the crab years and port groups that you would like to produce networks for. 
 ```{r}
@@ -100,12 +112,20 @@ my_layout <- "both"
 
 ## 1) Vessel-level networks summarized by port group
 
-B)(ii) and C)(i) A minimum annual total fisheries revenue cutoff for each vessel of $5,000, and a minimum annual individual fisheries revenue cutoff for each vessel of $500. Edge type is connectivity.
+B)(ii) and C)(i) A minimum annual total fisheries revenue cutoff for each vessel of `$5,000` (USD in 2005; following Holland et al. diversification indices), and a minimum annual individual fisheries revenue cutoff for each vessel of `$500` (USD in 2005; following Holland et al. diversification indices). Edge type is connectivity.
 
 ```{r}
 
-total_rev_cutoff <- 5000
-indiv_rev_cutoff <- 500
+total_rev_cutoff_2005 <- 5000 #USD in 2005; following Holland et al. diversification indices
+indiv_rev_cutoff_2005 <- 500 #USD in 2005; following Holland et al. diversification indices
+
+gdp_defl_2005 <- gdp_defl %>% filter ( year == 2005) %>% pull() # generated in script 00_process
+
+total_rev_cutoff <- total_rev_cutoff_2005 / gdp_defl_2005 
+indiv_rev_cutoff <- indiv_rev_cutoff_2005 / gdp_defl_2005
+
+
+
 edgetype <- "connectivity"
 ## To avoid inclusion of rare or minimal fishing activity, a given fishery must contribute to at least contr_cutoff% of a port's seasonal revenue to be included in the network data. This cutoff value can be increased if more stringent fishery inclusion criteria are preferred, and decreased (i.e. for summaries over shorter temporal / smaller spatial scales).
 contr_cutoff <- 0.1
@@ -118,7 +138,7 @@ Read the igraph objects into a list. This for loop will also apply the functions
 #palette(brewer.pal(n = 10, name = "Set3"))
 #pal3 <- brewer.pal(n = 10, name = "Set3")
 
-most_recent_igraph <- '2025-12-23' # set date associated with igraph files
+most_recent_igraph <- '2026-01-15' # set date associated with igraph files
 
 graphs_list <- list()
 graph_names <- c()
