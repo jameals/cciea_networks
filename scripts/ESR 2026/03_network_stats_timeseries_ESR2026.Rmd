@@ -36,6 +36,9 @@ Initially, we consider the above 2 metrics for salmon and non-DTS groundfish for
 
 
 
+Make sure to define filenames and networkstats_filename so that the date is associated with the most recent files
+
+
 # Setup
 
 <br>
@@ -80,9 +83,11 @@ pngdir <- 'results/figures'
 <br>
 
 What are the names of the `.csv` files with the network statistics that you want to compare? Would not suggest listing more than 4. Files should all be in the input directory (`indir`) specified above.
+
+
 ```{r}
-filenames <- c("VesselLevelNodeStats_2004_2025_21pcgroups_totalrev5000_indivrev500_connectivity_rmCrab_10pContribution_2025-12-23.csv")
-networkstats_filename <- "VesselLevelNetworkStats_2004_2025_21pcgroups_totalrev5000_indivrev500_connectivity_rmCrab_10pContribution_2025-12-23.csv"
+filenames <- c("VesselLevelNodeStats_2004_2025_21pcgroups_totalrev5000_indivrev500_connectivity_rmCrab_10pContribution_2026-01-15.csv")
+networkstats_filename <- "VesselLevelNetworkStats_2004_2025_21pcgroups_totalrev5000_indivrev500_connectivity_rmCrab_10pContribution_2026-01-15.csv"
 # hci_filename <- 'ei_hci_rgn1_M.csv'
 port_filename <- 'iopac_conversion_table.csv'
 ```
@@ -104,7 +109,7 @@ network_metrics <- c('ed', 'N') # ,'ed_weighted'
 
 Specify which fisheries to retain from the full data set.
 ```{r}
-myfisheries <- c('Salmon','Non-DTS groundfish')
+myfisheries <- c('Salmon','Non-DTS groundfish', 'DTS groundfish')
 ```
 <br>
 
@@ -227,7 +232,7 @@ dat_esr2 <- dat2_long %>%
 dat_esr <- dat_esr1 %>% bind_rows(dat_esr2) %>% 
   filter( timeseries != "Other Coastal Washington" & timeseries != "Unknown Ports" & timeseries != "Columbia River")
 
-write.csv(dat_esr,here::here(indir, paste0('FPN_ed_n_ns_ec_salmon_nondts_FY2026.csv')), row.names=FALSE)
+write.csv(dat_esr,here::here(indir, paste0('FPN_ed_n_ns_ec_salmon_nondts_dts_FY2026.csv',"_",Sys.Date())), row.names=FALSE)
 
 ```
 <br>
@@ -255,7 +260,7 @@ write.csv(dat_esr,here::here(indir, paste0('FPN_ed_n_ns_ec_salmon_nondts_FY2026.
 
 ## Figure x.Time series of node strength 
 
-... at WA and OR ports from 2004-2025. Node strength was derived from vessel-level networks summarized at the port level. Nodes (fisheries) are included in each network with a minimum total fisheries revenue cutoff for vessels of `$5,000` and a minimum revenue cutoff for individual fisheries of `$500`.
+... at WA and OR ports from 2004-2025. Node strength was derived from vessel-level networks summarized at the port level. Nodes (fisheries) are included in each network with a minimum total fisheries revenue cutoff for vessels of `$5,000` (USD in 2005; following Holland et al. diversification indices) and a minimum revenue cutoff for individual fisheries of `$500` (USD in 2005; following Holland et al. diversification indices).
 
 ```{r}
 plot_metric="Node Strength"
@@ -265,14 +270,15 @@ metric_label="Node Strength"
 
 ```{r echo=FALSE, fig.width=10}
 # filter and re-arrange data for plotting
-plotdat_gfish <- dat_long %>% filter(metric==plot_metric) %>% filter(metier.cm == 'Non-DTS groundfish')
+plotdat_nondtsgfish <- dat_long %>% filter(metric==plot_metric) %>% filter(metier.cm == 'Non-DTS groundfish')
+plotdat_dtsgfish <- dat_long %>% filter(metric==plot_metric) %>% filter(metier.cm == 'DTS groundfish')
 plotdat_salmon <- dat_long %>% filter(metric==plot_metric) %>% filter(metier.cm == 'Salmon')
 
 # color palette
 pal=pnw_palette("Starfish",length(unique(plotdat_gfish$pcgroup))) # or choose a different PNWColors palette
 
-# main metric plot - gfish
-figx_gfish <- ggplot(plotdat_gfish, aes(x=year, y=value, color=pcgroup)) + 
+# main metric plot - nondtsgfish
+figx_nondtsgfish <- ggplot(plotdat_nondtsgfish, aes(x=year, y=value, color=pcgroup)) + 
   geom_point(size=2) + geom_line() +
   facet_wrap(nrow = 2, vars(pcgroup), scales="free_y") +
   scale_color_manual(values=pal) +
@@ -291,7 +297,29 @@ figx_gfish <- ggplot(plotdat_gfish, aes(x=year, y=value, color=pcgroup)) +
                      panel.grid.major=element_blank(),
                      panel.grid.minor=element_blank()) + 
   theme(legend.position = 'none')
-figx_gfish
+figx_nondtsgfish
+
+# main metric plot - dtsgfish
+figx_dtsgfish <- ggplot(plotdat_dtsgfish, aes(x=year, y=value, color=pcgroup)) + 
+  geom_point(size=2) + geom_line() +
+  facet_wrap(nrow = 2, vars(pcgroup), scales="free_y") +
+  scale_color_manual(values=pal) +
+  scale_x_continuous(breaks=seq(min(plotdat_gfish$year), max(plotdat_gfish$year), by=2), labels=seq(min(plotdat_gfish$year), max(plotdat_gfish$year), by=2)) +
+  ylim(c(0,1)) +
+  labs(title='Node Strength of DTS Groundfish in Fisheries Participation Networks',
+       subtitle = '2004-2025',
+       x = "Year",
+       y = metric_label
+       ) +
+  theme_bw() + theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5),
+                     axis.title.x=element_text(size=13),
+                     axis.title.y=element_text(size=13),
+                     strip.text=element_text(size=13),
+                     legend.title=element_text(size=13),legend.text=element_text(size=13),
+                     panel.grid.major=element_blank(),
+                     panel.grid.minor=element_blank()) + 
+  theme(legend.position = 'none')
+figx_dtsgfish
 
 # color palette
 pal=pnw_palette("Starfish",length(unique(plotdat_salmon$pcgroup))) # or choose a different PNWColors palette
@@ -327,10 +355,19 @@ Save plot as a png, with filename: Node Strength of Non-DTS Groundfish in Fisher
 ```{r echo=FALSE}
 png(here::here(pngdir, "Node Strength of Non-DTS Groundfish in Fisheries Participation Networks 2004-2025.png"),
     res=200,height=800,width=1700)
-figx_gfish
+figx_nondtsgfish
 dev.off()
 ```
 <br>
+
+Save plot as a png, with filename: Node Strength of DTS Groundfish in Fisheries Participation Networks 2004-2025
+```{r echo=FALSE}
+png(here::here(pngdir, "Node Strength of DTS Groundfish in Fisheries Participation Networks 2004-2025.png"),
+    res=200,height=800,width=1700)
+figx_dtsgfish
+dev.off()
+```
+
 
 Save plot as a png, with filename: Node Strength of Salmon in Fisheries Participation Networks 2004-2024
 ```{r echo=FALSE}
@@ -343,7 +380,7 @@ dev.off()
 
 ## Figure y.Time series of importance
 
-... at WA and OR ports from 2004-2025. Importance (eigenvalue centrality) was derived from vessel-level networks summarized at the port level. Nodes (fisheries) are included in each network with a minimum total fisheries revenue cutoff for vessels of `$5,000` and a minimum revenue cutoff for individual fisheries of `$500`.
+... at WA and OR ports from 2004-2025. Importance (eigenvalue centrality) was derived from vessel-level networks summarized at the port level. Nodes (fisheries) are included in each network with a minimum total fisheries revenue cutoff for vessels of `$5,000` (USD in 2005; following Holland et al. diversification indices) and a minimum revenue cutoff for individual fisheries of `$500` (USD in 2005; following Holland et al. diversification indices).
 
 ```{r}
 plot_metric="Importance"
@@ -353,15 +390,18 @@ metric_label="Importance"
 
 ```{r echo=FALSE, fig.width=10}
 # filter and re-arrange data for plotting
-plotdat_gfish <- dat_long %>% filter(metric==plot_metric) %>% filter(metier.cm == 'Non-DTS groundfish')
+plotdat_nondtsgfish <- dat_long %>% filter(metric==plot_metric) %>% filter(metier.cm == 'Non-DTS groundfish')
+
+plotdat_dtsgfish <- dat_long %>% filter(metric==plot_metric) %>% filter(metier.cm == 'DTS groundfish')
+
 
 plotdat_salmon <- dat_long %>% filter(metric==plot_metric) %>% filter(metier.cm == 'Salmon')
 
 # color palette
 pal=pnw_palette("Starfish",length(unique(plotdat_gfish$pcgroup))) # or choose a different PNWColors palette
 
-# main metric plot - gfish
-figy_gfish <- ggplot(plotdat_gfish, aes(x=year, y=value, color=pcgroup)) + 
+# main metric plot - non-DTS gfish
+figy_nondtsgfish <- ggplot(plotdat_nondtsgfish, aes(x=year, y=value, color=pcgroup)) + 
   geom_point(size=2) + geom_line() +
   facet_wrap(nrow = 2, vars(pcgroup), scales="free_y") +
   scale_color_manual(values=pal) +
@@ -380,7 +420,29 @@ figy_gfish <- ggplot(plotdat_gfish, aes(x=year, y=value, color=pcgroup)) +
                      panel.grid.major=element_blank(),
                      panel.grid.minor=element_blank()) + 
   theme(legend.position = 'none')
-figy_gfish
+figy_nondtsgfish
+
+# main metric plot - DTS gfish
+figy_dtsgfish <- ggplot(plotdat_dtsgfish, aes(x=year, y=value, color=pcgroup)) + 
+  geom_point(size=2) + geom_line() +
+  facet_wrap(nrow = 2, vars(pcgroup), scales="free_y") +
+  scale_color_manual(values=pal) +
+  scale_x_continuous(breaks=seq(min(plotdat_gfish$year), max(plotdat_gfish$year), by=2), labels=seq(min(plotdat_gfish$year), max(plotdat_gfish$year), by=2)) +
+  ylim(c(0,1)) +
+  labs(title='Importance of Non-DTS Groundfish in Fisheries Participation Networks',
+       subtitle = '2004-2025',
+       x = "Year",
+       y = metric_label
+       ) +
+  theme_bw() + theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5),
+                     axis.title.x=element_text(size=13),
+                     axis.title.y=element_text(size=13),
+                     strip.text=element_text(size=13),
+                     legend.title=element_text(size=13),legend.text=element_text(size=13),
+                     panel.grid.major=element_blank(),
+                     panel.grid.minor=element_blank()) + 
+  theme(legend.position = 'none')
+figy_dtsgfish
 
 # color palette
 pal=pnw_palette("Starfish",length(unique(plotdat_salmon$pcgroup))) # or choose a different PNWColors palette
@@ -415,10 +477,18 @@ Save plot as a png, with filename: Importance of Non-DTS Groundfish in Fisheries
 ```{r echo=FALSE}
 png(here::here(pngdir, "Importance of Non-DTS Groundfish in Fisheries Participation Networks 2004-2025.png"),
     res=200,height=800,width=1700)
-figy_gfish
+figy_nondtsgfish
 dev.off()
 ```
 <br>
+
+Save plot as a png, with filename: Importance of DTS Groundfish in Fisheries Participation Networks 2004-2025
+```{r echo=FALSE}
+png(here::here(pngdir, "Importance of DTS Groundfish in Fisheries Participation Networks 2004-2025.png"),
+    res=200,height=800,width=1700)
+figy_dtsgfish
+dev.off()
+```
 
 Save plot as a png, with filename: Importance of Salmon in Fisheries Participation Networks 2004-2025
 ```{r echo=FALSE}
@@ -472,7 +542,7 @@ dev.off()
 
 ## Figure aa. Time series of edge density
 
-... at all ports from 2005-2025. Edge density was derived from vessel-level networks summarized at the port level. Nodes (fisheries) are included in each network with a minimum total fisheries revenue cutoff for vessels of `$5,000` and a minimum revenue cutoff for individual fisheries of `$500`.
+... at all ports from 2005-2025. Edge density was derived from vessel-level networks summarized at the port level. Nodes (fisheries) are included in each network with a minimum total fisheries revenue cutoff for vessels of `$5,000` (USD in 2005; following Holland et al. diversification indices) and a minimum revenue cutoff for individual fisheries of `$500` (USD in 2005; following Holland et al. diversification indices).
 
 (Drop Other Coastal Washington & Unknown Ports & Columbia River)
 
@@ -519,7 +589,7 @@ fig_ed
 
 Save plot as a png, with filename: Edge Density in Fisheries Participation Networks 2005-2024
 ```{r echo=FALSE}
-png(here::here(pngdir, "Edge Density in Fisheries Participation Networks 2005-2025.png"),
+png(here::here(pngdir, "Edge Density in Fisheries Participation Networks 2005-2025","_",Sys.Date(),".png"),
     res=200,height=1500,width=1700)
 fig_ed
 dev.off()
@@ -528,7 +598,7 @@ dev.off()
 
 ## Figure bb. Time series of number of nodes
 
-... at all ports from 2004-2025. The number of nodes was derived from vessel-level networks summarized at the port level. Nodes (fisheries) are included in each network with a minimum total fisheries revenue cutoff for vessels of `$5,000` and a minimum revenue cutoff for individual fisheries of `$500`. To avoid inclusion of rare or minimal fishing activity, a given fishery must contribute to at least 10% of a vessel's annual revenue to be included in the network data.
+... at all ports from 2004-2025. The number of nodes was derived from vessel-level networks summarized at the port level. Nodes (fisheries) are included in each network with a minimum total fisheries revenue cutoff for vessels of `$5,000` (USD in 2005; following Holland et al. diversification indices) and a minimum revenue cutoff for individual fisheries of `$500` (USD in 2005; following Holland et al. diversification indices). To avoid inclusion of rare or minimal fishing activity, a given fishery must contribute to at least 10% of a vessel's annual revenue to be included in the network data.
 
 (Drop Other Coastal Washington & Unknown Ports & Columbia River)
 
@@ -575,7 +645,7 @@ fig_n
 
 Save plot as a png, with filename: Nodes in Fisheries Participation Networks 2004-2024
 ```{r echo=FALSE}
-png(here::here(pngdir, "Number of Nodes in Fisheries Participation Networks 2004-2025.png"),
+png(here::here(pngdir, "Number of Nodes in Fisheries Participation Networks 2004-2025","_",Sys.Date(),".png"),
     res=200,height=1500,width=1700)
 fig_n
 dev.off()
