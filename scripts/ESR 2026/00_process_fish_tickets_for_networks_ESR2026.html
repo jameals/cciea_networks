@@ -1625,7 +1625,7 @@ Networks</h1>
 <h3 class="subtitle">Preparation for network analysis in CCIEA ESR
 2026</h3>
 <h4 class="author">M. Fisher, J.F. Samhouri</h4>
-<h4 class="date">Written Dec. 7, 2020. Last Run 2025-12-23</h4>
+<h4 class="date">Written Dec. 7, 2020. Last Run 2026-01-15</h4>
 
 </div>
 
@@ -1719,6 +1719,7 @@ consistency through the rest of the analysis.</p>
 # myfile2 &lt;- &#39;fish tickets 2004-2024 121724.rds&#39; # latest pull from PacFIN 12-17-2024, shared by Abigail Golden
 
 myfile2 &lt;- &#39;fish tickets 2003-2025 12152025.rds&#39; # latest pull from PacFIN 12-15-2025, shared by Abigail Golden
+myfile2a &lt;- &#39;fish tickets 2025 01082026.rds&#39; # 2025 data only pull from PacFIN 01-08-2026, shared by Abigail Golden
 
 myfile3 &lt;- &quot;iopac_conversion_table.csv&quot;
 myfile4 &lt;- &quot;species_groupings_spgrpn2_iea.csv&quot; # originally from first tab of species_groupings IEA.xlsx from Dan Holland. see email of 121520
@@ -1756,9 +1757,9 @@ dcrb_only &lt;- FALSE</code></pre>
 containing raw PacFIN data.</p>
 <pre class="r"><code>script_start_time_readtix &lt;- Sys.time()
 
-rawdat &lt;- read_rds(paste0(indir2,myfile2)) # 2004-2025 fish tix take ~1.2min to read on jameal&#39;s macbook pro
+rawdat_1 &lt;- read_rds(paste0(indir2,myfile2)) # 2004-2025 fish tix take ~1.2min to read on jameal&#39;s macbook pro
 #glimpse(rawdat) # commented out to avoid showing confidential data
-colnames(rawdat)</code></pre>
+colnames(rawdat_1)</code></pre>
 <pre><code>##   [1] &quot;LANDING_YEAR&quot;                         
 ##   [2] &quot;LANDING_MONTH&quot;                        
 ##   [3] &quot;LANDING_DAY&quot;                          
@@ -1884,7 +1885,140 @@ colnames(rawdat)</code></pre>
 ## [123] &quot;CDFW_AREA_BLOCK&quot;                      
 ## [124] &quot;VESSEL_NAME&quot;                          
 ## [125] &quot;FOS_GROUNDFISH_SECTOR_CODE&quot;</code></pre>
-<pre class="r"><code>port_grps &lt;- read_csv(here::here(processdir,myfile3))</code></pre>
+<pre class="r"><code>rawdat_2 &lt;- read_rds(paste0(indir2,myfile2a)) # 2025 fish tix take ~XXmin to read on jameal&#39;s macbook pro
+#glimpse(rawdat) # commented out to avoid showing confidential data
+colnames(rawdat_2)</code></pre>
+<pre><code>##   [1] &quot;LANDING_YEAR&quot;                         
+##   [2] &quot;LANDING_MONTH&quot;                        
+##   [3] &quot;LANDING_DAY&quot;                          
+##   [4] &quot;LANDING_DATE&quot;                         
+##   [5] &quot;NUM_OF_DAYS_FISHED&quot;                   
+##   [6] &quot;FISH_TICKET_ID&quot;                       
+##   [7] &quot;FTID&quot;                                 
+##   [8] &quot;AGENCY_CODE&quot;                          
+##   [9] &quot;PARTICIPATION_GROUP_CODE&quot;             
+##  [10] &quot;PARTICIPATION_GROUP_NAME&quot;             
+##  [11] &quot;FLEET_CODE&quot;                           
+##  [12] &quot;VESSEL_REGISTRATION_ID&quot;               
+##  [13] &quot;VESSEL_ID&quot;                            
+##  [14] &quot;VESSEL_NUM&quot;                           
+##  [15] &quot;VESSEL_TYPE_CODE&quot;                     
+##  [16] &quot;FISHER_LICENSE_NUM&quot;                   
+##  [17] &quot;GEAR_CODE&quot;                            
+##  [18] &quot;GEAR_NAME&quot;                            
+##  [19] &quot;ADJUSTED_GEAR_CODE&quot;                   
+##  [20] &quot;PACFIN_GEAR_CODE&quot;                     
+##  [21] &quot;PACFIN_GEAR_DESCRIPTION&quot;              
+##  [22] &quot;PACFIN_GROUP_GEAR_CODE&quot;               
+##  [23] &quot;CATCH_AREA_CODE&quot;                      
+##  [24] &quot;CATCH_AREA_DESCRIPTION&quot;               
+##  [25] &quot;AREA_TYPE_CODE&quot;                       
+##  [26] &quot;AREA_TYPE_NAME&quot;                       
+##  [27] &quot;ORIG_PACFIN_CATCH_AREA_CODE&quot;          
+##  [28] &quot;PACFIN_CATCH_AREA_CODE&quot;               
+##  [29] &quot;PACFIN_CATCH_AREA_NAME&quot;               
+##  [30] &quot;PACFIN_CATCH_AREA_DESCRIPTION&quot;        
+##  [31] &quot;PACFIN_GROUP_CATCH_AREA_CODE&quot;         
+##  [32] &quot;INPFC_AREA_TYPE_CODE&quot;                 
+##  [33] &quot;COUNCIL_CODE&quot;                         
+##  [34] &quot;PORT_CODE&quot;                            
+##  [35] &quot;PORT_NAME&quot;                            
+##  [36] &quot;PACFIN_PORT_CODE&quot;                     
+##  [37] &quot;PACFIN_PORT_NAME&quot;                     
+##  [38] &quot;PACFIN_PORT_DESCRIPTION&quot;              
+##  [39] &quot;PACFIN_GROUP_PORT_CODE&quot;               
+##  [40] &quot;COUNTY_CODE&quot;                          
+##  [41] &quot;COUNTY_NAME&quot;                          
+##  [42] &quot;COUNTY_STATE&quot;                         
+##  [43] &quot;SUBREGION_CODE&quot;                       
+##  [44] &quot;SUBREGION_NAME&quot;                       
+##  [45] &quot;REGION_CODE&quot;                          
+##  [46] &quot;REGION_NAME&quot;                          
+##  [47] &quot;DEALER_ID&quot;                            
+##  [48] &quot;DEALER_NUM&quot;                           
+##  [49] &quot;DEALER_NAME&quot;                          
+##  [50] &quot;SPECIES_CODE&quot;                         
+##  [51] &quot;SPECIES_CODE_NAME&quot;                    
+##  [52] &quot;ORIG_PACFIN_SPECIES_CODE&quot;             
+##  [53] &quot;PACFIN_SPECIES_CODE&quot;                  
+##  [54] &quot;PACFIN_SPECIES_COMMON_NAME&quot;           
+##  [55] &quot;PACFIN_SPECIES_SCIENTIFIC_NAME&quot;       
+##  [56] &quot;MANAGEMENT_GROUP_CODE&quot;                
+##  [57] &quot;COMPLEX&quot;                              
+##  [58] &quot;COMPLEX2&quot;                             
+##  [59] &quot;COMPLEX3&quot;                             
+##  [60] &quot;COMPLEX4&quot;                             
+##  [61] &quot;REMOVAL_TYPE_CODE&quot;                    
+##  [62] &quot;REMOVAL_TYPE_NAME&quot;                    
+##  [63] &quot;IS_REMOVAL_LEGAL&quot;                     
+##  [64] &quot;GRADE_CODE&quot;                           
+##  [65] &quot;GRADE_NAME&quot;                           
+##  [66] &quot;CONDITION_CODE&quot;                       
+##  [67] &quot;CONDITION_NAME&quot;                       
+##  [68] &quot;DISPOSITION_CODE&quot;                     
+##  [69] &quot;DISPOSITION_NAME&quot;                     
+##  [70] &quot;PRODUCT_USE_CODE&quot;                     
+##  [71] &quot;PRODUCT_USE_NAME&quot;                     
+##  [72] &quot;PRODUCT_FORM_CODE&quot;                    
+##  [73] &quot;PRODUCT_FORM_NAME&quot;                    
+##  [74] &quot;IS_OVERAGE&quot;                           
+##  [75] &quot;NUM_OF_FISH&quot;                          
+##  [76] &quot;LANDED_WEIGHT_LBS&quot;                    
+##  [77] &quot;LANDED_WEIGHT_MTONS&quot;                  
+##  [78] &quot;CONVERSION_FACTOR&quot;                    
+##  [79] &quot;ROUND_WEIGHT_LBS&quot;                     
+##  [80] &quot;ROUND_WEIGHT_MTONS&quot;                   
+##  [81] &quot;IS_VALUE_ESTIMATED&quot;                   
+##  [82] &quot;PRICE_PER_POUND&quot;                      
+##  [83] &quot;EXVESSEL_REVENUE&quot;                     
+##  [84] &quot;IS_ETIX_DATA&quot;                         
+##  [85] &quot;IS_IFQ_LANDING&quot;                       
+##  [86] &quot;IFQ_ACCOUNT_NUM&quot;                      
+##  [87] &quot;IS_AREA_COMP_USED&quot;                    
+##  [88] &quot;IS_SPECIES_COMP_USED&quot;                 
+##  [89] &quot;DAHL_GROUNDFISH_CODE&quot;                 
+##  [90] &quot;THOMSON_FISHERY_CODE&quot;                 
+##  [91] &quot;DANGELO_HMS_CODE&quot;                     
+##  [92] &quot;GMT_SABLEFISH_CODE&quot;                   
+##  [93] &quot;COUNT_LE_PERMITS&quot;                     
+##  [94] &quot;IS_TRAWL_ENDORSED&quot;                    
+##  [95] &quot;IS_LONGLINE_ENDORSED&quot;                 
+##  [96] &quot;IS_TRAP_ENDORSED&quot;                     
+##  [97] &quot;PACFIN_YEAR&quot;                          
+##  [98] &quot;PACFIN_VDATE&quot;                         
+##  [99] &quot;CFT_ID&quot;                               
+## [100] &quot;IS_EM_LANDING&quot;                        
+## [101] &quot;TICKET_SOURCE_CODE&quot;                   
+## [102] &quot;TRIP_SEQ&quot;                             
+## [103] &quot;HILLE_PERMIT&quot;                         
+## [104] &quot;WCHMS_PERMIT&quot;                         
+## [105] &quot;HSFCA_PERMIT&quot;                         
+## [106] &quot;IFQ_MANAGEMENT_AREA&quot;                  
+## [107] &quot;IS_SABLEFISH_TIER&quot;                    
+## [108] &quot;GF_PERMIT_NUMBER&quot;                     
+## [109] &quot;ACL_CODE&quot;                             
+## [110] &quot;DECLARATION_CODES&quot;                    
+## [111] &quot;DECLARATION_TYPES&quot;                    
+## [112] &quot;NOMINAL_TO_ACTUAL_PACFIN_SPECIES_CODE&quot;
+## [113] &quot;NOMINAL_TO_ACTUAL_PACFIN_SPECIES_NAME&quot;
+## [114] &quot;MARKET_CATEGORY&quot;                      
+## [115] &quot;MARKET_CATEGORY_NAME&quot;                 
+## [116] &quot;AFI_PRICE_PER_POUND&quot;                  
+## [117] &quot;AFI_EXVESSEL_REVENUE&quot;                 
+## [118] &quot;IOPAC_PORT_GROUP&quot;                     
+## [119] &quot;FIRST_RECEIVER_NUMBER&quot;                
+## [120] &quot;EFP_CODE&quot;                             
+## [121] &quot;EFP_NAME&quot;                             
+## [122] &quot;TRIP_ID&quot;                              
+## [123] &quot;CDFW_AREA_BLOCK&quot;                      
+## [124] &quot;VESSEL_NAME&quot;                          
+## [125] &quot;FOS_GROUNDFISH_SECTOR_CODE&quot;</code></pre>
+<pre class="r"><code>### ADD LINE TO DROP 2025 TIX FROM RAWDAT_1 AND BIND RAWDAT_2 INSTEAD, CALL PRODUCT RAWDAT
+rawdat &lt;- rawdat_1 %&gt;%
+  filter(LANDING_YEAR != 2025) %&gt;%
+  bind_rows(rawdat_2)
+
+port_grps &lt;- read_csv(here::here(processdir,myfile3))</code></pre>
 <pre><code>## Rows: 113 Columns: 8
 ## ── Column specification ────────────────────────────────────────────────────────
 ## Delimiter: &quot;,&quot;
@@ -1903,7 +2037,7 @@ colnames(rawdat)</code></pre>
 ## ℹ Use `spec()` to retrieve the full column specification for this data.
 ## ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.</code></pre>
 <pre class="r"><code>Sys.time()-script_start_time_readtix</code></pre>
-<pre><code>## Time difference of 1.15596 mins</code></pre>
+<pre><code>## Time difference of 1.446333 mins</code></pre>
 <p><br></p>
 <p>If needed, drop fish tix from any years not used for this
 analysis.</p>
@@ -1946,9 +2080,9 @@ rawdat.sub &lt;- rawdat.sub %&gt;%
   filter(fleet != &#39;TI&#39;) # tribal
 nrows_post &lt;- dim(rawdat.sub)
 nrows_pre - nrows_post</code></pre>
-<pre><code>## [1] 2310735       0</code></pre>
+<pre><code>## [1] 2315903       0</code></pre>
 <pre class="r"><code>nrows_post</code></pre>
-<pre><code>## [1] 7121965      21</code></pre>
+<pre><code>## [1] 7128895      21</code></pre>
 <p><br></p>
 </div>
 <div id="edit-add-columns" class="section level2">
@@ -1968,7 +2102,7 @@ rawdat.sub1 %&gt;% group_by(year) %&gt;%
   summarise(first_ticket = min(tdate), last_ticket = max(tdate), total_tickets = length(unique(trip_id)))</code></pre>
 <div data-pagedtable="false">
 <script data-pagedtable-source type="application/json">
-{"columns":[{"label":["year"],"name":[1],"type":["int"],"align":["right"]},{"label":["first_ticket"],"name":[2],"type":["date"],"align":["right"]},{"label":["last_ticket"],"name":[3],"type":["date"],"align":["right"]},{"label":["total_tickets"],"name":[4],"type":["int"],"align":["right"]}],"data":[{"1":"2003","2":"2003-01-01","3":"2003-12-31","4":"133790"},{"1":"2004","2":"2004-01-01","3":"2004-12-31","4":"131044"},{"1":"2005","2":"2005-01-01","3":"2005-12-31","4":"113287"},{"1":"2006","2":"2006-01-01","3":"2006-12-31","4":"109362"},{"1":"2007","2":"2007-01-01","3":"2007-12-31","4":"104149"},{"1":"2008","2":"2008-01-01","3":"2008-12-31","4":"96540"},{"1":"2009","2":"2009-01-01","3":"2009-12-31","4":"103463"},{"1":"2010","2":"2010-01-01","3":"2010-12-31","4":"105002"},{"1":"2011","2":"2011-01-01","3":"2011-12-31","4":"113094"},{"1":"2012","2":"2012-01-01","3":"2012-12-31","4":"111320"},{"1":"2013","2":"2013-01-01","3":"2013-12-31","4":"117923"},{"1":"2014","2":"2014-01-01","3":"2014-12-31","4":"112141"},{"1":"2015","2":"2015-01-01","3":"2015-12-31","4":"95124"},{"1":"2016","2":"2016-01-01","3":"2016-12-31","4":"89173"},{"1":"2017","2":"2017-01-01","3":"2017-12-31","4":"88972"},{"1":"2018","2":"2018-01-01","3":"2018-12-31","4":"85998"},{"1":"2019","2":"2019-01-01","3":"2019-12-31","4":"81663"},{"1":"2020","2":"2020-01-01","3":"2020-12-31","4":"75013"},{"1":"2021","2":"2021-01-01","3":"2021-12-31","4":"76200"},{"1":"2022","2":"2022-01-01","3":"2022-12-31","4":"74773"},{"1":"2023","2":"2023-01-01","3":"2023-12-31","4":"69246"},{"1":"2024","2":"2024-01-01","3":"2024-12-31","4":"71438"},{"1":"2025","2":"2025-01-01","3":"2025-12-14","4":"70487"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
+{"columns":[{"label":["year"],"name":[1],"type":["int"],"align":["right"]},{"label":["first_ticket"],"name":[2],"type":["date"],"align":["right"]},{"label":["last_ticket"],"name":[3],"type":["date"],"align":["right"]},{"label":["total_tickets"],"name":[4],"type":["int"],"align":["right"]}],"data":[{"1":"2003","2":"2003-01-01","3":"2003-12-31","4":"133790"},{"1":"2004","2":"2004-01-01","3":"2004-12-31","4":"131044"},{"1":"2005","2":"2005-01-01","3":"2005-12-31","4":"113287"},{"1":"2006","2":"2006-01-01","3":"2006-12-31","4":"109362"},{"1":"2007","2":"2007-01-01","3":"2007-12-31","4":"104149"},{"1":"2008","2":"2008-01-01","3":"2008-12-31","4":"96540"},{"1":"2009","2":"2009-01-01","3":"2009-12-31","4":"103463"},{"1":"2010","2":"2010-01-01","3":"2010-12-31","4":"105002"},{"1":"2011","2":"2011-01-01","3":"2011-12-31","4":"113094"},{"1":"2012","2":"2012-01-01","3":"2012-12-31","4":"111320"},{"1":"2013","2":"2013-01-01","3":"2013-12-31","4":"117923"},{"1":"2014","2":"2014-01-01","3":"2014-12-31","4":"112141"},{"1":"2015","2":"2015-01-01","3":"2015-12-31","4":"95124"},{"1":"2016","2":"2016-01-01","3":"2016-12-31","4":"89173"},{"1":"2017","2":"2017-01-01","3":"2017-12-31","4":"88972"},{"1":"2018","2":"2018-01-01","3":"2018-12-31","4":"85998"},{"1":"2019","2":"2019-01-01","3":"2019-12-31","4":"81663"},{"1":"2020","2":"2020-01-01","3":"2020-12-31","4":"75013"},{"1":"2021","2":"2021-01-01","3":"2021-12-31","4":"76200"},{"1":"2022","2":"2022-01-01","3":"2022-12-31","4":"74773"},{"1":"2023","2":"2023-01-01","3":"2023-12-31","4":"69246"},{"1":"2024","2":"2024-01-01","3":"2024-12-31","4":"71438"},{"1":"2025","2":"2025-01-01","3":"2025-12-31","4":"74182"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
   </script>
 </div>
 <pre class="r"><code># note: on 12-29-2021, jameal noticed that 2016 fish tickets from 9/20/2016 thru 12/31/2016 are excluded. that likely affected previous network graphs, but not the results presented in the 2021 ESR. Only time series considered in the presentation to the SSC-ES in Sep 2021 would be affected. To avoid issues, Jameal downloaded all fish tickets from 2004 through 12-29-2021 on 12-29-2021 into a single file.</code></pre>
@@ -2147,7 +2281,7 @@ data set before writing out to file.</p>
 <p><br></p>
 <hr />
 <p>Script runtime:</p>
-<pre><code>## Time difference of 2.794659 mins</code></pre>
+<pre><code>## Time difference of 2.956228 mins</code></pre>
 </div>
 </div>
 

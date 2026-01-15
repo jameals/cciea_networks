@@ -124,6 +124,7 @@ Specify file name of the raw fish ticket data file and supporting files with spe
 # myfile2 <- 'fish tickets 2004-2024 121724.rds' # latest pull from PacFIN 12-17-2024, shared by Abigail Golden
 
 myfile2 <- 'fish tickets 2003-2025 12152025.rds' # latest pull from PacFIN 12-15-2025, shared by Abigail Golden
+myfile2a <- 'fish tickets 2025 01082026.rds' # 2025 data only pull from PacFIN 01-08-2026, shared by Abigail Golden
 
 myfile3 <- "iopac_conversion_table.csv"
 myfile4 <- "species_groupings_spgrpn2_iea.csv" # originally from first tab of species_groupings IEA.xlsx from Dan Holland. see email of 121520
@@ -164,9 +165,18 @@ This should be a `.rds` or a `.csv` file containing raw PacFIN data.
 ```{r rawdata}
 script_start_time_readtix <- Sys.time()
 
-rawdat <- read_rds(paste0(indir2,myfile2)) # 2004-2025 fish tix take ~1.2min to read on jameal's macbook pro
+rawdat_1 <- read_rds(paste0(indir2,myfile2)) # 2004-2025 fish tix take ~1.2min to read on jameal's macbook pro
 #glimpse(rawdat) # commented out to avoid showing confidential data
-colnames(rawdat)
+colnames(rawdat_1)
+
+rawdat_2 <- read_rds(paste0(indir2,myfile2a)) # 2025 fish tix take ~XXmin to read on jameal's macbook pro
+#glimpse(rawdat) # commented out to avoid showing confidential data
+colnames(rawdat_2)
+
+### ADD LINE TO DROP 2025 TIX FROM RAWDAT_1 AND BIND RAWDAT_2 INSTEAD, CALL PRODUCT RAWDAT
+rawdat <- rawdat_1 %>%
+  filter(LANDING_YEAR != 2025) %>%
+  bind_rows(rawdat_2)
 
 port_grps <- read_csv(here::here(processdir,myfile3))
 sp_grps <- read_csv(here::here(processdir,myfile4)) %>% distinct() # remove duplicate rows (GPH1 is duplicated)
