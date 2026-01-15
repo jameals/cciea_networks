@@ -275,14 +275,15 @@ plotdat_dtsgfish <- dat_long %>% filter(metric==plot_metric) %>% filter(metier.c
 plotdat_salmon <- dat_long %>% filter(metric==plot_metric) %>% filter(metier.cm == 'Salmon')
 
 # color palette
-pal=pnw_palette("Starfish",length(unique(plotdat_gfish$pcgroup))) # or choose a different PNWColors palette
+pal=pnw_palette("Starfish",length(unique(plotdat_nondtsgfish$pcgroup))) # or choose a different PNWColors palette
 
 # main metric plot - nondtsgfish
 figx_nondtsgfish <- ggplot(plotdat_nondtsgfish, aes(x=year, y=value, color=pcgroup)) + 
   geom_point(size=2) + geom_line() +
-  facet_wrap(nrow = 2, vars(pcgroup), scales="free_y") +
+  #facet_wrap(nrow = 4, vars(pcgroup), scales="free_y") +
+  facet_wrap(vars(pcgroup),labeller = label_wrap_gen(16)) +
   scale_color_manual(values=pal) +
-  scale_x_continuous(breaks=seq(min(plotdat_gfish$year), max(plotdat_gfish$year), by=2), labels=seq(min(plotdat_gfish$year), max(plotdat_gfish$year), by=2)) +
+  scale_x_continuous(breaks=seq(min(plotdat_nondtsgfish$year), max(plotdat_nondtsgfish$year), by=2), labels=seq(min(plotdat_nondtsgfish$year), max(plotdat_nondtsgfish$year), by=2)) +
   ylim(c(0,1)) +
   labs(title='Node Strength of Non-DTS Groundfish in Fisheries Participation Networks',
        subtitle = '2004-2025',
@@ -299,12 +300,16 @@ figx_nondtsgfish <- ggplot(plotdat_nondtsgfish, aes(x=year, y=value, color=pcgro
   theme(legend.position = 'none')
 figx_nondtsgfish
 
+# color palette
+pal=pnw_palette("Starfish",length(unique(plotdat_dtsgfish$pcgroup))) # or choose a different PNWColors palette
+
 # main metric plot - dtsgfish
 figx_dtsgfish <- ggplot(plotdat_dtsgfish, aes(x=year, y=value, color=pcgroup)) + 
   geom_point(size=2) + geom_line() +
-  facet_wrap(nrow = 2, vars(pcgroup), scales="free_y") +
+  #facet_wrap(nrow = 4, vars(pcgroup), scales="free_y") +
+  facet_wrap(vars(pcgroup),labeller = label_wrap_gen(16)) +
   scale_color_manual(values=pal) +
-  scale_x_continuous(breaks=seq(min(plotdat_gfish$year), max(plotdat_gfish$year), by=2), labels=seq(min(plotdat_gfish$year), max(plotdat_gfish$year), by=2)) +
+  scale_x_continuous(breaks=seq(min(plotdat_dtsgfish$year), max(plotdat_dtsgfish$year), by=2), labels=seq(min(plotdat_dtsgfish$year), max(plotdat_dtsgfish$year), by=2)) +
   ylim(c(0,1)) +
   labs(title='Node Strength of DTS Groundfish in Fisheries Participation Networks',
        subtitle = '2004-2025',
@@ -327,7 +332,7 @@ pal=pnw_palette("Starfish",length(unique(plotdat_salmon$pcgroup))) # or choose a
 # main metric plot - salmon
 figx_salmon <- ggplot(plotdat_salmon, aes(x=year, y=value, color=pcgroup)) + 
   geom_point(size=2) + geom_line() +
-  facet_wrap(nrow = 2, vars(pcgroup), scales="free_y") +
+  facet_wrap(nrow = 4, vars(pcgroup), scales="free_y") +
   scale_color_manual(values=pal) +
   scale_x_continuous(breaks=seq(min(plotdat_salmon$year), max(plotdat_salmon$year), by=2), labels=seq(min(plotdat_salmon$year), max(plotdat_salmon$year), by=2)) +
   ylim(c(0,1)) +
@@ -354,7 +359,7 @@ figx_salmon
 Save plot as a png, with filename: Node Strength of Non-DTS Groundfish in Fisheries Participation Networks 2004-2025
 ```{r echo=FALSE}
 png(here::here(pngdir, "Node Strength of Non-DTS Groundfish in Fisheries Participation Networks 2004-2025.png"),
-    res=200,height=800,width=1700)
+    res=200,height=1500,width=1700)
 figx_nondtsgfish
 dev.off()
 ```
@@ -363,7 +368,7 @@ dev.off()
 Save plot as a png, with filename: Node Strength of DTS Groundfish in Fisheries Participation Networks 2004-2025
 ```{r echo=FALSE}
 png(here::here(pngdir, "Node Strength of DTS Groundfish in Fisheries Participation Networks 2004-2025.png"),
-    res=200,height=800,width=1700)
+    res=200,height=1500,width=1700)
 figx_dtsgfish
 dev.off()
 ```
@@ -372,7 +377,7 @@ dev.off()
 Save plot as a png, with filename: Node Strength of Salmon in Fisheries Participation Networks 2004-2024
 ```{r echo=FALSE}
 png(here::here(pngdir, "Node Strength of Salmon in Fisheries Participation Networks 2004-2025.png"),
-    res=200,height=800,width=1700)
+    res=200,height=1500,width=1700)
 figx_salmon
 dev.off()
 ```
@@ -398,14 +403,15 @@ plotdat_dtsgfish <- dat_long %>% filter(metric==plot_metric) %>% filter(metier.c
 plotdat_salmon <- dat_long %>% filter(metric==plot_metric) %>% filter(metier.cm == 'Salmon')
 
 # color palette
-pal=pnw_palette("Starfish",length(unique(plotdat_gfish$pcgroup))) # or choose a different PNWColors palette
+pal=pnw_palette("Starfish",length(unique(plotdat_nondtsgfish$pcgroup))) # or choose a different PNWColors palette
 
 # main metric plot - non-DTS gfish
 figy_nondtsgfish <- ggplot(plotdat_nondtsgfish, aes(x=year, y=value, color=pcgroup)) + 
   geom_point(size=2) + geom_line() +
-  facet_wrap(nrow = 2, vars(pcgroup), scales="free_y") +
+  #facet_wrap(nrow = 4, vars(pcgroup), scales="free_y") +
+  facet_wrap(vars(pcgroup),labeller = label_wrap_gen(16)) +
   scale_color_manual(values=pal) +
-  scale_x_continuous(breaks=seq(min(plotdat_gfish$year), max(plotdat_gfish$year), by=2), labels=seq(min(plotdat_gfish$year), max(plotdat_gfish$year), by=2)) +
+  scale_x_continuous(breaks=seq(min(plotdat_nondtsgfish$year), max(plotdat_nondtsgfish$year), by=2), labels=seq(min(plotdat_nondtsgfish$year), max(plotdat_nondtsgfish$year), by=2)) +
   ylim(c(0,1)) +
   labs(title='Importance of Non-DTS Groundfish in Fisheries Participation Networks',
        subtitle = '2004-2025',
@@ -422,14 +428,18 @@ figy_nondtsgfish <- ggplot(plotdat_nondtsgfish, aes(x=year, y=value, color=pcgro
   theme(legend.position = 'none')
 figy_nondtsgfish
 
+# color palette
+pal=pnw_palette("Starfish",length(unique(plotdat_dtsgfish$pcgroup))) # or choose a different PNWColors palette
+
 # main metric plot - DTS gfish
 figy_dtsgfish <- ggplot(plotdat_dtsgfish, aes(x=year, y=value, color=pcgroup)) + 
   geom_point(size=2) + geom_line() +
-  facet_wrap(nrow = 2, vars(pcgroup), scales="free_y") +
+  #facet_wrap(nrow = 4, vars(pcgroup), scales="free_y") +
+  facet_wrap(vars(pcgroup),labeller = label_wrap_gen(16)) +
   scale_color_manual(values=pal) +
-  scale_x_continuous(breaks=seq(min(plotdat_gfish$year), max(plotdat_gfish$year), by=2), labels=seq(min(plotdat_gfish$year), max(plotdat_gfish$year), by=2)) +
+  scale_x_continuous(breaks=seq(min(plotdat_dtsgfish$year), max(plotdat_dtsgfish$year), by=2), labels=seq(min(plotdat_dtsgfish$year), max(plotdat_dtsgfish$year), by=2)) +
   ylim(c(0,1)) +
-  labs(title='Importance of Non-DTS Groundfish in Fisheries Participation Networks',
+  labs(title='Importance of DTS Groundfish in Fisheries Participation Networks',
        subtitle = '2004-2025',
        x = "Year",
        y = metric_label
@@ -450,7 +460,8 @@ pal=pnw_palette("Starfish",length(unique(plotdat_salmon$pcgroup))) # or choose a
 # main metric plot - salmon
 figy_salmon <- ggplot(plotdat_salmon, aes(x=year, y=value, color=pcgroup)) + 
   geom_point(size=2) + geom_line() +
-  facet_wrap(nrow = 2, vars(pcgroup), scales="free_y") +
+  #facet_wrap(nrow = 4, vars(pcgroup), scales="free_y") +
+  facet_wrap(vars(pcgroup),labeller = label_wrap_gen(16)) +
   scale_color_manual(values=pal) +
   scale_x_continuous(breaks=seq(min(plotdat_salmon$year), max(plotdat_salmon$year), by=2), labels=seq(min(plotdat_salmon$year), max(plotdat_salmon$year), by=2)) +
   ylim(c(0,1)) +
@@ -476,7 +487,7 @@ figy_salmon
 Save plot as a png, with filename: Importance of Non-DTS Groundfish in Fisheries Participation Networks 2004-2025
 ```{r echo=FALSE}
 png(here::here(pngdir, "Importance of Non-DTS Groundfish in Fisheries Participation Networks 2004-2025.png"),
-    res=200,height=800,width=1700)
+    res=200,height=1500,width=1700)
 figy_nondtsgfish
 dev.off()
 ```
@@ -485,7 +496,7 @@ dev.off()
 Save plot as a png, with filename: Importance of DTS Groundfish in Fisheries Participation Networks 2004-2025
 ```{r echo=FALSE}
 png(here::here(pngdir, "Importance of DTS Groundfish in Fisheries Participation Networks 2004-2025.png"),
-    res=200,height=800,width=1700)
+    res=200,height=1500,width=1700)
 figy_dtsgfish
 dev.off()
 ```
@@ -493,7 +504,7 @@ dev.off()
 Save plot as a png, with filename: Importance of Salmon in Fisheries Participation Networks 2004-2025
 ```{r echo=FALSE}
 png(here::here(pngdir, "Importance of Salmon in Fisheries Participation Networks 2004-2025.png"),
-    res=200,height=800,width=1700)
+    res=200,height=1500,width=1700)
 figy_salmon
 dev.off()
 ```
@@ -589,7 +600,7 @@ fig_ed
 
 Save plot as a png, with filename: Edge Density in Fisheries Participation Networks 2005-2024
 ```{r echo=FALSE}
-png(here::here(pngdir, "Edge Density in Fisheries Participation Networks 2005-2025","_",Sys.Date(),".png"),
+png(here::here(pngdir, paste0("Edge Density in Fisheries Participation Networks 2005-2025","_",Sys.Date(),".png")),
     res=200,height=1500,width=1700)
 fig_ed
 dev.off()
@@ -645,7 +656,7 @@ fig_n
 
 Save plot as a png, with filename: Nodes in Fisheries Participation Networks 2004-2024
 ```{r echo=FALSE}
-png(here::here(pngdir, "Number of Nodes in Fisheries Participation Networks 2004-2025","_",Sys.Date(),".png"),
+png(here::here(pngdir, paste0("Number of Nodes in Fisheries Participation Networks 2004-2025","_",Sys.Date(),".png")),
     res=200,height=1500,width=1700)
 fig_n
 dev.off()
