@@ -23,7 +23,7 @@ This document generates fisheries participation networks for US West Coast port 
 - networks are based on fisheries participation and revenues at the vessel level, rather than aggregated across vessels for individual ports or states;
 - edges in the networks are based on a connectivity definition (the amount and evenness of revenue across pairs of nodes);
 - nodes (fisheries) that do not contribute to at least a median of 10% of the annual revenue of associated vessels are excluded;
-- nodes (fisheries) are included in each network with a minimum total fisheries revenue cutoff for vessels of `$5,000` and a minimum revenue cutoff for individual fisheries of `$500`
+- nodes (fisheries) are included in each network with a minimum total fisheries revenue cutoff for vessels of `$5,000` (USD in 2005; following Holland et al. diversification indices) and a minimum revenue cutoff for individual fisheries of `$500` (USD in 2005; following Holland et al. diversification indices)
 
 The code makes network graphs and calculates network statistics.
 
@@ -97,6 +97,13 @@ myfile5 <- "spgrpn2_iea_key.csv"
 
 ```
 <br>
+
+Specify file name for inflation adjustment factors.
+```{r get_AFIvalues}
+
+gdp_defl <- read.csv(file = paste(here(processdir), "inflation_adjustment.csv", sep = "/")) # generated in script 00_process
+
+```
 
 
 Identify the crab years, port groups, and states that you would like to produce networks for. The port groups vector should include only those port groups which are present in the single data file produced with script 00. The states vector should include only those states which are present in the agid column of the fishtix data produced with script 00. 
@@ -230,12 +237,18 @@ For each crab year and port group, this code will:
 
 ### 1) Vessel-level networks summarized by port group
 
-We only include vessels that generate >=`$5,000` in total fisheries revenue each year and >=`$500` in revenue from individual fisheries.
+We only include vessels that generate >=`$5,000` (USD in 2005; following Holland et al. diversification indices) in total fisheries revenue each year and >=`$500` (USD in 2005; following Holland et al. diversification indices) in revenue from individual fisheries.
 
 ```{r}
 
-total_rev_cutoff <- 5000
-indiv_rev_cutoff <- 500
+total_rev_cutoff_2005 <- 5000 #USD in 2005; following Holland et al. diversification indices
+indiv_rev_cutoff_2005 <- 500 #USD in 2005; following Holland et al. diversification indices
+
+gdp_defl_2005 <- gdp_defl %>% filter ( year == 2005) %>% pull() # generated in script 00_process
+
+total_rev_cutoff <- total_rev_cutoff_2005 / gdp_defl_2005 
+indiv_rev_cutoff <- indiv_rev_cutoff_2005 / gdp_defl_2005
+
 edgetype <- "connectivity"
 
 ```
