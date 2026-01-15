@@ -86,8 +86,8 @@ What are the names of the `.csv` files with the network statistics that you want
 
 
 ```{r}
-filenames <- c("VesselLevelNetworkStats_2004_2025_21pcgroups_totalrev7873.43337267464_indivrev787.343337267464_connectivity_rmCrab_10pContribution_2026-01-15.csv")
-networkstats_filename <- "VesselLevelNodeStats_2004_2025_21pcgroups_totalrev7873.43337267464_indivrev787.343337267464_connectivity_rmCrab_10pContribution_2026-01-15.csv"
+filenames <- "VesselLevelNodeStats_2004_2025_21pcgroups_totalrev7873.43337267464_indivrev787.343337267464_connectivity_rmCrab_10pContribution_2026-01-15.csv"
+networkstats_filename <- c("VesselLevelNetworkStats_2004_2025_21pcgroups_totalrev7873.43337267464_indivrev787.343337267464_connectivity_rmCrab_10pContribution_2026-01-15.csv")
 # hci_filename <- 'ei_hci_rgn1_M.csv'
 port_filename <- 'iopac_conversion_table.csv'
 ```
