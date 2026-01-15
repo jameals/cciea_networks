@@ -1626,7 +1626,7 @@ Council</h1>
 <h3 class="subtitle">Preparation for network analysis in CCIEA ESR
 2025</h3>
 <h4 class="author">M. Fisher, J.F. Samhouri</h4>
-<h4 class="date">Written Jan. 6, 2021. Last Run 2025-12-23</h4>
+<h4 class="date">Written Jan. 6, 2021. Last Run 2026-01-15</h4>
 
 </div>
 
@@ -1662,6 +1662,8 @@ section of the script could be adjusted to more flexibly highlight other
 fisheries.</p>
 <p>This code depends on the code “01_create_networks_cciea.Rmd”, which
 makes network graphs and calculates network statistics.</p>
+<p>Make sure to define most_recent_igraph so that the date is associated
+with the most recent igraph files</p>
 <p><br></p>
 <p><br></p>
 <p>This script requires the following packages.</p>
@@ -1685,8 +1687,12 @@ source(here::here(&#39;R/plot_network_comparable.R&#39;)) # note this function w
 indir_ports = &#39;data/networks/participation_vessel_ports&#39;
 
 ## output directory for network viz
-pngdir_ports = &#39;data/networks/participation_vessel_ports/plots/comparable&#39;</code></pre>
+pngdir_ports = &#39;data/networks/participation_vessel_ports/plots/comparable&#39;
+
+processdir &lt;- &quot;data/input&quot;</code></pre>
 <p><br></p>
+<p>Specify file name for inflation adjustment factors.</p>
+<pre class="r"><code>gdp_defl &lt;- read.csv(file = paste(here(processdir), &quot;inflation_adjustment.csv&quot;, sep = &quot;/&quot;)) # generated in script 00_process</code></pre>
 <p>Identify the crab years and port groups that you would like to
 produce networks for.</p>
 <pre class="r"><code>## (crab) years
@@ -1712,10 +1718,21 @@ myports &lt;- c(&quot;Puget Sound&quot;,&quot;North WA Coast&quot;,&quot;WA Coas
 <div id="vessel-level-networks-summarized-by-port-group" class="section level2">
 <h2>1) Vessel-level networks summarized by port group</h2>
 <p>B)(ii) and C)(i) A minimum annual total fisheries revenue cutoff for
-each vessel of $5,000, and a minimum annual individual fisheries revenue
-cutoff for each vessel of $500. Edge type is connectivity.</p>
-<pre class="r"><code>total_rev_cutoff &lt;- 5000
-indiv_rev_cutoff &lt;- 500
+each vessel of <code>$5,000</code> (USD in 2005; following Holland et
+al. diversification indices), and a minimum annual individual fisheries
+revenue cutoff for each vessel of <code>$500</code> (USD in 2005;
+following Holland et al. diversification indices). Edge type is
+connectivity.</p>
+<pre class="r"><code>total_rev_cutoff_2005 &lt;- 5000 #USD in 2005; following Holland et al. diversification indices
+indiv_rev_cutoff_2005 &lt;- 500 #USD in 2005; following Holland et al. diversification indices
+
+gdp_defl_2005 &lt;- gdp_defl %&gt;% filter ( year == 2005) %&gt;% pull() # generated in script 00_process
+
+total_rev_cutoff &lt;- total_rev_cutoff_2005 / gdp_defl_2005 
+indiv_rev_cutoff &lt;- indiv_rev_cutoff_2005 / gdp_defl_2005
+
+
+
 edgetype &lt;- &quot;connectivity&quot;
 ## To avoid inclusion of rare or minimal fishing activity, a given fishery must contribute to at least contr_cutoff% of a port&#39;s seasonal revenue to be included in the network data. This cutoff value can be increased if more stringent fishery inclusion criteria are preferred, and decreased (i.e. for summaries over shorter temporal / smaller spatial scales).
 contr_cutoff &lt;- 0.1</code></pre>
@@ -1725,7 +1742,7 @@ the functions to recolor and rename vertices</p>
 <pre class="r"><code>#palette(brewer.pal(n = 10, name = &quot;Set3&quot;))
 #pal3 &lt;- brewer.pal(n = 10, name = &quot;Set3&quot;)
 
-most_recent_igraph &lt;- &#39;2025-12-23&#39; # set date associated with igraph files
+most_recent_igraph &lt;- &#39;2026-01-15&#39; # set date associated with igraph files
 
 graphs_list &lt;- list()
 graph_names &lt;- c()
@@ -1756,12 +1773,12 @@ because the igraph <code>plot</code> function won’t save into an object
 that can be returned.</p>
 <pre class="r"><code>#lapply(graphs_list,plot_network, my_layout, outdir=pngdir)
 plot_comparable_networks(graphs_list,outdir=pngdir_ports,color_labels=FALSE)</code></pre>
-<pre><code>## added 8 empty vertices to graph 1</code></pre>
+<pre><code>## added 7 empty vertices to graph 1</code></pre>
 <pre><code>## added 6 empty vertices to graph 2</code></pre>
 <pre><code>## added 8 empty vertices to graph 3</code></pre>
-<pre><code>## added 9 empty vertices to graph 4</code></pre>
+<pre><code>## added 8 empty vertices to graph 4</code></pre>
 <pre><code>## added 8 empty vertices to graph 5</code></pre>
-<pre><code>## added 8 empty vertices to graph 6</code></pre>
+<pre><code>## added 9 empty vertices to graph 6</code></pre>
 <pre><code>## added 7 empty vertices to graph 7</code></pre>
 <pre><code>## added 8 empty vertices to graph 8</code></pre>
 <pre><code>## added 8 empty vertices to graph 9</code></pre>
@@ -1769,9 +1786,9 @@ plot_comparable_networks(graphs_list,outdir=pngdir_ports,color_labels=FALSE)</co
 <pre><code>## added 8 empty vertices to graph 11</code></pre>
 <pre><code>## added 8 empty vertices to graph 12</code></pre>
 <pre><code>## added 8 empty vertices to graph 13</code></pre>
-<pre><code>## added 8 empty vertices to graph 14</code></pre>
+<pre><code>## added 7 empty vertices to graph 14</code></pre>
 <pre><code>## added 8 empty vertices to graph 15</code></pre>
-<pre><code>## added 7 empty vertices to graph 16</code></pre>
+<pre><code>## added 8 empty vertices to graph 16</code></pre>
 <pre><code>## added 9 empty vertices to graph 17</code></pre>
 <pre><code>## added 8 empty vertices to graph 18</code></pre>
 <pre><code>## added 8 empty vertices to graph 19</code></pre>
@@ -1783,7 +1800,7 @@ plot_comparable_networks(graphs_list,outdir=pngdir_ports,color_labels=FALSE)</co
 <pre><code>## added 10 empty vertices to graph 25</code></pre>
 <pre><code>## added 10 empty vertices to graph 26</code></pre>
 <pre><code>## added 11 empty vertices to graph 27</code></pre>
-<pre><code>## added 11 empty vertices to graph 28</code></pre>
+<pre><code>## added 12 empty vertices to graph 28</code></pre>
 <pre><code>## added 11 empty vertices to graph 29</code></pre>
 <pre><code>## added 10 empty vertices to graph 30</code></pre>
 <pre><code>## added 12 empty vertices to graph 31</code></pre>
@@ -1800,7 +1817,7 @@ plot_comparable_networks(graphs_list,outdir=pngdir_ports,color_labels=FALSE)</co
 <pre><code>## added 11 empty vertices to graph 42</code></pre>
 <pre><code>## added 10 empty vertices to graph 43</code></pre>
 <pre><code>## added 11 empty vertices to graph 44</code></pre>
-<pre><code>## added 7 empty vertices to graph 45</code></pre>
+<pre><code>## added 8 empty vertices to graph 45</code></pre>
 <pre><code>## added 9 empty vertices to graph 46</code></pre>
 <pre><code>## added 9 empty vertices to graph 47</code></pre>
 <pre><code>## added 9 empty vertices to graph 48</code></pre>
@@ -1817,7 +1834,7 @@ plot_comparable_networks(graphs_list,outdir=pngdir_ports,color_labels=FALSE)</co
 <pre><code>## added 10 empty vertices to graph 59</code></pre>
 <pre><code>## added 9 empty vertices to graph 60</code></pre>
 <pre><code>## added 11 empty vertices to graph 61</code></pre>
-<pre><code>## added 11 empty vertices to graph 62</code></pre>
+<pre><code>## added 10 empty vertices to graph 62</code></pre>
 <pre><code>## added 12 empty vertices to graph 63</code></pre>
 <pre><code>## added 10 empty vertices to graph 64</code></pre>
 <pre><code>## added 11 empty vertices to graph 65</code></pre>
@@ -1826,7 +1843,7 @@ plot_comparable_networks(graphs_list,outdir=pngdir_ports,color_labels=FALSE)</co
 <pre><code>## added 16 empty vertices to graph 68</code></pre>
 <pre><code>## added 16 empty vertices to graph 69</code></pre>
 <pre><code>## added 16 empty vertices to graph 70</code></pre>
-<pre><code>## added 14 empty vertices to graph 71</code></pre>
+<pre><code>## added 15 empty vertices to graph 71</code></pre>
 <pre><code>## added 15 empty vertices to graph 72</code></pre>
 <pre><code>## added 16 empty vertices to graph 73</code></pre>
 <pre><code>## added 16 empty vertices to graph 74</code></pre>
@@ -1845,31 +1862,31 @@ plot_comparable_networks(graphs_list,outdir=pngdir_ports,color_labels=FALSE)</co
 <pre><code>## added 9 empty vertices to graph 87</code></pre>
 <pre><code>## added 8 empty vertices to graph 88</code></pre>
 <pre><code>## added 10 empty vertices to graph 89</code></pre>
-<pre><code>## added 11 empty vertices to graph 90</code></pre>
+<pre><code>## added 10 empty vertices to graph 90</code></pre>
 <pre><code>## added 10 empty vertices to graph 91</code></pre>
-<pre><code>## added 12 empty vertices to graph 92</code></pre>
-<pre><code>## added 11 empty vertices to graph 93</code></pre>
-<pre><code>## added 10 empty vertices to graph 94</code></pre>
+<pre><code>## added 11 empty vertices to graph 92</code></pre>
+<pre><code>## added 12 empty vertices to graph 93</code></pre>
+<pre><code>## added 12 empty vertices to graph 94</code></pre>
 <pre><code>## added 10 empty vertices to graph 95</code></pre>
 <pre><code>## added 9 empty vertices to graph 96</code></pre>
 <pre><code>## added 9 empty vertices to graph 97</code></pre>
 <pre><code>## added 9 empty vertices to graph 98</code></pre>
-<pre><code>## added 11 empty vertices to graph 99</code></pre>
-<pre><code>## added 11 empty vertices to graph 100</code></pre>
+<pre><code>## added 10 empty vertices to graph 99</code></pre>
+<pre><code>## added 13 empty vertices to graph 100</code></pre>
 <pre><code>## added 11 empty vertices to graph 101</code></pre>
 <pre><code>## added 9 empty vertices to graph 102</code></pre>
-<pre><code>## added 11 empty vertices to graph 103</code></pre>
+<pre><code>## added 12 empty vertices to graph 103</code></pre>
 <pre><code>## added 11 empty vertices to graph 104</code></pre>
 <pre><code>## added 10 empty vertices to graph 105</code></pre>
 <pre><code>## added 11 empty vertices to graph 106</code></pre>
-<pre><code>## added 13 empty vertices to graph 107</code></pre>
+<pre><code>## added 12 empty vertices to graph 107</code></pre>
 <pre><code>## added 11 empty vertices to graph 108</code></pre>
 <pre><code>## added 11 empty vertices to graph 109</code></pre>
 <pre><code>## added 12 empty vertices to graph 110</code></pre>
 <pre><code>## added 11 empty vertices to graph 111</code></pre>
 <pre><code>## added 12 empty vertices to graph 112</code></pre>
 <pre><code>## added 12 empty vertices to graph 113</code></pre>
-<pre><code>## added 11 empty vertices to graph 114</code></pre>
+<pre><code>## added 12 empty vertices to graph 114</code></pre>
 <pre><code>## added 11 empty vertices to graph 115</code></pre>
 <pre><code>## added 11 empty vertices to graph 116</code></pre>
 <pre><code>## added 13 empty vertices to graph 117</code></pre>
@@ -1900,29 +1917,29 @@ plot_comparable_networks(graphs_list,outdir=pngdir_ports,color_labels=FALSE)</co
 <pre><code>## added 11 empty vertices to graph 142</code></pre>
 <pre><code>## added 10 empty vertices to graph 143</code></pre>
 <pre><code>## added 11 empty vertices to graph 144</code></pre>
-<pre><code>## added 11 empty vertices to graph 145</code></pre>
+<pre><code>## added 10 empty vertices to graph 145</code></pre>
 <pre><code>## added 10 empty vertices to graph 146</code></pre>
 <pre><code>## added 12 empty vertices to graph 147</code></pre>
 <pre><code>## added 11 empty vertices to graph 148</code></pre>
 <pre><code>## added 10 empty vertices to graph 149</code></pre>
-<pre><code>## added 11 empty vertices to graph 150</code></pre>
+<pre><code>## added 10 empty vertices to graph 150</code></pre>
 <pre><code>## added 9 empty vertices to graph 151</code></pre>
 <pre><code>## added 10 empty vertices to graph 152</code></pre>
-<pre><code>## added 10 empty vertices to graph 153</code></pre>
+<pre><code>## added 9 empty vertices to graph 153</code></pre>
 <pre><code>## added 9 empty vertices to graph 154</code></pre>
-<pre><code>## added 10 empty vertices to graph 155</code></pre>
+<pre><code>## added 9 empty vertices to graph 155</code></pre>
 <pre><code>## added 8 empty vertices to graph 156</code></pre>
 <pre><code>## added 9 empty vertices to graph 157</code></pre>
 <pre><code>## added 10 empty vertices to graph 158</code></pre>
-<pre><code>## added 11 empty vertices to graph 159</code></pre>
+<pre><code>## added 10 empty vertices to graph 159</code></pre>
 <pre><code>## added 10 empty vertices to graph 160</code></pre>
 <pre><code>## added 12 empty vertices to graph 161</code></pre>
-<pre><code>## added 11 empty vertices to graph 162</code></pre>
+<pre><code>## added 10 empty vertices to graph 162</code></pre>
 <pre><code>## added 9 empty vertices to graph 163</code></pre>
-<pre><code>## added 11 empty vertices to graph 164</code></pre>
+<pre><code>## added 10 empty vertices to graph 164</code></pre>
 <pre><code>## added 10 empty vertices to graph 165</code></pre>
 <pre><code>## added 10 empty vertices to graph 166</code></pre>
-<pre><code>## added 11 empty vertices to graph 167</code></pre>
+<pre><code>## added 9 empty vertices to graph 167</code></pre>
 <pre><code>## added 10 empty vertices to graph 168</code></pre>
 <pre><code>## added 12 empty vertices to graph 169</code></pre>
 <pre><code>## added 11 empty vertices to graph 170</code></pre>
@@ -1932,43 +1949,43 @@ plot_comparable_networks(graphs_list,outdir=pngdir_ports,color_labels=FALSE)</co
 <pre><code>## added 10 empty vertices to graph 174</code></pre>
 <pre><code>## added 9 empty vertices to graph 175</code></pre>
 <pre><code>## added 10 empty vertices to graph 176</code></pre>
-<pre><code>## added 10 empty vertices to graph 177</code></pre>
-<pre><code>## added 10 empty vertices to graph 178</code></pre>
+<pre><code>## added 9 empty vertices to graph 177</code></pre>
+<pre><code>## added 9 empty vertices to graph 178</code></pre>
 <pre><code>## added 8 empty vertices to graph 179</code></pre>
-<pre><code>## added 11 empty vertices to graph 180</code></pre>
+<pre><code>## added 9 empty vertices to graph 180</code></pre>
 <pre><code>## added 8 empty vertices to graph 181</code></pre>
-<pre><code>## added 9 empty vertices to graph 182</code></pre>
+<pre><code>## added 10 empty vertices to graph 182</code></pre>
 <pre><code>## added 13 empty vertices to graph 183</code></pre>
 <pre><code>## added 11 empty vertices to graph 184</code></pre>
-<pre><code>## added 10 empty vertices to graph 185</code></pre>
-<pre><code>## added 9 empty vertices to graph 186</code></pre>
+<pre><code>## added 11 empty vertices to graph 185</code></pre>
+<pre><code>## added 10 empty vertices to graph 186</code></pre>
 <pre><code>## added 11 empty vertices to graph 187</code></pre>
 <pre><code>## added 14 empty vertices to graph 188</code></pre>
 <pre><code>## added 11 empty vertices to graph 189</code></pre>
 <pre><code>## added 10 empty vertices to graph 190</code></pre>
 <pre><code>## added 12 empty vertices to graph 191</code></pre>
 <pre><code>## added 12 empty vertices to graph 192</code></pre>
-<pre><code>## added 11 empty vertices to graph 193</code></pre>
-<pre><code>## added 12 empty vertices to graph 194</code></pre>
+<pre><code>## added 12 empty vertices to graph 193</code></pre>
+<pre><code>## added 13 empty vertices to graph 194</code></pre>
 <pre><code>## added 10 empty vertices to graph 195</code></pre>
-<pre><code>## added 12 empty vertices to graph 196</code></pre>
-<pre><code>## added 12 empty vertices to graph 197</code></pre>
+<pre><code>## added 11 empty vertices to graph 196</code></pre>
+<pre><code>## added 11 empty vertices to graph 197</code></pre>
 <pre><code>## added 13 empty vertices to graph 198</code></pre>
 <pre><code>## added 10 empty vertices to graph 199</code></pre>
 <pre><code>## added 12 empty vertices to graph 200</code></pre>
-<pre><code>## added 12 empty vertices to graph 201</code></pre>
+<pre><code>## added 11 empty vertices to graph 201</code></pre>
 <pre><code>## added 11 empty vertices to graph 202</code></pre>
 <pre><code>## added 12 empty vertices to graph 203</code></pre>
-<pre><code>## added 11 empty vertices to graph 204</code></pre>
+<pre><code>## added 12 empty vertices to graph 204</code></pre>
 <pre><code>## added 13 empty vertices to graph 205</code></pre>
-<pre><code>## added 13 empty vertices to graph 206</code></pre>
+<pre><code>## added 12 empty vertices to graph 206</code></pre>
 <pre><code>## added 13 empty vertices to graph 207</code></pre>
 <pre><code>## added 11 empty vertices to graph 208</code></pre>
 <pre><code>## added 14 empty vertices to graph 209</code></pre>
 <pre><code>## added 15 empty vertices to graph 210</code></pre>
 <pre><code>## added 13 empty vertices to graph 211</code></pre>
 <pre><code>## added 11 empty vertices to graph 212</code></pre>
-<pre><code>## added 12 empty vertices to graph 213</code></pre>
+<pre><code>## added 11 empty vertices to graph 213</code></pre>
 <pre><code>## added 13 empty vertices to graph 214</code></pre>
 <pre><code>## added 11 empty vertices to graph 215</code></pre>
 <pre><code>## added 13 empty vertices to graph 216</code></pre>
@@ -1976,7 +1993,7 @@ plot_comparable_networks(graphs_list,outdir=pngdir_ports,color_labels=FALSE)</co
 <pre><code>## added 12 empty vertices to graph 218</code></pre>
 <pre><code>## added 12 empty vertices to graph 219</code></pre>
 <pre><code>## added 13 empty vertices to graph 220</code></pre>
-<pre><code>## added 11 empty vertices to graph 221</code></pre>
+<pre><code>## added 12 empty vertices to graph 221</code></pre>
 <pre><code>## added 11 empty vertices to graph 222</code></pre>
 <pre><code>## added 12 empty vertices to graph 223</code></pre>
 <pre><code>## added 13 empty vertices to graph 224</code></pre>
@@ -1990,140 +2007,140 @@ plot_comparable_networks(graphs_list,outdir=pngdir_ports,color_labels=FALSE)</co
 <pre><code>## added 13 empty vertices to graph 232</code></pre>
 <pre><code>## added 11 empty vertices to graph 233</code></pre>
 <pre><code>## added 11 empty vertices to graph 234</code></pre>
-<pre><code>## added 12 empty vertices to graph 235</code></pre>
-<pre><code>## added 13 empty vertices to graph 236</code></pre>
+<pre><code>## added 11 empty vertices to graph 235</code></pre>
+<pre><code>## added 12 empty vertices to graph 236</code></pre>
 <pre><code>## added 12 empty vertices to graph 237</code></pre>
-<pre><code>## added 12 empty vertices to graph 238</code></pre>
-<pre><code>## added 11 empty vertices to graph 239</code></pre>
-<pre><code>## added 11 empty vertices to graph 240</code></pre>
+<pre><code>## added 11 empty vertices to graph 238</code></pre>
+<pre><code>## added 12 empty vertices to graph 239</code></pre>
+<pre><code>## added 10 empty vertices to graph 240</code></pre>
 <pre><code>## added 11 empty vertices to graph 241</code></pre>
 <pre><code>## added 11 empty vertices to graph 242</code></pre>
-<pre><code>## added 12 empty vertices to graph 243</code></pre>
-<pre><code>## added 11 empty vertices to graph 244</code></pre>
-<pre><code>## added 9 empty vertices to graph 245</code></pre>
-<pre><code>## added 11 empty vertices to graph 246</code></pre>
+<pre><code>## added 11 empty vertices to graph 243</code></pre>
+<pre><code>## added 10 empty vertices to graph 244</code></pre>
+<pre><code>## added 8 empty vertices to graph 245</code></pre>
+<pre><code>## added 10 empty vertices to graph 246</code></pre>
 <pre><code>## added 10 empty vertices to graph 247</code></pre>
 <pre><code>## added 12 empty vertices to graph 248</code></pre>
 <pre><code>## added 12 empty vertices to graph 249</code></pre>
-<pre><code>## added 11 empty vertices to graph 250</code></pre>
-<pre><code>## added 12 empty vertices to graph 251</code></pre>
-<pre><code>## added 10 empty vertices to graph 252</code></pre>
-<pre><code>## added 9 empty vertices to graph 253</code></pre>
+<pre><code>## added 12 empty vertices to graph 250</code></pre>
+<pre><code>## added 13 empty vertices to graph 251</code></pre>
+<pre><code>## added 9 empty vertices to graph 252</code></pre>
+<pre><code>## added 10 empty vertices to graph 253</code></pre>
 <pre><code>## added 11 empty vertices to graph 254</code></pre>
-<pre><code>## added 11 empty vertices to graph 255</code></pre>
-<pre><code>## added 11 empty vertices to graph 256</code></pre>
-<pre><code>## added 11 empty vertices to graph 257</code></pre>
+<pre><code>## added 10 empty vertices to graph 255</code></pre>
+<pre><code>## added 10 empty vertices to graph 256</code></pre>
+<pre><code>## added 12 empty vertices to graph 257</code></pre>
 <pre><code>## added 10 empty vertices to graph 258</code></pre>
 <pre><code>## added 8 empty vertices to graph 259</code></pre>
 <pre><code>## added 8 empty vertices to graph 260</code></pre>
 <pre><code>## added 9 empty vertices to graph 261</code></pre>
-<pre><code>## added 9 empty vertices to graph 262</code></pre>
-<pre><code>## added 10 empty vertices to graph 263</code></pre>
+<pre><code>## added 10 empty vertices to graph 262</code></pre>
+<pre><code>## added 8 empty vertices to graph 263</code></pre>
 <pre><code>## added 7 empty vertices to graph 264</code></pre>
 <pre><code>## added 7 empty vertices to graph 265</code></pre>
-<pre><code>## added 10 empty vertices to graph 266</code></pre>
+<pre><code>## added 9 empty vertices to graph 266</code></pre>
 <pre><code>## added 8 empty vertices to graph 267</code></pre>
-<pre><code>## added 9 empty vertices to graph 268</code></pre>
+<pre><code>## added 8 empty vertices to graph 268</code></pre>
 <pre><code>## added 9 empty vertices to graph 269</code></pre>
 <pre><code>## added 9 empty vertices to graph 270</code></pre>
-<pre><code>## added 11 empty vertices to graph 271</code></pre>
-<pre><code>## added 9 empty vertices to graph 272</code></pre>
-<pre><code>## added 13 empty vertices to graph 273</code></pre>
-<pre><code>## added 12 empty vertices to graph 274</code></pre>
+<pre><code>## added 10 empty vertices to graph 271</code></pre>
+<pre><code>## added 10 empty vertices to graph 272</code></pre>
+<pre><code>## added 11 empty vertices to graph 273</code></pre>
+<pre><code>## added 11 empty vertices to graph 274</code></pre>
 <pre><code>## added 12 empty vertices to graph 275</code></pre>
 <pre><code>## added 10 empty vertices to graph 276</code></pre>
 <pre><code>## added 12 empty vertices to graph 277</code></pre>
 <pre><code>## added 13 empty vertices to graph 278</code></pre>
 <pre><code>## added 13 empty vertices to graph 279</code></pre>
 <pre><code>## added 11 empty vertices to graph 280</code></pre>
-<pre><code>## added 13 empty vertices to graph 281</code></pre>
-<pre><code>## added 12 empty vertices to graph 282</code></pre>
+<pre><code>## added 12 empty vertices to graph 281</code></pre>
+<pre><code>## added 11 empty vertices to graph 282</code></pre>
 <pre><code>## added 13 empty vertices to graph 283</code></pre>
 <pre><code>## added 10 empty vertices to graph 284</code></pre>
 <pre><code>## added 11 empty vertices to graph 285</code></pre>
 <pre><code>## added 11 empty vertices to graph 286</code></pre>
-<pre><code>## added 10 empty vertices to graph 287</code></pre>
-<pre><code>## added 11 empty vertices to graph 288</code></pre>
+<pre><code>## added 11 empty vertices to graph 287</code></pre>
+<pre><code>## added 10 empty vertices to graph 288</code></pre>
 <pre><code>## added 10 empty vertices to graph 289</code></pre>
 <pre><code>## added 11 empty vertices to graph 290</code></pre>
 <pre><code>## added 11 empty vertices to graph 291</code></pre>
 <pre><code>## added 11 empty vertices to graph 292</code></pre>
-<pre><code>## added 11 empty vertices to graph 293</code></pre>
+<pre><code>## added 12 empty vertices to graph 293</code></pre>
 <pre><code>## added 13 empty vertices to graph 294</code></pre>
 <pre><code>## added 12 empty vertices to graph 295</code></pre>
 <pre><code>## added 9 empty vertices to graph 296</code></pre>
 <pre><code>## added 10 empty vertices to graph 297</code></pre>
 <pre><code>## added 11 empty vertices to graph 298</code></pre>
 <pre><code>## added 11 empty vertices to graph 299</code></pre>
-<pre><code>## added 11 empty vertices to graph 300</code></pre>
+<pre><code>## added 12 empty vertices to graph 300</code></pre>
 <pre><code>## added 11 empty vertices to graph 301</code></pre>
 <pre><code>## added 11 empty vertices to graph 302</code></pre>
 <pre><code>## added 11 empty vertices to graph 303</code></pre>
-<pre><code>## added 11 empty vertices to graph 304</code></pre>
+<pre><code>## added 13 empty vertices to graph 304</code></pre>
 <pre><code>## added 12 empty vertices to graph 305</code></pre>
 <pre><code>## added 13 empty vertices to graph 306</code></pre>
 <pre><code>## added 11 empty vertices to graph 307</code></pre>
 <pre><code>## added 11 empty vertices to graph 308</code></pre>
 <pre><code>## added 12 empty vertices to graph 309</code></pre>
-<pre><code>## added 12 empty vertices to graph 310</code></pre>
+<pre><code>## added 11 empty vertices to graph 310</code></pre>
 <pre><code>## added 13 empty vertices to graph 311</code></pre>
-<pre><code>## added 10 empty vertices to graph 312</code></pre>
-<pre><code>## added 13 empty vertices to graph 313</code></pre>
+<pre><code>## added 11 empty vertices to graph 312</code></pre>
+<pre><code>## added 12 empty vertices to graph 313</code></pre>
 <pre><code>## added 13 empty vertices to graph 314</code></pre>
 <pre><code>## added 11 empty vertices to graph 315</code></pre>
 <pre><code>## added 12 empty vertices to graph 316</code></pre>
 <pre><code>## added 11 empty vertices to graph 317</code></pre>
-<pre><code>## added 6 empty vertices to graph 318</code></pre>
-<pre><code>## added 8 empty vertices to graph 319</code></pre>
-<pre><code>## added 8 empty vertices to graph 320</code></pre>
+<pre><code>## added 7 empty vertices to graph 318</code></pre>
+<pre><code>## added 7 empty vertices to graph 319</code></pre>
+<pre><code>## added 9 empty vertices to graph 320</code></pre>
 <pre><code>## added 10 empty vertices to graph 321</code></pre>
 <pre><code>## added 9 empty vertices to graph 322</code></pre>
-<pre><code>## added 9 empty vertices to graph 323</code></pre>
-<pre><code>## added 12 empty vertices to graph 324</code></pre>
+<pre><code>## added 8 empty vertices to graph 323</code></pre>
+<pre><code>## added 11 empty vertices to graph 324</code></pre>
 <pre><code>## added 11 empty vertices to graph 325</code></pre>
 <pre><code>## added 9 empty vertices to graph 326</code></pre>
-<pre><code>## added 8 empty vertices to graph 327</code></pre>
+<pre><code>## added 10 empty vertices to graph 327</code></pre>
 <pre><code>## added 7 empty vertices to graph 328</code></pre>
 <pre><code>## added 8 empty vertices to graph 329</code></pre>
-<pre><code>## added 6 empty vertices to graph 330</code></pre>
-<pre><code>## added 9 empty vertices to graph 331</code></pre>
-<pre><code>## added 7 empty vertices to graph 332</code></pre>
+<pre><code>## added 5 empty vertices to graph 330</code></pre>
+<pre><code>## added 11 empty vertices to graph 331</code></pre>
+<pre><code>## added 8 empty vertices to graph 332</code></pre>
 <pre><code>## added 8 empty vertices to graph 333</code></pre>
-<pre><code>## added 9 empty vertices to graph 334</code></pre>
+<pre><code>## added 8 empty vertices to graph 334</code></pre>
 <pre><code>## added 10 empty vertices to graph 335</code></pre>
 <pre><code>## added 12 empty vertices to graph 336</code></pre>
 <pre><code>## added 11 empty vertices to graph 337</code></pre>
 <pre><code>## added 12 empty vertices to graph 338</code></pre>
-<pre><code>## added 9 empty vertices to graph 339</code></pre>
+<pre><code>## added 11 empty vertices to graph 339</code></pre>
 <pre><code>## added 6 empty vertices to graph 340</code></pre>
 <pre><code>## added 10 empty vertices to graph 341</code></pre>
 <pre><code>## added 11 empty vertices to graph 342</code></pre>
 <pre><code>## added 11 empty vertices to graph 343</code></pre>
 <pre><code>## added 10 empty vertices to graph 344</code></pre>
-<pre><code>## added 10 empty vertices to graph 345</code></pre>
+<pre><code>## added 11 empty vertices to graph 345</code></pre>
 <pre><code>## added 10 empty vertices to graph 346</code></pre>
-<pre><code>## added 10 empty vertices to graph 347</code></pre>
-<pre><code>## added 11 empty vertices to graph 348</code></pre>
+<pre><code>## added 11 empty vertices to graph 347</code></pre>
+<pre><code>## added 9 empty vertices to graph 348</code></pre>
 <pre><code>## added 10 empty vertices to graph 349</code></pre>
-<pre><code>## added 11 empty vertices to graph 350</code></pre>
-<pre><code>## added 9 empty vertices to graph 351</code></pre>
+<pre><code>## added 12 empty vertices to graph 350</code></pre>
+<pre><code>## added 10 empty vertices to graph 351</code></pre>
 <pre><code>## added 9 empty vertices to graph 352</code></pre>
 <pre><code>## added 10 empty vertices to graph 353</code></pre>
-<pre><code>## added 9 empty vertices to graph 354</code></pre>
-<pre><code>## added 9 empty vertices to graph 355</code></pre>
-<pre><code>## added 9 empty vertices to graph 356</code></pre>
+<pre><code>## added 8 empty vertices to graph 354</code></pre>
+<pre><code>## added 8 empty vertices to graph 355</code></pre>
+<pre><code>## added 10 empty vertices to graph 356</code></pre>
 <pre><code>## added 8 empty vertices to graph 357</code></pre>
-<pre><code>## added 8 empty vertices to graph 358</code></pre>
+<pre><code>## added 7 empty vertices to graph 358</code></pre>
 <pre><code>## added 6 empty vertices to graph 359</code></pre>
 <pre><code>## added 8 empty vertices to graph 360</code></pre>
-<pre><code>## added 7 empty vertices to graph 361</code></pre>
+<pre><code>## added 6 empty vertices to graph 361</code></pre>
 <pre><code>## added 8 empty vertices to graph 362</code></pre>
 <pre><code>## added 7 empty vertices to graph 363</code></pre>
 <pre><code>## added 7 empty vertices to graph 364</code></pre>
-<pre><code>## added 7 empty vertices to graph 365</code></pre>
+<pre><code>## added 8 empty vertices to graph 365</code></pre>
 <pre><code>## added 9 empty vertices to graph 366</code></pre>
 <pre><code>## added 8 empty vertices to graph 367</code></pre>
-<pre><code>## added 9 empty vertices to graph 368</code></pre>
+<pre><code>## added 10 empty vertices to graph 368</code></pre>
 <pre><code>## added 7 empty vertices to graph 369</code></pre>
 <pre><code>## added 7 empty vertices to graph 370</code></pre>
 <pre><code>## added 7 empty vertices to graph 371</code></pre>
@@ -2132,61 +2149,61 @@ plot_comparable_networks(graphs_list,outdir=pngdir_ports,color_labels=FALSE)</co
 <pre><code>## added 9 empty vertices to graph 374</code></pre>
 <pre><code>## added 9 empty vertices to graph 375</code></pre>
 <pre><code>## added 8 empty vertices to graph 376</code></pre>
-<pre><code>## added 9 empty vertices to graph 377</code></pre>
-<pre><code>## added 11 empty vertices to graph 378</code></pre>
+<pre><code>## added 8 empty vertices to graph 377</code></pre>
+<pre><code>## added 10 empty vertices to graph 378</code></pre>
 <pre><code>## added 9 empty vertices to graph 379</code></pre>
 <pre><code>## added 9 empty vertices to graph 380</code></pre>
 <pre><code>## added 8 empty vertices to graph 381</code></pre>
 <pre><code>## added 9 empty vertices to graph 382</code></pre>
 <pre><code>## added 10 empty vertices to graph 383</code></pre>
 <pre><code>## added 6 empty vertices to graph 384</code></pre>
-<pre><code>## added 10 empty vertices to graph 385</code></pre>
+<pre><code>## added 8 empty vertices to graph 385</code></pre>
 <pre><code>## added 9 empty vertices to graph 386</code></pre>
-<pre><code>## added 10 empty vertices to graph 387</code></pre>
+<pre><code>## added 9 empty vertices to graph 387</code></pre>
 <pre><code>## added 9 empty vertices to graph 388</code></pre>
 <pre><code>## added 8 empty vertices to graph 389</code></pre>
 <pre><code>## added 9 empty vertices to graph 390</code></pre>
 <pre><code>## added 9 empty vertices to graph 391</code></pre>
 <pre><code>## added 7 empty vertices to graph 392</code></pre>
-<pre><code>## added 10 empty vertices to graph 393</code></pre>
+<pre><code>## added 11 empty vertices to graph 393</code></pre>
 <pre><code>## added 9 empty vertices to graph 394</code></pre>
 <pre><code>## added 10 empty vertices to graph 395</code></pre>
 <pre><code>## added 9 empty vertices to graph 396</code></pre>
-<pre><code>## added 9 empty vertices to graph 397</code></pre>
+<pre><code>## added 10 empty vertices to graph 397</code></pre>
 <pre><code>## added 10 empty vertices to graph 398</code></pre>
-<pre><code>## added 8 empty vertices to graph 399</code></pre>
+<pre><code>## added 9 empty vertices to graph 399</code></pre>
 <pre><code>## added 10 empty vertices to graph 400</code></pre>
 <pre><code>## added 7 empty vertices to graph 401</code></pre>
 <pre><code>## added 9 empty vertices to graph 402</code></pre>
-<pre><code>## added 9 empty vertices to graph 403</code></pre>
-<pre><code>## added 7 empty vertices to graph 404</code></pre>
+<pre><code>## added 7 empty vertices to graph 403</code></pre>
+<pre><code>## added 8 empty vertices to graph 404</code></pre>
 <pre><code>## added 8 empty vertices to graph 405</code></pre>
-<pre><code>## added 7 empty vertices to graph 406</code></pre>
+<pre><code>## added 6 empty vertices to graph 406</code></pre>
 <pre><code>## added 7 empty vertices to graph 407</code></pre>
-<pre><code>## added 10 empty vertices to graph 408</code></pre>
+<pre><code>## added 9 empty vertices to graph 408</code></pre>
 <pre><code>## added 8 empty vertices to graph 409</code></pre>
-<pre><code>## added 7 empty vertices to graph 410</code></pre>
+<pre><code>## added 8 empty vertices to graph 410</code></pre>
 <pre><code>## added 9 empty vertices to graph 411</code></pre>
 <pre><code>## added 7 empty vertices to graph 412</code></pre>
-<pre><code>## added 9 empty vertices to graph 413</code></pre>
+<pre><code>## added 8 empty vertices to graph 413</code></pre>
 <pre><code>## added 6 empty vertices to graph 414</code></pre>
 <pre><code>## added 7 empty vertices to graph 415</code></pre>
-<pre><code>## added 9 empty vertices to graph 416</code></pre>
+<pre><code>## added 10 empty vertices to graph 416</code></pre>
 <pre><code>## added 9 empty vertices to graph 417</code></pre>
 <pre><code>## added 8 empty vertices to graph 418</code></pre>
 <pre><code>## added 9 empty vertices to graph 419</code></pre>
-<pre><code>## added 7 empty vertices to graph 420</code></pre>
+<pre><code>## added 6 empty vertices to graph 420</code></pre>
 <pre><code>## added 6 empty vertices to graph 421</code></pre>
-<pre><code>## added 7 empty vertices to graph 422</code></pre>
+<pre><code>## added 6 empty vertices to graph 422</code></pre>
 <pre><code>## added 7 empty vertices to graph 423</code></pre>
-<pre><code>## added 8 empty vertices to graph 424</code></pre>
+<pre><code>## added 7 empty vertices to graph 424</code></pre>
 <pre><code>## added 8 empty vertices to graph 425</code></pre>
-<pre><code>## added 8 empty vertices to graph 426</code></pre>
+<pre><code>## added 7 empty vertices to graph 426</code></pre>
 <pre><code>## added 8 empty vertices to graph 427</code></pre>
 <pre><code>## added 16 empty vertices to graph 428</code></pre>
 <pre><code>## added 16 empty vertices to graph 429</code></pre>
 <pre><code>## added 16 empty vertices to graph 430</code></pre>
-<pre><code>## added 15 empty vertices to graph 431</code></pre>
+<pre><code>## added 16 empty vertices to graph 431</code></pre>
 <pre><code>## added 16 empty vertices to graph 432</code></pre>
 <pre><code>## added 16 empty vertices to graph 433</code></pre>
 <pre><code>## added 16 empty vertices to graph 434</code></pre>
@@ -2199,11 +2216,11 @@ plot_comparable_networks(graphs_list,outdir=pngdir_ports,color_labels=FALSE)</co
 <pre><code>## added 8 empty vertices to graph 441</code></pre>
 <pre><code>## added 9 empty vertices to graph 442</code></pre>
 <pre><code>## added 11 empty vertices to graph 443</code></pre>
-<pre><code>## added 9 empty vertices to graph 444</code></pre>
+<pre><code>## added 10 empty vertices to graph 444</code></pre>
 <pre><code>## added 10 empty vertices to graph 445</code></pre>
 <pre><code>## added 12 empty vertices to graph 446</code></pre>
 <pre><code>## added 12 empty vertices to graph 447</code></pre>
-<pre><code>## added 11 empty vertices to graph 448</code></pre>
+<pre><code>## added 12 empty vertices to graph 448</code></pre>
 <p><br></p>
 <p>Put the 2025, 2024, and all Astoria and all Morro Bay circular graphs
 in their own directories</p>
