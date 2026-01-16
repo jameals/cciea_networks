@@ -7,6 +7,7 @@ subtitle: Preparation for network analysis in CCIEA ESR 2025
 ---
 
 ```{r setup, include=FALSE}
+
 library(tidyverse)
 library(ggmap)
 library(maps)
@@ -16,15 +17,26 @@ library(ggimage)
 library(cowplot)
 library(here)
 
-## output directory for network viz
-pngdir_ports = 'data/networks/participation_vessel_ports/plots/comparable/2023 only/'
-fig_path = here::here(pngdir_ports)
+# output directory for network viz
+
+# fig_path = here::here(pngdir_ports)
+# nick can never figure out here::here() #######################################
+
+setwd('~/GitHub/cciea_networks')
+home_dir = getwd()
+pngdir_ports = 'data/networks/participation_vessel_ports/plots/comparable/2024 only/'
+fig_path = paste0(home_dir, '/',pngdir_ports)
 fig_path
+# output directly to esr repo on nick's system
+# change this each year to send to correct folder
+esr_dir = paste0('~/GitHub/Ecosystem-Status-Report-FY2026/Figures/')
+
+################################################################################  
 #load network node images
 
-thisyear <- 2023
+thisyear <- 2024
 
-thisyearsESRimages <- list.files(here::here(pngdir_ports), "2023_circular_compare")
+thisyearsESRimages <- list.files(here::here(pngdir_ports), "2024_circular_compare")
 
 wa_fig_path <- here::here('data/networks/participation_vessel_ports/plots/comparable/')
 
@@ -186,6 +198,9 @@ CW_map
 ggsave(here::here(pngdir_ports,
                 paste0('iopac-node_full-coast_rect_font_',thisyear,'.png')), CW_map, width = 6, height = 10, dpi =600)
 
+# output to ESR repo
+ggsave( paste0(esr_dir,'fpn-coast-',thisyear,'.png'), CW_map, width = 6, height = 10, dpi =600)
+
 ```
 
 ```{r iopac-node_WA_rect_m, fig.width=6, fig.height=6}
@@ -201,6 +216,8 @@ WA_map
 ggsave(here::here(pngdir_ports,
                   paste0('iopac-node_WA_rect_',thisyear,'.png')
                   ), WA_map, width = 6, height = 6, dpi =600)
+
+ggsave( paste0(esr_dir,'fpn-wa-',thisyear,'.png'), WA_map, width = 6, height = 10, dpi =600)
 
 ```
 
@@ -223,6 +240,7 @@ ggsave(here::here(pngdir_ports,
                   paste0('iopac-node_OR_rect_',thisyear,'.png')
                   ), OR_map, width = 6, height = 6, dpi =600)
 
+ggsave( paste0(esr_dir,'fpn-or-',thisyear,'.png'), OR_map, width = 6, height = 10, dpi =600)
 ```
 
 
@@ -244,6 +262,7 @@ ggsave(here::here(pngdir_ports,
                   paste0('iopac-node_NCA_rect_',thisyear,'.png')
                   ), NCA_map, width = 6, height = 6, dpi =600)
 
+ggsave( paste0(esr_dir,'fpn-nca-',thisyear,'.png'), NCA_map, width = 6, height = 10, dpi =600)
 ```
 
 
@@ -262,6 +281,9 @@ SCA_map
 ggsave(here::here(pngdir_ports,
                   paste0('iopac-node_SCA_rect_',thisyear,'.png')
                   ), SCA_map, width = 6, height = 6, dpi =600)
+
+ggsave( paste0(esr_dir,'fpn-sca-',thisyear,'.png'), SCA_map, width = 6, height = 10, dpi =600)
+
 ```
 
 
