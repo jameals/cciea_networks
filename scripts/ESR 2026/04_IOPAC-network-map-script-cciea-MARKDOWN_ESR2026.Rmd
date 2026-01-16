@@ -23,7 +23,7 @@ library(cowplot)
 library(here)
 
 ## output directory for network viz
-pngdir_ports = 'data/networks/participation_vessel_ports/plots/comparable/2025 only/'
+pngdir_ports = 'data/networks/participation_vessel_ports/plots/comparable/2025 only/.'
 fig_path = here::here(pngdir_ports)
 
 #load network node images
