@@ -130,7 +130,7 @@ img_mb <- magick::image_read(
 
 
 #load spreadsheet with lat-long coordinates for boxes
-box <- read_csv(here::here('data','input','node_box_ref.csv'))
+box <- read_csv(here::here('data','input','node_box_ref_esr2026.csv'))
 
 ```
 
@@ -139,7 +139,8 @@ box <- read_csv(here::here('data','input','node_box_ref.csv'))
 ##### coastwide figure #####
 
 #identify ports of interest to include in the boxes
-poi <- c('North WA Coast', 'Astoria', 'Fort Bragg', 'Morro Bay')
+# poi <- c('North WA Coast', 'Astoria', 'Fort Bragg', 'Morro Bay')
+poi <- c('Puget Sound', 'Newport', 'Crescent City', 'Eureka')
 
 
 #function to create the grey base-map for maps
@@ -185,10 +186,10 @@ box_iopac <- function(basemap, box_filter, region) {
 # AG changed image sizes below 010425
 
 CW_map <- ggdraw(box_iopac(base_map_iopac(c("washington", "oregon", "california"), c(-130, -117), c(NA, NA)), box_filter('CW'),c('WA', 'OR', 'NCA', 'SCA'))) + # AG changed longitude limits 010425
-  draw_image(img_nwc, x = .06, y = .66, hjust = 0, vjust = 0, width = 0.31, height = 0.31) +
-  draw_image(img_ast, x = .08, y = .43, hjust = 0, vjust = 0, width = 0.31, height = 0.31) +
-  draw_image(img_fb, x = .08, y = .18, hjust = 0, vjust = 0, width = 0.31, height = 0.31) +
-  draw_image(img_mb, x = .27, y = .29, hjust = 0, vjust = 1, width = 0.31, height = 0.31) 
+  draw_image(img_ps, x = .06, y = .66, hjust = 0, vjust = 0, width = 0.31, height = 0.31) +
+  draw_image(img_nwp, x = .08, y = .43, hjust = 0, vjust = 0, width = 0.31, height = 0.31) +
+  draw_image(img_cc, x = .08, y = .18, hjust = 0, vjust = 0, width = 0.31, height = 0.31) +
+  draw_image(img_eu, x = .27, y = .29, hjust = 0, vjust = 1, width = 0.31, height = 0.31) 
 
 CW_map
 

@@ -1,0 +1,24 @@
+Box,xmax,ymax,xmin,ymin,IOPAC,map_version,segment_line,PRIMARY_LATITUDE,PRIMARY_LONGITUDE,STATE
+1,-125,48.68738,-130.25,45.18738,Puget Sound,CW,upper_right,47.619349,-122.351471,Washington
+2,-125,44.68738,-130.25,40.83738,Newport,CW,upper_right,44.620869,-124.043041,Oregon
+3,-125,40,-130.25,36,Crescent City,CW,upper_right,41.764514,-124.200779,California
+4,-122,35.5,-127.2,31.5,Eureka,CW,upper_right,40.793401,-124.155246,California
+5,-125,48.68738,-130.25,45.18738,North WA Coast,WA,upper_right,47.9063301,-124.6215221,Washington
+6,-120,44.68738,-125,40.83738,WA Coast,WA,upper_left,46.891815,-124.119847,Washington
+7,-120,53,-125,49.75,Puget Sound,WA,lower_right,47.619349,-122.351471,Washington
+8,-117.1,48.5,-121.1,46.5,Columbia River,OR,lower_left,45.631591,-121.168866,Oregon
+9,-121.5,48.75,-125.5,46.5,Astoria,OR,lower_left,46.187375,-123.815073,Oregon
+10,-126,48,-130.25,45.5,Tillamook,OR,lower_right,45.456123,-123.833145,Oregon
+11,-125,45,-129,42.75,Newport,OR,upper_right,44.620869,-124.043041,Oregon
+12,-125,42.25,-129,39.75,Coos Bay,OR,upper_right,43.381126,-124.232597,Oregon
+13,-119,41.75,-123,39.25,Brookings,OR,upper_left,42.072408,-124.304909,Oregon
+14,-119,45,-123,42.5,Eureka,NCA,lower_left,40.793401,-124.155246,California
+15,-124,45,-128,42.5,Crescent City,NCA,lower_right,41.764514,-124.200779,California
+16,-125,42,-129,39.5,Fort Bragg,NCA,lower_right,39.439803,-123.801757,California
+17,-124,39,-128,36,San Francisco,NCA,lower_right,37.769846,-122.22569,California
+18,-117.1,42,-121,39.5,Bodega Bay,NCA,lower_left,38.327215,-123.02923,California
+19,-117.1,39,-121,36,Monterey,NCA,lower_left,36.601193,-121.88311,California
+20,-124.5,35.99,-127.75,33.5,Morro Bay,SCA,upper_right,35.367289,-120.869205,California
+21,-120.5,35.2,-124,32.5,Santa Barbara,SCA,upper_right,34.400601,-119.712955,California
+22,-121,32,-124.5,29,Los Angeles,SCA,upper_right,34.019394,-118.410825,California
+23,-117.01,32,-120.5,29,San Diego,SCA,upper_right,33.224601,-117.306291,California
