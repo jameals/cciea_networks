@@ -232,7 +232,7 @@ dat_esr2 <- dat2_long %>%
 dat_esr <- dat_esr1 %>% bind_rows(dat_esr2) %>% 
   filter( timeseries != "Other Coastal Washington" & timeseries != "Unknown Ports" & timeseries != "Columbia River")
 
-write.csv(dat_esr,here::here(indir, paste0('FPN_ed_n_ns_ec_salmon_nondts_dts_FY2026.csv',"_",Sys.Date())), row.names=FALSE)
+write.csv(dat_esr,here::here(indir, paste0('FPN_ed_n_ns_ec_salmon_nondts_dts_FY2026_',Sys.Date(),".csv")), row.names=FALSE)
 
 ```
 <br>
