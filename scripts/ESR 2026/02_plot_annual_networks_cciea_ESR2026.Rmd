@@ -50,6 +50,8 @@ if(!require("igraph")) {install.packages("igraph")}
 if(!require("RColorBrewer")) {install.packages("RColorBrewer")}
 if(!require("stringr")) {install.packages("stringr")}
 if(!require("magick")) {install.packages("magick")}
+if(!require("grid")) {install.packages("grid")}
+if(!require("cowplot")) {install.packages("cowplot")}
 
 ```
 <br>
@@ -57,7 +59,7 @@ if(!require("magick")) {install.packages("magick")}
 And calls the following functions:
 ```{r}
 source(here::here('R/color_network_nodes.R'))
-source(here::here('R/plot_network.R'))
+#source(here::here('R/plot_network.R'))
 #source(here::here('R/plot_simple_network.R'))
 source(here::here('R/plot_network_comparable.R')) # note this function will plot networks with (1) edge thickness according to edge weight, (2) node size according to the vertex attribute "importance", and (3) node colors according to the vertex attribute "colors". File names will be constructed using node attributes 'p' and 'year'. This means that the function can be used to plot vessel-level or aggregate (bulk) networks; simply change the file_suffix to tell the two apart if needed, and change the node attributes accordingly (e.g., whether V(g)$p represents port group or state). 
 ```
@@ -205,13 +207,35 @@ img_bb2022 <- magick::image_read(
   here::here(pngdir_ports,
              bodega_2022)
 )
+
+#Get the actual dimensions (width and height in pixels)
+info_bb2022 <- magick::image_info(img_bb2022)
+
 img_bb2025 <- magick::image_read(
   here::here(pngdir_ports,
              bodega_2025)
 )
 
-gg_bb2022 <-image_ggplot(img_bb2022) + labs(title = "Bodega Bay 2022")
-gg_bb2025 <-image_ggplot(img_bb2025) + labs(title = "Bodega Bay 2025")
+#Get the actual dimensions (width and height in pixels)
+info_bb2025 <- magick::image_info(img_bb2025)
+
+#gg_bb2022 <-image_ggplot(img_bb2022) + labs(title = "Bodega Bay 2022")
+gg_bb2022 <- ggplot() +
+  annotation_raster(img_bb2022, xmin = 0, xmax = info_bb2022$width, ymin = 0, ymax = info_bb2022$height) +
+  coord_fixed() +
+  scale_x_continuous(limits = c(0, info_bb2022$width[1]), expand = c(0,0)) +
+  scale_y_continuous(limits = c(0, info_bb2022$height[1]), expand = c(0,0)) +
+  theme_void() + 
+  labs(title = "Bodega Bay 2022")
+
+#gg_bb2025 <-image_ggplot(img_bb2025) + labs(title = "Bodega Bay 2025")
+gg_bb2025 <- ggplot() +
+  annotation_raster(img_bb2025, xmin = 0, xmax = info_bb2025$width, ymin = 0, ymax = info_bb2025$height) +
+  coord_fixed() +
+  scale_x_continuous(limits = c(0, info_bb2025$width[1]), expand = c(0,0)) +
+  scale_y_continuous(limits = c(0, info_bb2025$height[1]), expand = c(0,0)) +
+  theme_void() + 
+  labs(title = "Bodega Bay 2025")
 
 bb2022_2025 <- plot_grid(gg_bb2022, gg_bb2025)
 
@@ -226,13 +250,34 @@ img_mt2022 <- magick::image_read(
   here::here(pngdir_ports,
              monterey_2022)
 )
+
+#Get the actual dimensions (width and height in pixels)
+info_mt2022 <- magick::image_info(img_mt2022)
+
 img_mt2025 <- magick::image_read(
   here::here(pngdir_ports,
              monterey_2025)
 )
 
-gg_mt2022 <-image_ggplot(img_mt2022) + labs(title = "Monterey 2022")
-gg_mt2025 <-image_ggplot(img_mt2025) + labs(title = "Monterey 2025")
+#Get the actual dimensions (width and height in pixels)
+info_mt2025 <- magick::image_info(img_mt2025)
+
+gg_mt2022 <- ggplot() +
+  annotation_raster(img_mt2022, xmin = 0, xmax = info_mt2022$width, ymin = 0, ymax = info_mt2022$height) +
+  coord_fixed() +
+  scale_x_continuous(limits = c(0, info_mt2022$width[1]), expand = c(0,0)) +
+  scale_y_continuous(limits = c(0, info_mt2022$height[1]), expand = c(0,0)) +
+  theme_void() + 
+  labs(title = "Monterey 2022")
+
+#gg_mt2025 <-image_ggplot(img_mt2025) + labs(title = "Monterey 2025")
+gg_mt2025 <- ggplot() +
+  annotation_raster(img_mt2025, xmin = 0, xmax = info_mt2025$width, ymin = 0, ymax = info_mt2025$height) +
+  coord_fixed() +
+  scale_x_continuous(limits = c(0, info_mt2025$width[1]), expand = c(0,0)) +
+  scale_y_continuous(limits = c(0, info_mt2025$height[1]), expand = c(0,0)) +
+  theme_void() + 
+  labs(title = "Monterey 2025")
 
 mt2022_2025 <- plot_grid(gg_mt2022, gg_mt2025)
 

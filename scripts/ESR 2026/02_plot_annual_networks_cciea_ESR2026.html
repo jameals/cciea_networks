@@ -1626,7 +1626,7 @@ Council</h1>
 <h3 class="subtitle">Preparation for network analysis in CCIEA ESR
 2025</h3>
 <h4 class="author">M. Fisher, J.F. Samhouri</h4>
-<h4 class="date">Written Jan. 6, 2021. Last Run 2026-01-15</h4>
+<h4 class="date">Written Jan. 6, 2021. Last Run 2026-01-20</h4>
 
 </div>
 
@@ -1671,11 +1671,14 @@ with the most recent igraph files</p>
 if(!require(&quot;ggplot2&quot;)) {install.packages(&quot;ggplot2&quot;)}
 if(!require(&quot;igraph&quot;)) {install.packages(&quot;igraph&quot;)}
 if(!require(&quot;RColorBrewer&quot;)) {install.packages(&quot;RColorBrewer&quot;)}
-if(!require(&quot;stringr&quot;)) {install.packages(&quot;stringr&quot;)}</code></pre>
+if(!require(&quot;stringr&quot;)) {install.packages(&quot;stringr&quot;)}
+if(!require(&quot;magick&quot;)) {install.packages(&quot;magick&quot;)}
+if(!require(&quot;grid&quot;)) {install.packages(&quot;grid&quot;)}
+if(!require(&quot;cowplot&quot;)) {install.packages(&quot;cowplot&quot;)}</code></pre>
 <p><br></p>
 <p>And calls the following functions:</p>
 <pre class="r"><code>source(here::here(&#39;R/color_network_nodes.R&#39;))
-source(here::here(&#39;R/plot_network.R&#39;))
+#source(here::here(&#39;R/plot_network.R&#39;))
 #source(here::here(&#39;R/plot_simple_network.R&#39;))
 source(here::here(&#39;R/plot_network_comparable.R&#39;)) # note this function will plot networks with (1) edge thickness according to edge weight, (2) node size according to the vertex attribute &quot;importance&quot;, and (3) node colors according to the vertex attribute &quot;colors&quot;. File names will be constructed using node attributes &#39;p&#39; and &#39;year&#39;. This means that the function can be used to plot vessel-level or aggregate (bulk) networks; simply change the file_suffix to tell the two apart if needed, and change the node attributes accordingly (e.g., whether V(g)$p represents port group or state). </code></pre>
 <p><br></p>
@@ -2227,20 +2230,110 @@ in their own directories</p>
 <pre class="r"><code>list.of.files_2025 &lt;- list.files(here::here(pngdir_ports), &quot;2025_circular_compare&quot;)
 file.copy(here::here(pngdir_ports,list.of.files_2025), here::here(pngdir_ports, &quot;2025 only&quot;), overwrite = TRUE)</code></pre>
 <pre><code>##  [1] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
-## [16] TRUE TRUE TRUE TRUE TRUE</code></pre>
+## [16] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
+## [31] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE</code></pre>
 <pre class="r"><code>list.of.files_2024 &lt;- list.files(here::here(pngdir_ports), &quot;2024_circular_compare&quot;)
 file.copy(here::here(pngdir_ports,list.of.files_2024), here::here(pngdir_ports, &quot;2024 only&quot;), overwrite = TRUE)</code></pre>
 <pre><code>##  [1] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
-## [16] TRUE TRUE TRUE TRUE TRUE</code></pre>
+## [16] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
+## [31] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE</code></pre>
 <pre class="r"><code>list.of.files_astoria &lt;- intersect(list.files(here::here(pngdir_ports), pattern = &quot;Astoria&quot;), list.files(here::here(pngdir_ports), pattern = &quot;circular&quot;)) 
 file.copy(here::here(pngdir_ports,list.of.files_astoria), here::here(pngdir_ports, &quot;astoria&quot;), overwrite = TRUE)</code></pre>
 <pre><code>##  [1] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
-## [16] TRUE TRUE TRUE TRUE TRUE TRUE TRUE</code></pre>
+## [16] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
+## [31] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE</code></pre>
 <pre class="r"><code>list.of.files_morrobay &lt;- intersect(list.files(here::here(pngdir_ports), pattern = &quot;Morro Bay&quot;), list.files(here::here(pngdir_ports), pattern = &quot;circular&quot;)) 
 file.copy(here::here(pngdir_ports,list.of.files_morrobay), here::here(pngdir_ports, &quot;morrobay&quot;), overwrite = TRUE)</code></pre>
 <pre><code>##  [1] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
-## [16] TRUE TRUE TRUE TRUE TRUE TRUE TRUE</code></pre>
+## [16] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
+## [31] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE</code></pre>
 <p><br></p>
+<p>Assemble the 2022 vs 2025 networks for 2 California ports that
+historically had heavy salmon participation before the last 3 years of
+salmon fishery closures.</p>
+<pre class="r"><code>bodega_2022 &lt;- intersect(intersect(list.files(here::here(pngdir_ports), pattern = &quot;Bodega&quot;), list.files(here::here(pngdir_ports), pattern = &quot;circular&quot;)), list.files(here::here(pngdir_ports), pattern = &quot;2022&quot;)) 
+bodega_2025 &lt;- intersect(intersect(list.files(here::here(pngdir_ports), pattern = &quot;Bodega&quot;), list.files(here::here(pngdir_ports), pattern = &quot;circular&quot;)), list.files(here::here(pngdir_ports), pattern = &quot;2025&quot;)) 
+
+img_bb2022 &lt;- magick::image_read(
+  here::here(pngdir_ports,
+             bodega_2022)
+)
+
+#Get the actual dimensions (width and height in pixels)
+info_bb2022 &lt;- magick::image_info(img_bb2022)
+
+img_bb2025 &lt;- magick::image_read(
+  here::here(pngdir_ports,
+             bodega_2025)
+)
+
+#Get the actual dimensions (width and height in pixels)
+info_bb2025 &lt;- magick::image_info(img_bb2025)
+
+#gg_bb2022 &lt;-image_ggplot(img_bb2022) + labs(title = &quot;Bodega Bay 2022&quot;)
+gg_bb2022 &lt;- ggplot() +
+  annotation_raster(img_bb2022, xmin = 0, xmax = info_bb2022$width, ymin = 0, ymax = info_bb2022$height) +
+  coord_fixed() +
+  scale_x_continuous(limits = c(0, info_bb2022$width[1]), expand = c(0,0)) +
+  scale_y_continuous(limits = c(0, info_bb2022$height[1]), expand = c(0,0)) +
+  theme_void() + 
+  labs(title = &quot;Bodega Bay 2022&quot;)
+
+#gg_bb2025 &lt;-image_ggplot(img_bb2025) + labs(title = &quot;Bodega Bay 2025&quot;)
+gg_bb2025 &lt;- ggplot() +
+  annotation_raster(img_bb2025, xmin = 0, xmax = info_bb2025$width, ymin = 0, ymax = info_bb2025$height) +
+  coord_fixed() +
+  scale_x_continuous(limits = c(0, info_bb2025$width[1]), expand = c(0,0)) +
+  scale_y_continuous(limits = c(0, info_bb2025$height[1]), expand = c(0,0)) +
+  theme_void() + 
+  labs(title = &quot;Bodega Bay 2025&quot;)
+
+bb2022_2025 &lt;- plot_grid(gg_bb2022, gg_bb2025)
+
+ggsave(here::here(pngdir_ports,
+                paste0(&#39;bodega bay 2022 v 2025_&#39;,Sys.Date(),&#39;.png&#39;)), bb2022_2025, width = 6, height = 10, dpi =600)
+
+
+monterey_2022 &lt;- intersect(intersect(list.files(here::here(pngdir_ports), pattern = &quot;Monterey&quot;), list.files(here::here(pngdir_ports), pattern = &quot;circular&quot;)), list.files(here::here(pngdir_ports), pattern = &quot;2022&quot;)) 
+monterey_2025 &lt;- intersect(intersect(list.files(here::here(pngdir_ports), pattern = &quot;Monterey&quot;), list.files(here::here(pngdir_ports), pattern = &quot;circular&quot;)), list.files(here::here(pngdir_ports), pattern = &quot;2025&quot;)) 
+
+img_mt2022 &lt;- magick::image_read(
+  here::here(pngdir_ports,
+             monterey_2022)
+)
+
+#Get the actual dimensions (width and height in pixels)
+info_mt2022 &lt;- magick::image_info(img_mt2022)
+
+img_mt2025 &lt;- magick::image_read(
+  here::here(pngdir_ports,
+             monterey_2025)
+)
+
+#Get the actual dimensions (width and height in pixels)
+info_mt2025 &lt;- magick::image_info(img_mt2025)
+
+gg_mt2022 &lt;- ggplot() +
+  annotation_raster(img_mt2022, xmin = 0, xmax = info_mt2022$width, ymin = 0, ymax = info_mt2022$height) +
+  coord_fixed() +
+  scale_x_continuous(limits = c(0, info_mt2022$width[1]), expand = c(0,0)) +
+  scale_y_continuous(limits = c(0, info_mt2022$height[1]), expand = c(0,0)) +
+  theme_void() + 
+  labs(title = &quot;Monterey 2022&quot;)
+
+#gg_mt2025 &lt;-image_ggplot(img_mt2025) + labs(title = &quot;Monterey 2025&quot;)
+gg_mt2025 &lt;- ggplot() +
+  annotation_raster(img_mt2025, xmin = 0, xmax = info_mt2025$width, ymin = 0, ymax = info_mt2025$height) +
+  coord_fixed() +
+  scale_x_continuous(limits = c(0, info_mt2025$width[1]), expand = c(0,0)) +
+  scale_y_continuous(limits = c(0, info_mt2025$height[1]), expand = c(0,0)) +
+  theme_void() + 
+  labs(title = &quot;Monterey 2025&quot;)
+
+mt2022_2025 &lt;- plot_grid(gg_mt2022, gg_mt2025)
+
+ggsave(here::here(pngdir_ports,
+                paste0(&#39;monterey 2022 v 2025_&#39;,Sys.Date(),&#39;.png&#39;)), mt2022_2025, width = 6, height = 10, dpi =600)</code></pre>
 </div>
 
 
