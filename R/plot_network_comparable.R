@@ -125,8 +125,9 @@ plot_comparable_networks <- function(glist, color_labels=FALSE, outdir, file_suf
       # add vertex attribute describing number of vessels active in each fishery, after filters
       V(g)$vessel_label <- add_vessel_labels(g)
       
-      # split echinoderms vertex into two lines, because it's too long for our graphing method
+      # split echinoderms and Prawns/shrimp vertex into two lines, because it's too long for our graphing method
       V(g)$common_name <- ifelse(V(g)$common_name=="Echinoderms","Echino-\nderms",V(g)$common_name)
+      V(g)$common_name <- ifelse(V(g)$common_name=="Prawns/shrimp","Prawns/\nshrimp",V(g)$common_name)
       
       # set label locations. see note at end of function 
       lab.position.df <- data.frame(node=seq(1:vcount(g)), position=new_order) %>%
