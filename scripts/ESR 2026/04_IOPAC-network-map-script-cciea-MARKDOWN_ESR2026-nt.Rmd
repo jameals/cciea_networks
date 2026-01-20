@@ -136,8 +136,6 @@ img_mb <- magick::image_read(
 box <- read_csv(here::here('data','input','node_box_ref.csv'))
 
 
-
-
 ```
 
 
@@ -184,8 +182,6 @@ box_iopac <- function(basemap, box_filter, region) {
 
 ```
 
-
-
 ```{r iopac-node_full-coast_rect_font_m, fig.width=7, fig.height=9}
 CW_map <- ggdraw(box_iopac(base_map_iopac(c("washington", "oregon", "california"), c(-130, -117), c(NA, NA)), box_filter('CW'),c('WA', 'OR', 'NCA', 'SCA'))) + 
   draw_image(img_nwc, x = .06, y = .66, hjust = 0, vjust = 0, width = 0.31, height = 0.31) +
@@ -204,12 +200,15 @@ ggsave( paste0(esr_dir,'fpn-coast-',thisyear,'.png'), CW_map, width = 6, height 
 ```
 
 ```{r iopac-node_WA_rect_m, fig.width=6, fig.height=6}
+
+ht = wd = 0.25
+
 WA_map <- ggdraw(box_iopac(base_map_iopac("washington", c(-130, -117), c(NA, NA)), 
                              box_filter('WA'), 
                              'WA')) + 
-  draw_image(img_ps, x = .38, y = .65, hjust = 0, vjust = 0, width = 0.3, height = 0.3) +
-  draw_image(img_nwc, x = .13, y = .32, hjust = 0, vjust = 0, width = 0.3, height = 0.3) +
-  draw_image(img_wc, x = .39, y = .01, hjust = 0, vjust = 0, width = 0.3, height = 0.3) 
+  draw_image(img_ps, x = .38, y = .65, hjust = -0.16, vjust = -0.1, width = wd, height = ht) +
+  draw_image(img_nwc, x = .13, y = .32, hjust = -0.1, vjust = -0.1, width = wd, height = ht) +
+  draw_image(img_wc, x = .39, y = .01, hjust = -0.1, vjust = -0.20, width = wd, height = ht) 
   
 WA_map
 
@@ -217,22 +216,25 @@ ggsave(here::here(pngdir_ports,
                   paste0('iopac-node_WA_rect_',thisyear,'.png')
                   ), WA_map, width = 6, height = 6, dpi =600)
 
-ggsave( paste0(esr_dir,'fpn-wa-',thisyear,'.png'), WA_map, width = 6, height = 10, dpi =600)
+ggsave( paste0(esr_dir,'fpn-wa-',thisyear,'.png'), WA_map, width = 6, height = 6, dpi =600)
 
 ```
 
 
 ```{r iopac-node_OR_rect_m, fig.width=6, fig.height=6}
 
+ht = wd = 0.25
+
+
 OR_map <- ggdraw(box_iopac(base_map_iopac("oregon", c(-130, -117), c(NA, NA)), 
                              box_filter('OR'), 
                              'OR')) + 
-  draw_image(img_cr, x = .55, y = .7, hjust = 0, vjust = 0, width = 0.29, height = 0.29) +
-  draw_image(img_ast, x = .35, y = .68, hjust = 0, vjust = 0, width = 0.29, height = 0.29) +
-  draw_image(img_tl, x = .04, y = .61, hjust = 0, vjust = 0, width = 0.29, height = 0.29) +
-  draw_image(img_nwp, x = .11, y = .31, hjust = 0, vjust = 0, width = 0.29, height = 0.29) +
-  draw_image(img_cb, x = .11, y = .08, hjust = 0, vjust = 0, width = 0.26, height = 0.26) +
-  draw_image(img_brk, x = .515, y = .04, hjust = 0, vjust = 0, width = 0.29, height = 0.29)
+  draw_image(img_cr, x = .55, y = .7, hjust = 0, vjust = 0, width = wd, height = ht) +
+  draw_image(img_ast, x = .35, y = .68, hjust = -0.1, vjust = -0.07, width = wd, height = ht) +
+  draw_image(img_tl, x = .04, y = .61, hjust = -0.1, vjust = -0.1, width = wd, height = ht) +
+  draw_image(img_nwp, x = .11, y = .31, hjust = -0.1, vjust = -0.1, width = wd, height = ht) +
+  draw_image(img_cb, x = .11, y = .08, hjust = 0, vjust = 0, width = wd, height = ht) +
+  draw_image(img_brk, x = .515, y = .04, hjust = -0.1, vjust = 0, width = wd, height = ht)
 
 OR_map
 
@@ -240,41 +242,46 @@ ggsave(here::here(pngdir_ports,
                   paste0('iopac-node_OR_rect_',thisyear,'.png')
                   ), OR_map, width = 6, height = 6, dpi =600)
 
-ggsave( paste0(esr_dir,'fpn-or-',thisyear,'.png'), OR_map, width = 6, height = 10, dpi =600)
+ggsave( paste0(esr_dir,'fpn-or-',thisyear,'.png'), OR_map, width = 6, height = 6, dpi =600)
 ```
 
 
 ```{r iopac-node_NCA_rect_m, fig.width=7, fig.height=6}
+# box$PRIMARY_LONGITUDE[box$IOPAC=="Monterey"] <- -121.8
+box$xmin[box$IOPAC=="Monterey"] <- -120.3
+box$xmax[box$IOPAC=="Monterey"] <- -116.4
+
+ht = wd = 0.23
 
 NCA_map <- ggdraw(box_iopac(base_map_iopac("california", c(-130, -117), c(NA, NA)), 
                             box_filter('NCA'), 
                             'NCA')) + 
-  draw_image(img_cc, x = .245, y = .71, hjust = 0, vjust = 0, width = 0.23, height = 0.23) +
-  draw_image(img_eu, x = .5, y = .72, hjust = 0, vjust = 0, width = 0.24, height = 0.24) +
-  draw_image(img_fb, x = .2, y = .47, hjust = 0, vjust = 0, width = 0.22, height = 0.22) +
-  draw_image(img_bb, x = .595, y = .48, hjust = 0, vjust = 0, width = 0.24, height = 0.24) +
-  draw_image(img_sf, x = .225, y = .25, hjust = 0, vjust = 0, width = 0.24, height = 0.24) +
-  draw_image(img_mt, x = .615, y = .26, hjust = 0, vjust = 0, width = 0.24, height = 0.24)
-
+  draw_image(img_cc, x = .245, y = .71, hjust = -0.08, vjust = 0, width = wd, height = ht) +
+  draw_image(img_eu, x = .5, y = .72, hjust = -0.03, vjust = 0, width = 0.22, height = 0.22) +
+  draw_image(img_fb, x = .2, y = .47, hjust = -0.05, vjust = 0, width = wd, height = ht) +
+  draw_image(img_bb, x = .595, y = .48, hjust = -0.05, vjust = -0.15, width = 0.22, height = 0.22) +
+  draw_image(img_sf, x = .225, y = .25, hjust = 0, vjust = 0, width = wd, height = ht) +
+  draw_image(img_mt, x = .65, y = .27, hjust = 0.00, vjust = 0, width = 0.21, height = 0.21)
+  
 NCA_map
 
 ggsave(here::here(pngdir_ports,
                   paste0('iopac-node_NCA_rect_',thisyear,'.png')
                   ), NCA_map, width = 6, height = 6, dpi =600)
 
-ggsave( paste0(esr_dir,'fpn-nca-',thisyear,'.png'), NCA_map, width = 6, height = 10, dpi =600)
+ggsave( paste0(esr_dir,'fpn-nca-',thisyear,'.png'), NCA_map, width = 6, height = 5.5, dpi =600)
 ```
 
 
-```{r iopac-node_SCA_rect_m, fig.width=6, fig.height=5}
+```{r iopac-node_SCA_rect_m, fig.width=6, fig.height=6}
 
 SCA_map <- ggdraw(box_iopac(base_map_iopac("california", c(-130, -117), c(NA, NA)), 
                             box_filter('SCA'), 
                             'SCA')) + 
-  draw_image(img_mb, x = .25, y = .325, hjust = 0, vjust = 0, width = 0.20, height = 0.20) +
-  draw_image(img_sb, x = .45, y = .26, hjust = 0, vjust = 0, width = 0.21, height = 0.21) +
+  draw_image(img_mb, x = .25, y = .325, hjust = -0.08, vjust = 0, width = 0.18, height = 0.18) +
+  draw_image(img_sb, x = .45, y = .26, hjust = -0.08, vjust = 0, width = 0.19, height = 0.19) +
   draw_image(img_la, x = .43, y = .04, hjust = 0, vjust = 0, width = 0.21, height = 0.21) +
-  draw_image(img_sd, x = .65, y = .04, hjust = 0, vjust = 0, width = 0.21, height = 0.21) 
+  draw_image(img_sd, x = .65, y = .04, hjust = -0.07, vjust = -0.09, width = 0.19, height = 0.19) 
 
 SCA_map
 
@@ -282,7 +289,7 @@ ggsave(here::here(pngdir_ports,
                   paste0('iopac-node_SCA_rect_',thisyear,'.png')
                   ), SCA_map, width = 6, height = 6, dpi =600)
 
-ggsave( paste0(esr_dir,'fpn-sca-',thisyear,'.png'), SCA_map, width = 6, height = 10, dpi =600)
+ggsave( paste0(esr_dir,'fpn-sca-',thisyear,'.png'), SCA_map, width = 6, height = 6, dpi =600)
 
 ```
 
