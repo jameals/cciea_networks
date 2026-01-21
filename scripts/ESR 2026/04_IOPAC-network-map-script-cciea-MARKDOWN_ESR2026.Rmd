@@ -9,6 +9,11 @@ subtitle: Preparation for network analysis in CCIEA ESR 2026
 Clear the environment
 ```{r}
 rm(list=ls())
+
+# output to the ESR repo automatically
+esr_dir = paste0('~/GitHub/Ecosystem-Status-Report-FY2026/Figures/')
+esr_output = TRUE
+
 ```
 
 
@@ -40,6 +45,8 @@ wa_fig_path <- here::here('data/networks/participation_vessel_ports/plots/compar
 
 knitr::opts_chunk$set(fig.width=6, fig.height=10, fig.path= fig_path, dpi = 600,
                       results = 'asis', concordance=F, echo=F, cache = F, warning = F, error=F, message = F)
+
+
 ```
 
 ```{r}
@@ -199,6 +206,9 @@ CW_map
 ggsave(here::here(pngdir_ports,
                 paste0('iopac-node_full-coast_rect_font_',thisyear,'.png')), CW_map, width = 6, height = 10, dpi =600)
 
+# output to ESR repo
+if(esr_output==TRUE){ggsave( paste0(esr_dir,'fpn-coast-',thisyear,'.png'), CW_map, width = 6, height = 10, dpi =600)}
+
 ```
 
 
@@ -216,6 +226,7 @@ ggsave(here::here(pngdir_ports,
                   paste0('iopac-node_WA_rect_',thisyear,'.png')
                   ), WA_map, width = 6, height = 6, dpi =600)
 
+if(esr_output==TRUE){ggsave( paste0(esr_dir,'fpn-wa-',thisyear,'.png'), WA_map, width = 6, height = 6, dpi =600)}
 ```
 
 
@@ -237,8 +248,8 @@ ggsave(here::here(pngdir_ports,
                   paste0('iopac-node_OR_rect_',thisyear,'.png')
                   ), OR_map, width = 6, height = 6, dpi =600)
 
+if(esr_output==TRUE){ggsave( paste0(esr_dir,'fpn-or-',thisyear,'.png'), OR_map, width = 6, height = 6, dpi =600)}
 ```
-
 
 ```{r iopac-node_NCA_rect_m, fig.width=7, fig.height=6}
 
@@ -257,7 +268,9 @@ NCA_map
 ggsave(here::here(pngdir_ports,
                   paste0('iopac-node_NCA_rect_',thisyear,'.png')
                   ), NCA_map, width = 6, height = 6, dpi =600)
-
+                  
+                  
+if(esr_output==TRUE){ggsave( paste0(esr_dir,'fpn-nca-',thisyear,'.png'), NCA_map, width = 6, height = 6, dpi =600)}
 ```
 
 
@@ -276,6 +289,8 @@ SCA_map
 ggsave(here::here(pngdir_ports,
                   paste0('iopac-node_SCA_rect_',thisyear,'.png')
                   ), SCA_map, width = 6, height = 6, dpi =600)
+
+if(esr_output==TRUE){ggsave( paste0(esr_dir,'fpn-sca-',thisyear,'.png'), SCA_map, width = 6, height = 6, dpi =600)}
 ```
 
 
