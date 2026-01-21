@@ -216,9 +216,9 @@ if(esr_output==TRUE){ggsave( paste0(esr_dir,'fpn-coast-',thisyear,'.png'), CW_ma
 WA_map <- ggdraw(box_iopac(base_map_iopac("washington", c(-130, -117), c(NA, NA)), 
                              box_filter('WA'), 
                              'WA')) + 
-  draw_image(img_ps, x = .38, y = .65, hjust = 0, vjust = 0, width = 0.3, height = 0.3) +
-  draw_image(img_nwc, x = .13, y = .32, hjust = 0, vjust = 0, width = 0.3, height = 0.3) +
-  draw_image(img_wc, x = .39, y = .01, hjust = 0, vjust = 0, width = 0.3, height = 0.3) 
+  draw_image(img_ps, x = .39, y = .66, hjust = 0, vjust = 0, width = 0.3, height = 0.26) +
+  draw_image(img_nwc, x = .14, y = .34, hjust = 0, vjust = 0, width = 0.3, height = 0.26) +
+  draw_image(img_wc, x = .39, y = .05, hjust = 0, vjust = 0, width = 0.3, height = 0.26) 
   
 WA_map
 
@@ -235,12 +235,12 @@ if(esr_output==TRUE){ggsave( paste0(esr_dir,'fpn-wa-',thisyear,'.png'), WA_map, 
 OR_map <- ggdraw(box_iopac(base_map_iopac("oregon", c(-130, -117), c(NA, NA)), 
                              box_filter('OR'), 
                              'OR')) + 
-  draw_image(img_cr, x = .55, y = .7, hjust = 0, vjust = 0, width = 0.29, height = 0.29) +
-  draw_image(img_ast, x = .35, y = .68, hjust = 0, vjust = 0, width = 0.29, height = 0.29) +
+  draw_image(img_cr, x = .61, y = .65, hjust = 0, vjust = 0, width = 0.29, height = 0.29) +
+  draw_image(img_ast, x = .35, y = .695, hjust = 0, vjust = 0, width = 0.29, height = 0.25) +
   draw_image(img_tl, x = .04, y = .61, hjust = 0, vjust = 0, width = 0.29, height = 0.29) +
-  draw_image(img_nwp, x = .11, y = .31, hjust = 0, vjust = 0, width = 0.29, height = 0.29) +
+  draw_image(img_nwp, x = .12, y = .34, hjust = 0, vjust = 0, width = 0.28, height = 0.28) +
   draw_image(img_cb, x = .11, y = .08, hjust = 0, vjust = 0, width = 0.26, height = 0.26) +
-  draw_image(img_brk, x = .515, y = .04, hjust = 0, vjust = 0, width = 0.29, height = 0.29)
+  draw_image(img_brk, x = .515, y = .04, hjust = 0, vjust = 0, width = 0.28, height = 0.28)
 
 OR_map
 
@@ -257,9 +257,9 @@ NCA_map <- ggdraw(box_iopac(base_map_iopac("california", c(-130, -117), c(NA, NA
                             box_filter('NCA'), 
                             'NCA')) + 
   draw_image(img_cc, x = .245, y = .71, hjust = 0, vjust = 0, width = 0.23, height = 0.23) +
-  draw_image(img_eu, x = .5, y = .72, hjust = 0, vjust = 0, width = 0.24, height = 0.24) +
-  draw_image(img_fb, x = .2, y = .47, hjust = 0, vjust = 0, width = 0.22, height = 0.22) +
-  draw_image(img_bb, x = .595, y = .48, hjust = 0, vjust = 0, width = 0.24, height = 0.24) +
+  draw_image(img_eu, x = .505, y = .72, hjust = 0, vjust = 0, width = 0.24, height = 0.24) +
+  draw_image(img_fb, x = .200, y = .49, hjust = 0, vjust = 0, width = 0.22, height = 0.22) +
+  draw_image(img_bb, x = .625, y = .48, hjust = 0, vjust = 0, width = 0.22, height = 0.24) +
   draw_image(img_sf, x = .225, y = .25, hjust = 0, vjust = 0, width = 0.24, height = 0.24) +
   draw_image(img_mt, x = .615, y = .26, hjust = 0, vjust = 0, width = 0.24, height = 0.24)
 
@@ -279,10 +279,10 @@ if(esr_output==TRUE){ggsave( paste0(esr_dir,'fpn-nca-',thisyear,'.png'), NCA_map
 SCA_map <- ggdraw(box_iopac(base_map_iopac("california", c(-130, -117), c(NA, NA)), 
                             box_filter('SCA'), 
                             'SCA')) + 
-  draw_image(img_mb, x = .25, y = .325, hjust = 0, vjust = 0, width = 0.20, height = 0.20) +
-  draw_image(img_sb, x = .45, y = .26, hjust = 0, vjust = 0, width = 0.21, height = 0.21) +
-  draw_image(img_la, x = .43, y = .04, hjust = 0, vjust = 0, width = 0.21, height = 0.21) +
-  draw_image(img_sd, x = .65, y = .04, hjust = 0, vjust = 0, width = 0.21, height = 0.21) 
+  draw_image(img_mb, x = .25, y = .325, hjust = 0, vjust = 0, width = 0.19, height = 0.20) +
+  draw_image(img_sb, x = .46, y = .26, hjust = 0, vjust = 0, width = 0.20, height = 0.21) +
+  draw_image(img_la, x = .43, y = .04, hjust = 0, vjust = 0, width = 0.20, height = 0.21) +
+  draw_image(img_sd, x = .65, y = .04, hjust = 0, vjust = 0, width = 0.20, height = 0.21) 
 
 SCA_map
 
