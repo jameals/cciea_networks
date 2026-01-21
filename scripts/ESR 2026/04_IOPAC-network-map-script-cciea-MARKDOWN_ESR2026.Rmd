@@ -30,8 +30,11 @@ fig_path = here::here(pngdir_ports)
 
 thisyear <- 2025
 
+# add date for most recent graphs
+most_recent_igraph <- "2026-01-20"
+
 #fig_path
-thisyearsESRimages <- list.files(here::here(pngdir_ports), "2025_circular_compare")
+thisyearsESRimages <- list.files(here::here(pngdir_ports), paste0("2025_circular_compare_",most_recent_igraph))
 
 wa_fig_path <- here::here('data/networks/participation_vessel_ports/plots/comparable/')
 
