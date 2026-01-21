@@ -11,8 +11,8 @@ Clear the environment
 rm(list=ls())
 
 # output to the ESR repo automatically
-esr_dir = paste0('~/GitHub/Ecosystem-Status-Report-FY2026/Figures/')
-esr_output = TRUE
+esr_dir = paste0('~/GitHub/Ecosystem-Status-Report-FY2026/Figures/') # change to reflect directory that ESR repo is in
+esr_output = TRUE # set to false if not writing ESR repo
 
 ```
 
