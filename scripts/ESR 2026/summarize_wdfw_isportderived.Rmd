@@ -17,23 +17,24 @@ fontsize: 11pt
 ---
 
 # PacFIN query
-<!-- select * -->
 
-<!-- from PACFIN_MARTS.COMPREHENSIVE_FT cft -->
+Make sure to update the definition of `latestpull` with the date on which PacFIN was queried, and `min_crab_year` and `max_crab_year` to define the years reported for the ESR.
 
-<!-- left join PACFIN_MARTS.WDFW_FT_PORT_DERIVED_V ftpd -->
+<!-- SELECT * -->
 
-<!-- on cft.pacfin_year = ftpd.landing_year -->
+<!--     FROM PACFIN_MARTS.COMPREHENSIVE_FT cft -->
 
-<!-- and cft.ftid = ftpd.ftid -->
+<!--          LEFT JOIN PACFIN_MARTS.WDFW_FT_PORT_DERIVED_V ftpd -->
 
-<!-- and cft.agency_code = ftpd.agency_code -->
+<!--              ON     cft.pacfin_year = ftpd.landing_year -->
 
-<!-- WHERE cft.pacfin_year between 2004 and 2024 -->
+<!--                 AND cft.ftid = ftpd.ftid -->
 
-<!-- and cft.agency_code='W' -->
+<!--                 AND cft.agency_code = ftpd.agency_code -->
 
-<!-- order by cft.landing_year desc; -->
+<!--    WHERE cft.pacfin_year BETWEEN 2003 AND 2025 AND cft.agency_code = 'W' -->
+
+<!-- ORDER BY cft.landing_year DESC; -->
 
 # Load libraries and set directories
 ```{r setup}
@@ -45,6 +46,7 @@ if(!require("formattable")) {install.packages("formattable")}
 if(!require("kableExtra")) {install.packages("kableExtra")}
 if(!require("scales")) {install.packages("scales")}
 if(!require("dplyr")) {install.packages("dplyr")}
+if(!require("tictoc")) {install.packages("tictoc")}
 
 library(here)
 library(tidyverse)
@@ -53,12 +55,13 @@ library(formattable)
 library(kableExtra)
 library(dplyr)
 library(scales)
+library(tictoc)
 
 # raw PacFIN fish ticket data file location
-indir2 <- "/Users/jameal.samhouri/Documents/PacFIN Data/"
+indir2 <- "/Users/jameal.samhouri/Documents/CONFIDENTIAL DATA/PacFIN Tickets/"
 
 # output directory for confidential data
-out_conf_dir <- "/Users/jameal.samhouri/Documents/CCIEA Networks/processed/"
+out_conf_dir <- "/Users/jameal.samhouri/Documents/CONFIDENTIAL DATA/PacFIN Tickets/"
 
 statdir = 'results/statistics'
 
@@ -72,33 +75,41 @@ If you have a new download of fish ticket data and want to clean it up a bit and
 <!-- ```{r csv2rds} -->
 
 <!-- # NOTE: reading in PacFIN csv's for multiple years is SLOW, and took >1.5hrs on JS macbook -->
+<!-- tic() -->
 
-<!-- tmpfile_name <- 'isportderived_2004_2024.csv' # latest pull from PacFIN 01-29-2025 -->
+<!-- tmpfile_name <- 'fish tickets 2003-2025 WDFW  port derived 012725.csv' # latest pull from PacFIN 01-27-2026 -->
 <!-- tmpfile2 <- read.csv(paste0(indir2,tmpfile_name)) -->
-<!-- glimpse(tmpfile2) -->
+<!-- #glimpse(tmpfile2) -->
 
 <!-- #as.Date(tmpfile2[1,]$LANDING_DATE, "%m/%d/%Y") -->
 
 <!-- # # LANDING_YEAR in more recent data pulls has a time associated with it. convert myfile2$LANDING_DATE to date formats that exclude time. added 12-29-2021 -->
-<!-- tmpfile2$LANDING_DATE <- as.Date(tmpfile2$LANDING_DATE, "%m/%d/%Y") -->
-<!-- write_rds(tmpfile2, paste0(out_conf_dir,'WDFW fish tickets 2004-2024_',Sys.Date(),'.rds')) -->
+<!-- # update 01-28-2026. LANDING_DATE format now is 21-SEP-25, so updated conversion below -->
+<!-- tmpfile2$LANDING_DATE <- as.Date(tmpfile2$LANDING_DATE, "%d-%b-%y") -->
+<!-- write_rds(tmpfile2, paste0(out_conf_dir,'WDFW fish tickets 2003-2025_',Sys.Date(),'.rds')) -->
 <!-- rm(tmpfile2) -->
 
+<!-- toc() -->
+<!-- # 86.833 sec elapsed -->
 <!-- ``` -->
 
 
 If you already have an rds, start here.
 ```{r readinrds}
-
-wdfwtix_filename <- 'WDFW fish tickets 2004-2024_2025-02-04'
+tic()
+latestpull <- "2026-01-28"
+wdfwtix_filename <- paste0('WDFW fish tickets 2003-2025_',latestpull)
 wdfw_tix <- read_rds(paste0(out_conf_dir, wdfwtix_filename, '.rds'))
+toc()
+
+# 23.801 sec elapsed
 
 #glimpse(wdfw_tix)
 
 ```
 # Convert to crab years
 
-A crab year is defined as week 46 of year 1 through week 45 of year 2; for example, the Use crab year to split data frame, but remove the crab_year column from data set before writing out to file.
+A crab year is defined as week 46 of year 1 through week 45 of year 2
 
 ```{r crab_year}
 
@@ -107,8 +118,18 @@ wdfw_tix1 <- wdfw_tix %>%
   ## create 'calendar week of landing' variable
   mutate(tweek=week(tdate)) %>%
   ## create crab year variable 
-  mutate(crab_year = ifelse(tweek > 45, LANDING_YEAR, LANDING_YEAR - 1))
+  mutate(crab_year = as.numeric(ifelse(tweek > 45, LANDING_YEAR + 1, LANDING_YEAR)))
 rm(wdfw_tix)
+
+```
+
+Set the crab years of interest for this ESR.
+
+```{r crab_year_ESR}
+
+min_crab_year <- 2004
+max_crab_year <- 2025
+year_range <- as.numeric(min_crab_year:max_crab_year)
 
 ```
 
@@ -117,16 +138,27 @@ rm(wdfw_tix)
 For the ISDERIVED column: 0 means it is not derived, 
 1 means it is derived, Null means we do not know
 
+Theresa Tsou (WDFW) 01-27-2026. "I would like to point out again that if a landing port is derived from the license database, it doesn’t always mean it is an error. Most of the time, the address on license reflects their home port, the port they use most often."
+
 ```{r sum_isportderived}
 
+wdfw_tix1$IS_PORT_DERIVED <- as.factor(wdfw_tix1$IS_PORT_DERIVED)
+
 portderivedsum <- wdfw_tix1 %>%
+  filter(crab_year >= min_crab_year) %>%
+  filter(crab_year <= max_crab_year) %>%
   group_by(crab_year, IS_PORT_DERIVED) %>%
   summarise(
     num_tix = n(),
-    total_landings = sum(LANDED_WEIGHT_MTONS),
-    total_afi_revenue = sum(AFI_EXVESSEL_REVENUE),
-    .groups = 'drop_last'
+    total_landings = sum(LANDED_WEIGHT_MTONS, na.rm=TRUE), # 01-28-2026. warning: added na.rm = TRUE; implications unclear but it prevents in the total_landings column
+    total_afi_revenue = sum(AFI_EXVESSEL_REVENUE, na.rm=TRUE), # 01-28-2026. warning: added na.rm = TRUE; implications unclear but it prevents in the total_afi_revenue column
+    .groups = 'drop' #'drop_last'. changed 01-28-2026
   ) %>%
+  
+  # make sure every crab_year is represented for every level of IS_PORT_DERIVED
+  complete(IS_PORT_DERIVED, crab_year = year_range, fill = list(num_tix = 0, total_landings = 0, total_afi_revenue = 0), explicit = FALSE) %>% 
+  
+  group_by(crab_year) %>%
   mutate(
     percent_tix = scales::percent(num_tix/sum(num_tix), accuracy = 0.1),
     percent_landings = scales::percent(total_landings/sum(total_landings), accuracy = 0.1),
@@ -239,15 +271,15 @@ portderivedUNKNOWN_out
 ```{r write}
 
 write_csv(portNOTderived_out,
-          paste0(statdir, 'portNOTderived_out.csv')
+          here::here(statdir, paste0('portNOTderived_out_FY2026_',Sys.Date(),".csv"))
           )
 
 write_csv(portderived_out,
-          paste0(statdir, 'portderived_out.csv')
+          here::here(statdir, paste0('portderived_out_FY2026_',Sys.Date(),".csv"))
           )
 
 write_csv(portderivedUNKNOWN_out,
-          paste0(statdir, 'portderivedUNKNOWN_out.csv')
+          here::here(statdir, paste0('portderivedUNKNOWN_out_FY2026_',Sys.Date(),".csv"))
           )
 
 ```
