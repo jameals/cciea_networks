@@ -11,7 +11,9 @@ Clear the environment
 rm(list=ls())
 
 # output to the ESR repo automatically
-esr_dir = paste0('~/GitHub/Ecosystem-Status-Report-FY2026/Figures/') # change to reflect directory that ESR repo is in
+# esr_dir = paste0('~/GitHub/Ecosystem-Status-Report-FY2026/Figures/')  # nick
+esr_dir = paste0('/Users/jameal.samhouri/Documents/Github repos/Ecosystem-Status-Report-FY2026/Figures/') # jameal
+# change to reflect directory that ESR repo is in
 esr_output = TRUE # set to false if not writing ESR repo
 
 ```
@@ -61,7 +63,7 @@ img_nwc <- magick::image_read(
   )
 img_wc <- magick::image_read(
   here::here(pngdir_ports,
-             thisyearsESRimages[grep("WA Coast", thisyearsESRimages)])
+             thisyearsESRimages[grep("(?<!North )WA Coast", thisyearsESRimages, perl = TRUE)])
 )
 img_ps <- magick::image_read(
   here::here(pngdir_ports,
